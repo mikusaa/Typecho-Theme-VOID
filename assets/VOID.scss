@@ -724,6 +724,21 @@ iframe {
     }
 }
 
+/* 剪切板 */
+.clipboard {
+    position: absolute;
+    top: 3px;
+    right: 10px;
+    color: #22252b;
+    z-index: 100;
+    text-align: center;
+    cursor: pointer;
+    line-height: 18px;
+}
+body.theme-dark .clipboard {
+    color: white;
+}
+
 @import "parts/header";
 @import "parts/index";
 @import "parts/article";
