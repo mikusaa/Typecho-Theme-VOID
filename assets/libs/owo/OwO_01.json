@@ -305,9 +305,89 @@
             }
         ]
     },
-    "mihoyo": {
+    "米哈游": {
         "type": "image",
         "container": [
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E6AF94E5BF83.png\">",
+              "data": ":!(帕姆_比心)",
+              "text": "帕姆_比心"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E4B88DE58FAFE4BBA5.png\">",
+              "data": ":!(帕姆_不可以)",
+              "text": "帕姆_不可以"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E587BAE98791.png\">",
+              "data": ":!(帕姆_出金)",
+              "text": "帕姆_出金"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E782B9E8B59E.png\">",
+              "data": ":!(帕姆_点赞)",
+              "text": "帕姆_点赞"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5B9B2E9A5AD.png\">",
+              "data": ":!(帕姆_干饭)",
+              "text": "帕姆_干饭"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E597A8.png\">",
+              "data": ":!(帕姆_嗨)",
+              "text": "帕姆_嗨"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5AEB3E7BE9E.png\">",
+              "data": ":!(帕姆_害羞)",
+              "text": "帕姆_害羞"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5A5BDE5A587.png\">",
+              "data": ":!(帕姆_好奇)",
+              "text": "帕姆_好奇"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5A5BDE880B6.png\">",
+              "data": ":!(帕姆_好耶)",
+              "text": "帕姆_好耶"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E58AA0E78FAD.png\">",
+              "data": ":!(帕姆_加班)",
+              "text": "帕姆_加班"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E593ADE593AD.png\">",
+              "data": ":!(帕姆_哭哭)",
+              "text": "帕姆_哭哭"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E7A4BCE789A9.png\">",
+              "data": ":!(帕姆_礼物)",
+              "text": "帕姆_礼物"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E694B6E588B0.png\">",
+              "data": ":!(帕姆_收到)",
+              "text": "帕姆_收到"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E79691E68391.png\">",
+              "data": ":!(帕姆_疑惑)",
+              "text": "帕姆_疑惑"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E99C87E6838A.png\">",
+              "data": ":!(帕姆_震惊)",
+              "text": "帕姆_震惊"
+            },
+            {
+              "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E6B3A8E6848F.png\">",
+              "data": ":!(帕姆_注意)",
+              "text": "帕姆_注意"
+            },
             {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E7B1B3E6B8B8E5A7AC_E68891E79A84E5BF83E5A5BDE7979B.png\">",
                 "data": ":!(米游姬_我的心好痛)",
@@ -317,16 +397,6 @@
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E7A59EE9878CE7BBABE58D8E_E5BA86E8B4BA.png\">",
                 "data": ":!(神里绫华_庆贺)",
                 "text": "神里绫华_庆贺"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E6B4BEE89299_E68AB1E5A4A7E885BF.png\">",
-                "data": ":!(派蒙_抱大腿)",
-                "text": "派蒙_抱大腿"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58594E8BAAFE4B880E99C87.png\">",
-                "data": ":!(兔躯一震)",
-                "text": "兔躯一震"
             },
             {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E6B4BEE89299_E5BF83E68385E7AE80E58D95.png\">",
@@ -379,11 +449,6 @@
                 "text": "崩坏3_抓获"
             },
             {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E4BAAEE58991.png\">",
-                "data": ":!(崩坏3_亮剑)",
-                "text": "崩坏3_亮剑"
-            },
-            {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68993E69EB6.png\">",
                 "data": ":!(崩坏3_打架)",
                 "text": "崩坏3_打架"
@@ -394,19 +459,9 @@
                 "text": "崩坏3_灵光一现"
             },
             {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E782B9E8B59E.png\">",
-                "data": ":!(崩坏3_点赞)",
-                "text": "崩坏3_点赞"
-            },
-            {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E5A4A9E59190.png\">",
                 "data": ":!(崩坏3_天呐)",
                 "text": "崩坏3_天呐"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E5BC80E9A5AD.png\">",
-                "data": ":!(崩坏3_开饭)",
-                "text": "崩坏3_开饭"
             },
             {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E59083E7B2BDE5AD90.png\">",
@@ -422,31 +477,6 @@
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E6838AE59186E4BA86.png\">",
                 "data": ":!(崩坏3_惊呆了)",
                 "text": "崩坏3_惊呆了"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E581B7E79C8B.png\">",
-                "data": ":!(崩坏3_偷看)",
-                "text": "崩坏3_偷看"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E692B8E78CAB.png\">",
-                "data": ":!(崩坏3_撸猫)",
-                "text": "崩坏3_撸猫"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E58FA3E6B0B4.png\">",
-                "data": ":!(崩坏3_口水)",
-                "text": "崩坏3_口水"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68A93E4BD8FE5A5B3E8A385.png\">",
-                "data": ":!(崩坏3_抓住女装)",
-                "text": "崩坏3_抓住女装"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E7A4BAE5BCB1.png\">",
-                "data": ":!(崩坏3_示弱)",
-                "text": "崩坏3_示弱"
             },
             {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68B96E8B5B0.png\">",
@@ -524,11 +554,6 @@
                 "text": "原神_干杯"
             },
             {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E8AFA5E59083E9A5ADE4BA86.png\">",
-                "data": ":!(原神_该吃饭了)",
-                "text": "原神_该吃饭了"
-            },
-            {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E587BAE8B4A7E590A7.png\">",
                 "data": ":!(原神_出货吧)",
                 "text": "原神_出货吧"
@@ -564,84 +589,19 @@
                 "text": "原神_1摩拉"
             },
             {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_OK.png\">",
-                "data": ":!(原神_OK)",
-                "text": "原神_OK"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E69A97E4B8ADE8A782E5AF9F.png\">",
-                "data": ":!(原神_暗中观察)",
-                "text": "原神_暗中观察"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E6AF94E5BF83.png\">",
-                "data": ":!(原神_比心)",
-                "text": "原神_比心"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E99C87E692BC.png\">",
-                "data": ":!(原神_震撼)",
-                "text": "原神_震撼"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E58092.png\">",
-                "data": ":!(原神_倒)",
-                "text": "原神_倒"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E782B9E8B59E.png\">",
-                "data": ":!(原神_点赞)",
-                "text": "原神_点赞"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E9BC93E68E8C.png\">",
-                "data": ":!(原神_鼓掌)",
-                "text": "原神_鼓掌"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E4B996E5B7A7.png\">",
-                "data": ":!(原神_乖巧)",
-                "text": "原神_乖巧"
-            },
-            {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5BE97E6848F.png\">",
                 "data": ":!(原神_得意)",
                 "text": "原神_得意"
             },
             {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E586B7E6BCA0.png\">",
-                "data": ":!(原神_冷漠)",
-                "text": "原神_冷漠"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E69C9FE5BE85.png\">",
-                "data": ":!(原神_期待)",
-                "text": "原神_期待"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E69292E88AB1.png\">",
-                "data": ":!(原神_撒花)",
-                "text": "原神_撒花"
+                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E58594E8BAAFE4B880E99C87.png\">",
+                "data": ":!(原神_兔躯一震)",
+                "text": "原神_兔躯一震"
             },
             {
                 "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E6999AE5AE89.png\">",
                 "data": ":!(原神_晚安)",
                 "text": "原神_晚安"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5A794E5B188.png\">",
-                "data": ":!(原神_委屈)",
-                "text": "原神_委屈"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E79691E997AE.png\">",
-                "data": ":!(原神_疑问)",
-                "text": "原神_疑问"
-            },
-            {
-                "icon": "<img class=\"biaoqing\" data-src=\"/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E69C89E4B8BBE6848FE4BA86.png\">",
-                "data": ":!(原神_有主意了)",
-                "text": "原神_有主意了"
             }
         ]
     },

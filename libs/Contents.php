@@ -243,7 +243,7 @@ Class Contents
     }
 
     /**
-     * mihoyo表情回调函数
+     * 米哈游表情回调函数
      *
      * @return string
      */
