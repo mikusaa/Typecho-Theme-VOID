@@ -1,6 +1,4 @@
-**[2023.04.07] 如果大家配合 Typecho 1.2 版本使用 VOID 时遇到问题，请到 GitHub 集中留言反馈：https://github.com/AlanDecode/Typecho-Theme-VOID/issues/87**
 
----
 
 # Typecho Theme VOID 3.5.1
 
@@ -8,9 +6,9 @@
 
 作为计算机术语时，VOID 的意思是「无类型」。
 
-![](https://raw.githubusercontent.com/AlanDecode/Typecho-Theme-VOID/master/screenshot.png)
+![](https://raw.githubusercontent.com/mikusaa/Typecho-Theme-VOID/master/screenshot.png)
 
-[![Build](https://github.com/AlanDecode/Typecho-Theme-VOID/workflows/Build/badge.svg)](https://github.com/AlanDecode/Typecho-Theme-VOID/actions) [![downloads](https://img.shields.io/github/downloads/AlanDecode/Typecho-Theme-VOID/total.svg?style=flat-square)](https://github.com/AlanDecode/Typecho-Theme-VOID/releases) [![](https://img.shields.io/github/release/AlanDecode/Typecho-Theme-VOID.svg?style=flat-square)](https://github.com/AlanDecode/Typecho-Theme-VOID/releases) ![](https://img.shields.io/github/license/AlanDecode/Typecho-Theme-VOID.svg?style=flat-square)
+[![Build](https://github.com/mikusaa/Typecho-Theme-VOID/workflows/Build/badge.svg)](https://github.com/mikusaa/Typecho-Theme-VOID/actions) [![downloads](https://img.shields.io/github/downloads/mikusaa/Typecho-Theme-VOID/total.svg?style=flat-square)](https://github.com/mikusaa/Typecho-Theme-VOID/releases) [![](https://img.shields.io/github/release/mikusaa/Typecho-Theme-VOID.svg?style=flat-square)](https://github.com/mikusaa/Typecho-Theme-VOID/releases) ![](https://img.shields.io/github/license/mikusaa/Typecho-Theme-VOID.svg?style=flat-square)
 
 ## 特性
 
@@ -48,7 +46,7 @@
 
 ## 开始使用
 
-1. 下载主题：[发布版](https://github.com/AlanDecode/Typecho-Theme-VOID/releases)，注意是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code
+1. 下载主题：[发布版](https://github.com/mikusaa/Typecho-Theme-VOID/releases)，注意是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code
 2. 解压
 3. 将**主题文件夹下**的 VOID 文件夹上传至站点 /usr/themes 目录下
 4. 后台启用主题
@@ -82,7 +80,7 @@
 
 <details><summary>下载安装后样式不对？</summary><br>
 
-仓库中的是未压缩的源代码，包含大量实际使用中不需要的文件，并且可能无法直接使用。请一定通过这两个链接下载主题：[发布版](https://github.com/AlanDecode/Typecho-Theme-VOID/releases) | [开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意其中发布版是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code。
+仓库中的是未压缩的源代码，包含大量实际使用中不需要的文件，并且可能无法直接使用。请一定通过这两个链接下载主题：[发布版](https://github.com/mikusaa/Typecho-Theme-VOID/releases) | [开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意其中发布版是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code。
 
 </details>
 
@@ -177,7 +175,7 @@
 如果你有不错的想法，可以定制自己的版本。首先你需要准备好 NodeJS 环境，然后 clone 这个 repo：
 
 ```bash
-git clone https://github.com/AlanDecode/Typecho-Theme-VOID ./VOID && cd ./VOID
+git clone https://github.com/mikusaa/Typecho-Theme-VOID ./VOID && cd ./VOID
 ```
 
 安装依赖：
@@ -233,14 +231,14 @@ gulp build
 * 修复：某些情况下懒加载可能不触发的问题
 * 修复：懒加载导致归档页面错乱
 * 修复：Safari 平滑滚动无法打断, thank @Reedo0910
-* 修复：[#32](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/32)
-* 修复：[#34](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/34)
+* 修复：[#32](https://github.com/mikusaa/Typecho-Theme-VOID/issues/32)
+* 修复：[#34](https://github.com/mikusaa/Typecho-Theme-VOID/issues/34)
 * 移除：Microdata
 * 其它细节优化
 
 从 2.2 版本起，主题部分功能需要配套插件支持，例如文章点赞、浏览量统计、字数统计等。**请先卸载**原来的 Likes、TePostViews 插件，否则数据会出现错误！TePostViews 插件卸载前请设置为**卸载后保留数据**，以防丢失浏览数据。
 
-更多：[change-log.md](https://github.com/AlanDecode/Typecho-Theme-VOID/blob/master/change-log.md)
+更多：[change-log.md](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/change-log.md)
 
 ## 鸣谢
 
