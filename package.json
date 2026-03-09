@@ -2,7 +2,7 @@
   "devDependencies": {
     "del": "^5.1.0",
     "eslint": "^7.32.0",
-    "gulp": "^4.0.2",
+    "gulp": "^5.0.1",
     "gulp-autoprefixer": "^8.0.0",
     "gulp-clean-css": "^4.3.0",
     "gulp-concat": "^2.6.1",
