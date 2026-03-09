@@ -58,7 +58,7 @@
 * 可选：将主题 `assets` 文件夹下的 `VOIDCacheRule.js` 复制一份到站点根目录，并在主题设置中启用 Service Worker 缓存。
 * 可选：主题文件夹下 advanceSetting.sample.json 中有一些高级设置，可以看看。
 
-开发版主题可以在这里获取：[开发版](https://github.com/AlanDecode/Typecho-Theme-VOID/archive/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
+开发版主题可以在这里获取：[开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
 
 ## **常见问题（请务必仔细阅读）**
 
@@ -82,7 +82,7 @@
 
 <details><summary>下载安装后样式不对？</summary><br>
 
-仓库中的是未压缩的源代码，包含大量实际使用中不需要的文件，并且可能无法直接使用。请一定通过这两个链接下载主题：[发布版](https://github.com/AlanDecode/Typecho-Theme-VOID/releases) | [开发版](https://github.com/AlanDecode/Typecho-Theme-VOID/archive/nightly.zip)。注意其中发布版是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code。
+仓库中的是未压缩的源代码，包含大量实际使用中不需要的文件，并且可能无法直接使用。请一定通过这两个链接下载主题：[发布版](https://github.com/AlanDecode/Typecho-Theme-VOID/releases) | [开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意其中发布版是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code。
 
 </details>
 
