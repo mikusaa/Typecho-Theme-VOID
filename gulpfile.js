@@ -1,7 +1,7 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable no-undef */
 var gulp = require('gulp');
-var sass = require('gulp-sass')(require('node-sass'));
+var sass = require('gulp-sass')(require('sass'));
 var prefix = require('gulp-autoprefixer');
 var minify = require('gulp-clean-css');
 var rev = require('gulp-rev');
@@ -92,7 +92,7 @@ gulp.task('move', function () {
         .pipe(gulp.dest('./build/assets/fonts/'));
     return gulp.src(['./LICENSE',
         './README.md',
-        './screenshot.png',
+        './screenshot.webp',
         './advanceSetting.sample.json',
         './change-log.md'])
         .pipe(gulp.dest('./build/'));

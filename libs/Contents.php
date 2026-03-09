@@ -511,7 +511,8 @@ Class Contents
             $row = $widget->filter($row);
             $arr = array(
                 'title' => $row['title'],
-                'permalink' => $row['permalink']);
+                'permalink' => $row['permalink'],
+                'categories' => self::getCategories($row['cid']));
 
             if(Utils::isPluginAvailable('VOID')) {
                 $arr['words'] = $row['wordCount'];
@@ -547,6 +548,30 @@ Class Contents
             }
         }
 
+        return $metas;
+    }
+
+    /**
+     * 文章分类（使用 JOIN 查询优化，避免 N+1）
+     * 
+     * @return array
+     */
+    public static function getCategories($cid)
+    {
+        $db = Typecho_Db::get();
+        $rows = $db->fetchAll($db->select('table.metas.name', 'table.metas.slug')
+            ->from('table.relationships')
+            ->join('table.metas', 'table.relationships.mid = table.metas.mid')
+            ->where('table.relationships.cid = ?', $cid)
+            ->where('table.metas.type = ?', 'category'));
+        
+        $metas = array();
+        foreach ($rows as $row) {
+            $metas[] = array(
+                'name' => $row['name'],
+                'permalink' => Helper::options()->siteUrl . 'category/' . $row['slug'] . '/'
+            );
+        }
         return $metas;
     }
 }
