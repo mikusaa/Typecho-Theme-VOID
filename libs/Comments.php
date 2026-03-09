@@ -224,12 +224,12 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
     {
 
         if ($this->options->commentsPageBreak) {            
-            $pageRow = array('permalink' => $this->parentContent['pathinfo'], 'commentPage' => $this->_currentPage);
+            $pageRow = array('permalink' => $this->parameter->parentContent['pathinfo'], 'commentPage' => $this->_currentPage);
             return Typecho_Router::url('comment_page',
                         $pageRow, $this->options->index) . '#' . $this->theId;
         }
         
-        return $this->parentContent['permalink'] . '#' . $this->theId;
+        return $this->parameter->parentContent['permalink'] . '#' . $this->theId;
     }
 
     /**
@@ -238,7 +238,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @access protected
      * @return array
      */
-    protected function ___children()
+    protected function ___children(): array
     {
         return $this->options->commentsThreaded && !$this->isTopLevel && isset($this->_threadedComments[$this->coid]) 
             ? $this->_threadedComments[$this->coid] : array();
@@ -250,21 +250,12 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @access protected
      * @return boolean
      */
-    protected function ___isTopLevel()
+    protected function ___isTopLevel(): bool
     {
         return $this->levels > 0;
     }
 
-    /**
-     * 重载内容获取
-     *
-     * @access protected
-     * @return void
-     */
-    protected function ___parentContent() : ?array
-    {
-        return $this->parameter->parentContent;
-    }
+
 
     /**
      * 输出文章评论数
