@@ -36,7 +36,7 @@ function themeInit()
 }
 
 $GLOBALS['VOIDPluginREQ'] = 1.2;
-$GLOBALS['VOIDVersion'] = 3.51;
+$GLOBALS['VOIDVersion'] = 3.52;
 
 /**
  * 主题设置
@@ -58,7 +58,7 @@ function themeConfig($form)
 
     echo '<p id="void-check-update" class="notice">正在检查更新……</p>';
     echo '<script>var VOIDVersion='.$GLOBALS['VOIDVersion'].'</script>';
-    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-9eb5c4cc00.js"></script>';
+    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-143d915008.js"></script>';
 
     $defaultBanner = new Typecho_Widget_Helper_Form_Element_Text('defaultBanner', null, '', '首页顶部大图', '可以填写随机图 API。');
     $form->addInput($defaultBanner);
@@ -96,7 +96,7 @@ function themeConfig($form)
     $form->addInput($serviceworker);
 
     // 超高级设置
-    $advance = new Typecho_Widget_Helper_Form_Element_Textarea('advance', null, null, 超高级设置, '主题中包含一份 advanceSetting.sample.json，自己仿照着写吧。');
+    $advance = new Typecho_Widget_Helper_Form_Element_Textarea('advance', null, null, '超高级设置', '主题中包含一份 advanceSetting.sample.json，自己仿照着写吧。');
     $form->addInput($advance);
 }
 

@@ -76,10 +76,10 @@ $setting = $GLOBALS['VOIDSetting'];
                         var src = $(item).attr('src');
                         if (typeof src === 'string' && src.indexOf('player.bilibili.com') > -1) {
                             // $(item).addClass('bili-player');
-                            if (src.indexOf('&high_quality') < 0) {
-                                src += '&high_quality=1'; // 启用高质量
-                                $(item).attr('src', src);
-                            }
+                            // if (src.indexOf('&high_quality') < 0) {
+                            //     src += '&high_quality=1'; // 启用高质量
+                            //     $(item).attr('src', src);
+                            // }
                             $(item).wrap('<div class="bili-player"></div>');
                         }
                     });
@@ -88,7 +88,7 @@ $setting = $GLOBALS['VOIDSetting'];
 
                 <!--分页-->
                 <?php if(!$this->is('page')): ?>
-                <div class="post-pager"><?php $prev = Contents::thePrev($this); $next = Contents::theNext($this); ?>
+                <div class="post-pager"><?php $prev = Contents::thePrev($this); ?>
                     <?php if($prev): ?>
                         <div class="prev">
                             <a href="<?php $prev->permalink(); ?>"><h2><?php $prev->title(); ?></h2></a>
@@ -99,6 +99,7 @@ $setting = $GLOBALS['VOIDSetting'];
                             <h2>没有了</h2>
                         </div>
                     <?php endif; ?>
+                    <?php $next = Contents::theNext($this); ?>
                     <?php if($next): ?>
                         <div class="next">
                             <a href="<?php $next->permalink(); ?>"><h2><?php $next->title(); ?></h2></a>

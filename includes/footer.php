@@ -130,18 +130,18 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-b514182550.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-f6e2165bcb.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script src='<?php Utils::indexTheme('/assets/libs/mathjax/2.7.4/MathJax.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-2c818e2660.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-de94266f62.js'); ?>"></script>
         <script>
         if($(".OwO").length > 0){
             new OwO({
                 logo: 'OωO',
                 container: document.getElementsByClassName('OwO')[0],
                 target: document.getElementsByClassName('input-area')[0],
-                api: '<?php Utils::indexTheme('/assets/libs/owo/OwO_02.json'); ?>',
+                api: '<?php Utils::indexTheme('/assets/libs/owo/OwO_01.json'); ?>',
                 position: 'down',
                 width: '400px',
                 maxHeight: '250px'

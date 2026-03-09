@@ -192,10 +192,14 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         $parentID=$parentID['parent'];
         if($parentID=='0') return '';
         else {
-            $author=$db->fetchRow($db->select()->from('table.comments')->where('coid = ?', $parentID));
-            if (!array_key_exists('author', $author) || empty($author['author']))
+            $author = $db->fetchRow($db->select()->from('table.comments')->where('coid = ?', $parentID));
+            if ($author === null) {
+                $author = array();
+            }
+            if (!array_key_exists('author', $author) || empty($author['author'])) {
                 $author['author'] = '已删除的评论';
-            return ' <span style="font-size: 0.9rem">回复</span> <b style="font-size:0.9rem;margin-right: 0.3em">@'.$author['author'].'</b> ';
+            }
+            return ' <span style="font-size: 0.9rem">回复</span> <b style="font-size:0.9rem;margin-right: 0.3em">@' . $author['author'] . '</b> ';
         }
     }  
 
@@ -216,7 +220,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @access protected
      * @return string
      */
-    protected function ___permalink()
+    protected function ___permalink() : string
     {
 
         if ($this->options->commentsPageBreak) {            
@@ -257,7 +261,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @access protected
      * @return void
      */
-    protected function ___parentContent()
+    protected function ___parentContent() : ?array
     {
         return $this->parameter->parentContent;
     }
@@ -385,7 +389,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @param array $value 每行的值
      * @return array
      */
-    public function push(array $value)
+    public function push(array $value) : array
     {
         $value = $this->filter($value);
         
@@ -526,7 +530,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      * @access public
      * @return void
      */
-    public function alt()
+    public function alt(...$args)
     {
         $args = func_get_args();
         $num = func_num_args();
