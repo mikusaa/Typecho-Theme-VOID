@@ -35,8 +35,8 @@
 * 修复：某些情况下懒加载可能不触发的问题
 * 修复：懒加载导致归档页面错乱
 * 修复：Safari 平滑滚动无法打断, thank @Reedo0910
-* 修复：[#32](https://github.com/mikusaa/Typecho-Theme-VOID/issues/32)
-* 修复：[#34](https://github.com/mikusaa/Typecho-Theme-VOID/issues/34)
+* 修复：[#32](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/32)
+* 修复：[#34](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/34)
 * 移除：Microdata
 * 其它细节优化
 

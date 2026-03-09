@@ -209,6 +209,15 @@ gulp build
 
 ## 更新日志
 
+**🍰 2026-03-10 Version 3.5.2**
+
+* 新增：[归档增强] 归档页年度发布统计与分类标签聚合。
+* 优化：[性能] 彻底解决归档页 N+1 查询性能瓶颈。
+* 适配：[Typecho 1.3] 全面适配 Typecho 1.3.0+ 与 PHP 8.1+。
+* 修复：[构建] 升级 Gulp 5 + Dart Sass，修复构建产物混入 `node_modules` 问题。
+* 修复：[CI/CD] 修复 GitHub Actions 构建失败并同步最新表情包。
+
+
 **🍰 2020-07-04 Version 3.5.1**
 
 *该版本依赖 VOID 插件 1.20 及以上版本，请先禁用原插件，上传新插件后重新启用插件*
@@ -231,8 +240,8 @@ gulp build
 * 修复：某些情况下懒加载可能不触发的问题
 * 修复：懒加载导致归档页面错乱
 * 修复：Safari 平滑滚动无法打断, thank @Reedo0910
-* 修复：[#32](https://github.com/mikusaa/Typecho-Theme-VOID/issues/32)
-* 修复：[#34](https://github.com/mikusaa/Typecho-Theme-VOID/issues/34)
+* 修复：[#32](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/32)
+* 修复：[#34](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/34)
 * 移除：Microdata
 * 其它细节优化
 
