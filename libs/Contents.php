@@ -308,18 +308,21 @@ Class Contents
         // 这里，若图片已获取长宽基础信息，则直接计算后输出
         $attrAddOnA = '';
         $attrAddOnFigure = '';
-        $matches;
+        $matches = [];
         if (strpos($src_ori, 'vwid') != false) {
             preg_match("/vwid=(\d{0,5})/i", $src_ori, $matches);
-            $width = floatval($matches[1]);
+            $width = !empty($matches[1]) ? floatval($matches[1]) : 0;
+            
             preg_match("/vhei=(\d{0,5})/i", $src_ori, $matches);
-            $height = floatval($matches[1]);
+            $height = !empty($matches[1]) ? floatval($matches[1]) : 0;
 
-            $ratio = $height / $width * 100;
-            $flex_grow = $width * 50 / $height;
+            if ($width > 0 && $height > 0) {
+                $ratio = $height / $width * 100;
+                $flex_grow = $width * 50 / $height;
 
-            $attrAddOnA = 'style="padding-top: '.$ratio.'%"';
-            $attrAddOnFigure = 'class="size-parsed" style="flex-grow: '.$flex_grow.'; width: '.$width.'px"';
+                $attrAddOnA = 'style="padding-top: '.$ratio.'%"';
+                $attrAddOnFigure = 'class="size-parsed" style="flex-grow: '.$flex_grow.'; width: '.$width.'px"';
+            }
         }
 
         $figcaption = '';

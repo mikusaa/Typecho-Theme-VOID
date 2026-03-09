@@ -109,9 +109,9 @@ class Utils
         }
         
         if (isset ($_SERVER['HTTP_USER_AGENT'])) {
-            $clientkeywords = array ('mobile','nokia','sony','ericsson','mot','samsung','htc','sgh','lg','sharp','sie-','philips','panasonic','alcatel','lenovo','iphone','ipod','blackberry','meizu','android','netfront','symbian','ucweb','windowsce','palm','operamini','operamobi','openwave','nexusone','cldc','midp','wap'
-                ); 
-            if (preg_match("/(" . implode('|', $clientkeywords) . ")/i", strtolower($_SERVER['HTTP_USER_AGENT']))){
+            $clientkeywords = array ('mobile','nokia','sony','ericsson','mot','samsung','htc','sgh','lg','sharp','sie-','philips','panasonic','alcatel','lenovo','iphone','ipod','blackberry','meizu','android','netfront','symbian','ucweb','windowsce','palm','operamini','operamobi','openwave','nexusone','cldc','midp','wap'); 
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            if (preg_match("/(" . implode('|', $clientkeywords) . ")/i", strtolower($userAgent))){
                 return TRUE;
             }
         }
