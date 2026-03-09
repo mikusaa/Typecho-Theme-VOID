@@ -77,7 +77,7 @@ gulp.task('pack:js:main', function () {
 
 // 静态文件加戳
 gulp.task('md5', function () {
-    return gulp.src(['temp/rev/**/*.json', './**/*.php'])
+    return gulp.src(['temp/rev/**/*.json', './**/*.php', '!./node_modules/**/*.php'])
         .pipe(revCollector())
         .pipe(gulp.dest('./build/'));
 });
