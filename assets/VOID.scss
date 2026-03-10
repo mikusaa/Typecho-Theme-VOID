@@ -734,6 +734,17 @@ iframe {
     text-align: center;
     cursor: pointer;
     line-height: 18px;
+    opacity: 0;
+    @media (hover: none) {
+        opacity: 0.8;
+    }
+    transition: opacity 0.2s, color 0.2s;
+    &:hover {
+        opacity: 1;
+    }
+}
+pre:hover .clipboard {
+    opacity: 0.6;
 }
 body.theme-dark .clipboard {
     color: white;
