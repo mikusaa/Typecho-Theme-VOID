@@ -84,17 +84,17 @@ gulp.task('md5', function () {
 
 // 无需处理的文件
 gulp.task('move', function () {
-    gulp.src(['./assets/libs/owo/**/*', './assets/libs/mathjax/**/*'], { base: './assets/libs/' })
+    gulp.src(['./assets/libs/owo/**/*', './assets/libs/mathjax/**/*'], { base: './assets/libs/', encoding: false })
         .pipe(gulp.dest('./build/assets/libs/'));
     gulp.src(['./assets/sw-toolbox.js', './assets/VOIDCacheRule.js'])
         .pipe(gulp.dest('./build/assets/'));
-    gulp.src(['./assets/fonts/*'])
+    gulp.src(['./assets/fonts/*'], { encoding: false })
         .pipe(gulp.dest('./build/assets/fonts/'));
     return gulp.src(['./LICENSE',
         './README.md',
-        './screenshot.png',
+        './screenshot.webp',
         './advanceSetting.sample.json',
-        './change-log.md'])
+        './change-log.md'], { encoding: false })
         .pipe(gulp.dest('./build/'));
 });
 
