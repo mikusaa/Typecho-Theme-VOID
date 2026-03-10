@@ -25,9 +25,9 @@ Typecho_Plugin::factory('Widget_Abstract_Contents')->markdown = array('Contents'
 Typecho_Plugin::factory('Widget_Abstract_Contents')->contentEx = array('Contents', 'contentEx');
 Typecho_Plugin::factory('Widget_Abstract_Contents')->excerptEx = array('Contents', 'excerptEx');
 // 为兼容 Typecho 1.3
-Typecho_Plugin::factory('Widget_Base_Contents')->markdown = array('Contents', 'markdown');
-Typecho_Plugin::factory('Widget_Base_Contents')->contentEx = array('Contents', 'contentEx');
-Typecho_Plugin::factory('Widget_Base_Contents')->excerptEx = array('Contents', 'excerptEx');
+Typecho_Plugin::factory('Widget\Base\Contents')->markdown = array('Contents', 'markdown');
+Typecho_Plugin::factory('Widget\Base\Contents')->contentEx = array('Contents', 'contentEx');
+Typecho_Plugin::factory('Widget\Base\Contents')->excerptEx = array('Contents', 'excerptEx');
 
 /**
  * 主题启用
