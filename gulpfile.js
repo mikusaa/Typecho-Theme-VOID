@@ -92,7 +92,7 @@ gulp.task('move', function () {
         .pipe(gulp.dest('./build/assets/fonts/'));
     return gulp.src(['./LICENSE',
         './README.md',
-        './screenshot.png',
+        './screenshot.webp',
         './advanceSetting.sample.json',
         './change-log.md'])
         .pipe(gulp.dest('./build/'));

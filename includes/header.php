@@ -62,12 +62,14 @@ if($this->is('post') || $this->is('page')) {
                     </ul>
                 </span>
                 <?php if($setting['nav']){ foreach ($setting['nav'] as $listItem): ?>
-                <span class="dropdown"><?php echo $listItem['name']; ?>
+                <span class="dropdown"><?php echo htmlspecialchars($listItem['name'], ENT_QUOTES, 'UTF-8'); ?>
                     <ul>
                         <?php foreach ($listItem['items'] as $item) {
                             $target = '_blank';
-                            if(isset($item['target'])) $target = $item['target'];
-                            echo "<li><a target=\"{$target}\" href=\"{$item['link']}\">{$item['title']}</a></li>";
+                            if(isset($item['target'])) $target = htmlspecialchars($item['target'], ENT_QUOTES, 'UTF-8');
+                            $link = htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8');
+                            $title = htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                            echo "<li><a target=\"{$target}\" href=\"{$link}\">{$title}</a></li>";
                         }?>
                     </ul>
                 </span>
@@ -105,12 +107,14 @@ if($this->is('post') || $this->is('page')) {
             </nav>
         </section>
         <?php if($setting['nav']){ foreach ($setting['nav'] as $listItem): ?>
-        <section data-title="<?php echo $listItem['name']; ?>">
+        <section data-title="<?php echo htmlspecialchars($listItem['name'], ENT_QUOTES, 'UTF-8'); ?>">
             <nav>
                 <?php foreach ($listItem['items'] as $item) {
                     $target = '_blank';
-                    if(isset($item['target'])) $target = $item['target'];
-                    echo "<a target=\"{$target}\" href=\"{$item['link']}\">{$item['title']}</a>";
+                    if(isset($item['target'])) $target = htmlspecialchars($item['target'], ENT_QUOTES, 'UTF-8');
+                    $link = htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8');
+                    $title = htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                    echo "<a target=\"{$target}\" href=\"{$link}\">{$title}</a>";
                 }?>
             </nav>
         </section>

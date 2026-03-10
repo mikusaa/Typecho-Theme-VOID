@@ -98,7 +98,7 @@ $setting = $GLOBALS['VOIDSetting'];
 {
     "@context": "https://schema.org",
     "@type": "Series",
-    "url": "<?php Utils::index($_SERVER['PHP_SELF']); ?>",
+    "url": "<?php Utils::index(htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8')); ?>",
     "name": "<?php Contents::title($this); ?>",
     "mainEntityOfPage": {
         "@type": "WebPage",
