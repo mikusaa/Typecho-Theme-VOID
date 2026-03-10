@@ -127,7 +127,8 @@ class Utils
      * iOS 判定
      */
     public static function isIosSafari () {
-        return strpos($_SERVER['HTTP_USER_AGENT'], 'iPhone') || strpos($_SERVER['HTTP_USER_AGENT'], 'iPad');
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        return strpos($ua, 'iPhone') !== false || strpos($ua, 'iPad') !== false;
     }
 
     /**

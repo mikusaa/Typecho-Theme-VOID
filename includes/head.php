@@ -12,7 +12,9 @@ $setting = $GLOBALS['VOIDSetting'];
 
 if (isset($_POST['void_action'])) {
     if ($_POST['void_action'] == 'getLoginAction') {
-        echo $this->options->loginAction;
+        if ($this->request->isPost() && Typecho_Cookie::get('__typecho_uid')) {
+            echo $this->options->loginAction;
+        }
         exit;
     }
 }
@@ -58,7 +60,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-1e9bf597b1.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-450258366d.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-b4f3f815e5.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-fe07bf5f02.js'); ?>"></script>

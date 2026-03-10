@@ -140,7 +140,7 @@ Class Contents
     static public function parseNotice($content)
     {
         $reg='/\[notice.*?\](.*?)\[\/notice\]/s';
-        $rp='<p class="notice">${1}</p>';
+        $rp='<p class="notice">$1</p>';
         $new=preg_replace($reg,$rp,$content);
         return $new;
     }
@@ -161,10 +161,10 @@ Class Contents
         $rp='';
 
         if($setting['largePhotoSet']) {
-            $rp = '<div class="photos large">${1}</div>';
+            $rp = '<div class="photos large">$1</div>';
         }
         else {
-            $rp = '<div class="photos">${1}</div>';
+            $rp = '<div class="photos">$1</div>';
         }
 
         $new=preg_replace($reg, $rp, $new);
@@ -309,7 +309,7 @@ Class Contents
         $attrAddOnA = '';
         $attrAddOnFigure = '';
         $matches = [];
-        if (strpos($src_ori, 'vwid') != false) {
+        if (strpos($src_ori, 'vwid') !== false) {
             preg_match("/vwid=(\d{0,5})/i", $src_ori, $matches);
             $width = !empty($matches[1]) ? floatval($matches[1]) : 0;
             
@@ -406,7 +406,7 @@ Class Contents
         $text = '<div class="board-list link-list">%boards%</div>';
 
         $reg='/\[(.*?)\]\((.*?)\)\+\((.*?)\)/s';
-        $rp = '<a target="_blank" href="${2}" class="board-item link-item"><div class="board-thumb" data-thumb="${3}"></div><div class="board-title">${1}</div></a>';
+        $rp = '<a target="_blank" href="$2" class="board-item link-item"><div class="board-thumb" data-thumb="$3"></div><div class="board-title">$1</div></a>';
         $boards = preg_replace($reg,$rp,$matchs[1]);
 
         return  str_replace('%boards%', $boards, $text);
@@ -420,7 +420,7 @@ Class Contents
     static public function parseRuby($string)
     {
         $reg='/\{\{(.*?):(.*?)\}\}/s';
-        $rp='<ruby>${1}<rp>(</rp><rt>${2}</rt><rp>)</rp></ruby>';
+        $rp='<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>';
         $new=preg_replace($reg,$rp,$string);
         return $new;
     }
