@@ -279,9 +279,15 @@ Class Contents
             "QINIU" => '?imageView2/2/w/64/q/75'
         );
 
+        // 兼容 PHP 8.1+：parse_url 参数需为字符串
+        if (!is_string($src) || $src === '') {
+            return is_scalar($src) ? (string) $src : '';
+        }
+
+        // 兼容 PHP 8.1+：parse_url 结果可能非数组或缺少键
         $components = parse_url($src);
         $cdn = '';
-        if (array_key_exists($components['host'], $cdn_config)) {
+        if (is_array($components) && array_key_exists('host', $components) && array_key_exists($components['host'], $cdn_config)) {
             $cdn = $cdn_config[$components['host']];
         }
 
@@ -290,7 +296,10 @@ Class Contents
             $addon = $addons[$cdn];
         }
 
-        return str_replace('#'.parse_url($src)['fragment'], '', $src).$addon;
+        $fragment = (is_array($components) && array_key_exists('fragment', $components)) ? $components['fragment'] : null;
+        $srcWithoutFragment = $fragment !== null ? str_replace('#' . $fragment, '', $src) : $src;
+
+        return $srcWithoutFragment . $addon;
     }
 
     /**
@@ -479,8 +488,12 @@ Class Contents
     public static function theNext($archive)
     {
         $db = Typecho_Db::get();
+        $currentTime = (class_exists('Typecho_Date') && method_exists('Typecho_Date', 'time'))
+            ? Typecho_Date::time()
+            : time();
+
         $content = $db->fetchRow($db->select()->from('table.contents')->where('table.contents.created > ? AND table.contents.created < ?',
-            $archive->created, Helper::options()->gmtTime)
+            $archive->created, $currentTime)
             ->where('table.contents.status = ?', 'publish')
             ->where('table.contents.type = ?', $archive->type)
             ->where('table.contents.password IS NULL')
@@ -555,24 +568,20 @@ Class Contents
     }
 
     /**
-     * 文章分类（使用 JOIN 查询优化，避免 N+1）
+     * 文章分类
      * 
      * @return array
      */
     public static function getCategories($cid)
     {
-        $db = Typecho_Db::get();
-        $rows = $db->fetchAll($db->select('table.metas.name', 'table.metas.slug')
-            ->from('table.relationships')
-            ->join('table.metas', 'table.relationships.mid = table.metas.mid')
-            ->where('table.relationships.cid = ?', $cid)
-            ->where('table.metas.type = ?', 'category'));
+        $rows = Widget_Metas_Category_Related::allocWithAlias($cid, array('cid' => $cid))
+            ->toArray(array('name', 'permalink'));
         
         $metas = array();
         foreach ($rows as $row) {
             $metas[] = array(
                 'name' => $row['name'],
-                'permalink' => Helper::options()->siteUrl . 'category/' . $row['slug'] . '/'
+                'permalink' => $row['permalink']
             );
         }
         return $metas;

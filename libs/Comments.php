@@ -252,7 +252,8 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      */
     protected function ___isTopLevel(): bool
     {
-        return $this->levels > 0;
+        // 对齐 Typecho 1.3：顶层判定语义与核心一致
+        return $this->levels > $this->options->commentsMaxNestingLevels - 2;
     }
 
 
@@ -288,17 +289,15 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             return;
         }
 
-        $commentsAuthor = Typecho_Cookie::get('__typecho_remember_author');
-        $commentsMail = Typecho_Cookie::get('__typecho_remember_mail');
-
-        // 对已登录用户显示待审核评论，方便前台管理
-        if ($this->user->hasLogin()) {
-            $select = $this->select()->where('table.comments.cid = ?', $this->parameter->parentId)
-                ->where('table.comments.status = ? OR table.comments.status = ?', 'approved', 'waiting');
-        } else {
-            $select = $this->select()->where('table.comments.cid = ?', $this->parameter->parentId)
-                ->where('table.comments.status = ? OR (table.comments.author = ? AND table.comments.mail = ? AND table.comments.status = ?)', 'approved', $commentsAuthor, $commentsMail, 'waiting');
-        }
+        // 对齐 Typecho 1.3：仅显示已审核评论 + 当前访客自己的待审核评论
+        $unapprovedCommentId = intval(Typecho_Cookie::get('__typecho_unapproved_comment', 0));
+        $select = $this->select()->where('table.comments.cid = ?', $this->parameter->parentId)
+            ->where(
+                'table.comments.status = ? OR (table.comments.coid = ? AND table.comments.status <> ?)',
+                'approved',
+                $unapprovedCommentId,
+                'approved'
+            );
 
         $threadedSelect = NULL;
         
@@ -324,7 +323,8 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
                 if (0 != $parent && isset($this->stack[$parent])) {
                 
                     /** 如果当前节点深度大于最大深度, 则将其挂接在父节点上 */
-                    if ($comment['levels'] >= 2) {
+                    // 对齐 Typecho 1.3：遵循 commentsMaxNestingLevels 配置，不再硬编码层级
+                    if ($comment['levels'] >= (int)$this->options->commentsMaxNestingLevels) {
                         $comment['levels'] = $this->stack[$parent]['levels'];
                         $parent = $this->stack[$parent]['parent'];     // 上上层节点
                         $comment['parent'] = $parent;
@@ -556,7 +556,8 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
      */
     public function reply($word = '')
     {
-        if ($this->options->commentsThreaded && $this->parameter->allowComment) {
+        // 对齐 Typecho 1.3：达到顶层时不再显示回复入口
+        if ($this->options->commentsThreaded && !$this->isTopLevel && $this->parameter->allowComment) {
             $word = empty($word) ? '回复' : $word;
             $this->pluginHandle()->trigger($plugged)->reply($word, $this);
             
@@ -582,7 +583,8 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             $this->pluginHandle()->trigger($plugged)->cancelReply($word, $this);
             
             if (!$plugged) {
-                $replyId = $this->request->filter('int')->replyTo;
+                // 兼容 Typecho 1.3：改为 get() 读取，避免使用已弃用的 request magic 属性
+                $replyId = $this->request->filter('int')->get('replyTo');
                 echo '<a id="cancel-comment-reply-link" href="' . $this->parameter->parentContent['permalink'] . '#' . $this->parameter->respondId .
                 '" rel="nofollow"' . ($replyId ? '' : ' style="display:none"') . ' onclick="return TypechoComment.cancelReply();">' . $word . '</a>';
             }

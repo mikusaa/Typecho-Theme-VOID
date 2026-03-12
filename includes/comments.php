@@ -9,11 +9,18 @@
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $setting = $GLOBALS['VOIDSetting'];
+// 兼容 Typecho 1.3：优先新键 commentsRequireUrl，旧键 commentsRequireURL 兜底
+$commentsRequireUrl = Helper::options()->commentsRequireUrl;
+if ($commentsRequireUrl === null) {
+    $commentsRequireUrl = Helper::options()->commentsRequireURL;
+}
+$commentsRequireUrl = !empty($commentsRequireUrl);
 $parameter = array(
     'parentId'      => $this->hidden ? 0 : $this->cid,
     'parentContent' => $this->row,
     'respondId'     => $this->respondId,
-    'commentPage'   => $this->request->filter('int')->commentPage,
+    // 兼容 Typecho 1.3：避免使用已弃用的 request magic 属性读取
+    'commentPage'   => $this->request->filter('int')->get('commentPage'),
     'allowComment'  => $this->allow('comment')
 );
 $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
@@ -49,9 +56,9 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
                             placeholder="电子邮件<?php echo Helper::options()->commentsRequireMail? '(必填，将保密)' : '(选填)' ?>" 
                             <?php echo Helper::options()->commentsRequireMail? 'required' : '' ?>
                             value="<?php $this->remember('mail'); ?>" />
-                        <input aria-label="网站<?php echo Helper::options()->commentsRequireURL? '(必填)' : '(选填)' ?>" type="url" name="url" id="url" 
-                            <?php echo Helper::options()->commentsRequireURL? 'required' : '' ?>
-                            placeholder="网站<?php echo Helper::options()->commentsRequireURL? '(必填)' : '(选填)' ?>"  
+                        <input aria-label="网站<?php echo $commentsRequireUrl ? '(必填)' : '(选填)' ?>" type="url" name="url" id="url" 
+                            <?php echo $commentsRequireUrl ? 'required' : '' ?>
+                            placeholder="网站<?php echo $commentsRequireUrl ? '(必填)' : '(选填)' ?>"  
                             value="<?php $this->remember('url'); ?>" />
                         </div>
                     <?php endif; ?>

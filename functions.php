@@ -21,13 +21,11 @@ require_once('libs/Comments.php');
 Typecho_Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');
 Typecho_Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addButton');
 // 为防止友链解析与 Markdown 冲突，重写 Markdown 函数
-Typecho_Plugin::factory('Widget_Abstract_Contents')->markdown = array('Contents', 'markdown');
-Typecho_Plugin::factory('Widget_Abstract_Contents')->contentEx = array('Contents', 'contentEx');
-Typecho_Plugin::factory('Widget_Abstract_Contents')->excerptEx = array('Contents', 'excerptEx');
-// 为兼容 Typecho 1.3
-Typecho_Plugin::factory('Widget\Base\Contents')->markdown = array('Contents', 'markdown');
-Typecho_Plugin::factory('Widget\Base\Contents')->contentEx = array('Contents', 'contentEx');
-Typecho_Plugin::factory('Widget\Base\Contents')->excerptEx = array('Contents', 'excerptEx');
+// 兼容 Typecho 1.3：按能力选择单一路径注册，避免同一 hook 重复注册
+$voidContentsHookTarget = class_exists('Widget\Base\Contents') ? 'Widget\Base\Contents' : 'Widget_Abstract_Contents';
+Typecho_Plugin::factory($voidContentsHookTarget)->markdown = array('Contents', 'markdown');
+Typecho_Plugin::factory($voidContentsHookTarget)->contentEx = array('Contents', 'contentEx');
+Typecho_Plugin::factory($voidContentsHookTarget)->excerptEx = array('Contents', 'excerptEx');
 
 /**
  * 主题启用
