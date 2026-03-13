@@ -2,16 +2,16 @@
 /* eslint-disable no-undef */
 var gulp = require('gulp');
 var sass = require('gulp-sass')(require('sass'));
-var prefix = require('gulp-autoprefixer');
+var prefix = require('gulp-autoprefixer').default;
 var minify = require('gulp-clean-css');
-var rev = require('gulp-rev');
+var rev = require('gulp-rev').default;
 var revCollector = require('gulp-rev-collector');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var del = require('del');
 
 var prefixerOptions = {
-    Browserslist: ['last 2 versions']
+    overrideBrowserslist: ['last 2 versions']
 };
 
 // 删除旧版与临时文件
