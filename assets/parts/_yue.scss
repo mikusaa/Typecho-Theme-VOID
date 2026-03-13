@@ -6,7 +6,10 @@
  * Copyright (c) 2013 - 2017 by Hsiaoming Yang.
  */
 
- .yue {
+@use "sass:meta";
+@use "./var" as *;
+
+.yue {
     font: 400 18px/1.75 $void-font-default;
     [fontsize="1"] & {
         font-size: 14px;
@@ -321,7 +324,7 @@
     }
 }
 
-@import "./prism";
+@include meta.load-css("./prism");
 
 .yue pre tt {
     border: none;

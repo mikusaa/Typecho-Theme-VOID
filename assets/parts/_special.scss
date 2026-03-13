@@ -1,3 +1,5 @@
+@use "./var" as *;
+
 main {
     div.app-landscape {
         .mask {

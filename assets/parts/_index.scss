@@ -1,3 +1,5 @@
+@use "./var" as *;
+
 main{
     flex: 1;
     /* 普通模式下使用background来控制主题色 */

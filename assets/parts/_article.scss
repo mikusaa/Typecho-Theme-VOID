@@ -1,4 +1,5 @@
-@import "./yue";
+@use "./var" as *;
+@use "./yue";
 
 section#post {
     .post-pager {

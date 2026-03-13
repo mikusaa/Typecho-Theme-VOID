@@ -5,8 +5,10 @@
 * version: 2019-01-15 0.1
 */
 
-@import "parts/normalize";
-@import "parts/var";
+@use "sass:meta";
+@use "parts/var" as *;
+
+@include meta.load-css("parts/normalize");
 
 // 缺省定义
 html{
@@ -750,11 +752,11 @@ body.theme-dark .clipboard {
     color: white;
 }
 
-@import "parts/header";
-@import "parts/index";
-@import "parts/article";
-@import "parts/archive";
-@import "parts/comments";
-@import "parts/footer";
-@import "parts/special";
-@import "parts/voidicon"
+@include meta.load-css("parts/header");
+@include meta.load-css("parts/index");
+@include meta.load-css("parts/article");
+@include meta.load-css("parts/archive");
+@include meta.load-css("parts/comments");
+@include meta.load-css("parts/footer");
+@include meta.load-css("parts/special");
+@include meta.load-css("parts/voidicon");
