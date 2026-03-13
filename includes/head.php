@@ -56,7 +56,7 @@ if (isset($_POST['void_action'])) {
     <meta name="twitter:site" content="@<?php echo $setting['twitterId']; ?>" />
     <meta name="twitter:creator" content="@<?php echo $setting['twitterId']; ?>" />
     <meta name="twitter:image" content="<?php echo $banner; ?>" />
-    <?php $this->header('commentReply=&description=&'); ?>
+    <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle.css');?>">

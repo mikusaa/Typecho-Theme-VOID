@@ -30,7 +30,7 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
     <section id="comments" class="container">
         <!--评论框-->
         <?php if($this->allow('comment')): ?>
-            <?php $this->header('commentReply=1&description=0&keywords=0&generator=0&template=0&pingback=0&xmlrpc=0&wlw=0&rss2=0&rss1=0&antiSpam=0&atom'); ?>
+            <?php $this->header('commentReply=1&description=0&keywords=0&generator=0&template=0&pingback=0&xmlrpc=0&wlw=0&rss2=0&rss1=0&antiSpam=0&atom&social=0'); ?>
             <div id="<?php $this->respondId(); ?>" class="respond">
                 <div class="cancel-comment-reply" role=button>
                     <?php $comments->cancelReply(); ?>
