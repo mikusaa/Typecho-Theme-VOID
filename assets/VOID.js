@@ -129,7 +129,13 @@ var VOID_Content = {
     },
 
     pangu: function () {
-        pangu.spacingElementByTagName('p');
+        if (typeof pangu === 'undefined' || typeof pangu.spacingNode !== 'function') {
+            return;
+        }
+
+        $.each($('p'), function (index, item) {
+            pangu.spacingNode(item);
+        });
     },
 
     math: function () {
