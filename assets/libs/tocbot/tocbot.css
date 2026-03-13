@@ -38,6 +38,10 @@ a.toc-link {
 	max-height: 0
 }
 
+.is-collapsed:has(:focus) {
+	max-height: 1000px;
+}
+
 .is-position-fixed {
 	position: fixed !important;
 	top: 0
