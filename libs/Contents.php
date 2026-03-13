@@ -11,6 +11,11 @@
 Class Contents
 {
     /**
+     * 文章图集 class
+     */
+    static private $photoSetClass = 'photos';
+
+    /**
      * 根据 cid 返回文章对象
      * 
      * @return Widget_Abstract_Contents
@@ -75,20 +80,77 @@ Class Contents
     }
 
     /**
+     * 获取当前过滤链中的文本
+     *
+     * @return string|null
+     */
+    static private function getFilteredText($data, $last)
+    {
+        return null !== $last ? $last : $data;
+    }
+
+    /**
+     * 当前是否为 feed 输出
+     */
+    static private function isFeedContext($widget)
+    {
+        if (!is_object($widget) || !isset($widget->parameter)) {
+            return false;
+        }
+
+        return $widget->parameter->__get('type') == 'feed'
+            || (bool) $widget->parameter->__get('isFeed');
+    }
+
+    /**
+     * 净化 feed 内容中的主题样式和交互属性
+     */
+    static private function sanitizeFeedHtml($content)
+    {
+        $content = preg_replace_callback(
+            '/<a\b([^>]*)>\s*<div\b[^>]*class="board-thumb"[^>]*><\/div>\s*<div\b[^>]*class="board-title"[^>]*>(.*?)<\/div>\s*<\/a>/is',
+            function ($matches) {
+                $href = '';
+                if (preg_match('/\bhref="([^"]+)"/i', $matches[1], $hrefMatches)) {
+                    $href = $hrefMatches[1];
+                }
+
+                return '<p><a href="' . $href . '">' . $matches[2] . '</a></p>';
+            },
+            $content
+        );
+
+        $content = preg_replace('/<div class="board-list link-list">\s*(.*?)\s*<\/div>/is', '$1', $content);
+        $content = preg_replace('/<div class="photos(?: large)?">(.*?)<\/div>/is', '$1', $content);
+        $content = preg_replace('/\s+no-pjax(?=[\s>])/i', '', $content);
+        $content = preg_replace('/\s+(?:class|style|loading|data-[a-z0-9_-]+)="[^"]*"/i', '', $content);
+        return $content;
+    }
+
+    /**
      * 内容解析点钩子
      * 目录解析移至前端完成
      */
     static public function contentEx($data, $widget, $last)
     {
-        $text = empty($last)?$data:$last;
-        if ($widget instanceof Widget_Archive) {
-            $text = self::parseRuby($text);
-            $text = self::parseFancyBox($text, $widget->parameter->__get('type') == 'feed');
-            $text = self::parseBiaoQing($text);
-            $text = self::parsePhotoSet($text);
-            $text = self::parseNotice($text);
+        $text = self::getFilteredText($data, $last);
+        if (!is_string($text) || $text === '') {
+            return $text;
+        }
+
+        $isFeedContext = self::isFeedContext($widget);
+        $text = self::parseRuby($text);
+        $text = self::parseFancyBox($text, $isFeedContext);
+        $text = self::parseBiaoQing($text);
+        $text = self::parsePhotoSet($text);
+        $text = self::parseNotice($text);
+
+        if ($isFeedContext) {
+            $text = self::sanitizeFeedHtml($text);
+        } else {
             $text = self::parseHeader($text);
         }
+
         return $text;
     }
 
@@ -97,15 +159,18 @@ Class Contents
      */
     static public function excerptEx($data, $widget, $last)
     {
-        $text = empty($last)?$data:$last;
-        if ($widget instanceof Widget_Archive) {
-            $text = self::parseRuby($text);
-            $text = self::parseBiaoQing($text);
-            $text = self::parseNotice($text);
-            // 去除照片集标记
-            $text = str_replace('[photos]', '', $text);
-            $text = str_replace('[/photos]', '', $text);
+        $text = self::getFilteredText($data, $last);
+        if (!is_string($text) || $text === '') {
+            return $text;
         }
+
+        $text = self::parseRuby($text);
+        $text = self::parseBiaoQing($text);
+        $text = self::parseNotice($text);
+        // Typecho 1.3 的 excerpt 基于 content 生成，需要额外清理已渲染图集
+        $text = preg_replace('/<div class="photos(?: large)?">.*?<\/div>/is', '', $text);
+        $text = str_replace('[photos]', '', $text);
+        $text = str_replace('[/photos]', '', $text);
         return $text;
     }
 
@@ -139,10 +204,10 @@ Class Contents
      */
     static public function parseNotice($content)
     {
-        $reg='/\[notice.*?\](.*?)\[\/notice\]/s';
-        $rp='<p class="notice">$1</p>';
-        $new=preg_replace($reg,$rp,$content);
-        return $new;
+        $reg = '/<p>\s*\[notice(?:[^\]]*)\](.*?)\[\/notice\]\s*<\/p>/is';
+        $content = preg_replace($reg, '<p class="notice">$1</p>', $content);
+        $reg = '/\[notice(?:[^\]]*)\](.*?)\[\/notice\]/is';
+        return preg_replace($reg, '<p class="notice">$1</p>', $content);
     }
 
     /**
@@ -153,22 +218,9 @@ Class Contents
     static public function parsePhotoSet($content)
     {
         $setting = $GLOBALS['VOIDSetting'];
-
-        // 清除无用 tag
-        $reg = '/\[photos(.*?)\/photos\]/s';
-        $new = preg_replace_callback($reg, array('Contents', 'parsePhotoSetCallBack'), $content);
-        $reg='/<p>\[photos.*?\](.*?)\[\/photos\]<\/p>/s';
-        $rp='';
-
-        if($setting['largePhotoSet']) {
-            $rp = '<div class="photos large">$1</div>';
-        }
-        else {
-            $rp = '<div class="photos">$1</div>';
-        }
-
-        $new=preg_replace($reg, $rp, $new);
-        return $new;
+        self::$photoSetClass = $setting['largePhotoSet'] ? 'photos large' : 'photos';
+        $reg = '/(?:<p>\s*)?\[photos(?:[^\]]*)\](.*?)(?:\[\/photos\])(?:\s*<\/p>)?/is';
+        return preg_replace_callback($reg, array('Contents', 'parsePhotoSetCallBack'), $content);
     }
 
     /**
@@ -178,7 +230,11 @@ Class Contents
      */
     private static function parsePhotoSetCallBack($match)
     {
-        return '[photos'. str_replace(['<br>', '<p>', '</p>'], '', $match[1]) .'/photos]';
+        $content = preg_replace('/<br\s*\/?>/i', '', $match[1]);
+        $content = str_replace(array('<p>', '</p>'), '', $content);
+        $content = trim($content);
+
+        return '<div class="' . self::$photoSetClass . '">' . $content . '</div>';
     }
 
     /**
@@ -371,6 +427,10 @@ Class Contents
      */
     static public function markdown($text)
     {
+        if (!is_string($text) || $text === '') {
+            return $text;
+        }
+
         // 去除换行
         $reg = '/\[links.*?\](.*?)\[\/links\]/s';
         $text = preg_replace_callback($reg, array('Contents', 'parseBoardCallback1'), $text);
@@ -412,11 +472,11 @@ Class Contents
      */
     static function parseBoardCallback2($matchs)
     {
-        $text = '<div class="board-list link-list">%boards%</div>';
+        $text = "\n\n<div class=\"board-list link-list\">%boards%</div>\n\n";
 
         $reg='/\[(.*?)\]\((.*?)\)\+\((.*?)\)/s';
         $rp = '<a target="_blank" href="$2" class="board-item link-item"><div class="board-thumb" data-thumb="$3"></div><div class="board-title">$1</div></a>';
-        $boards = preg_replace($reg,$rp,$matchs[1]);
+        $boards = trim(preg_replace($reg, $rp, $matchs[1]));
 
         return  str_replace('%boards%', $boards, $text);
     }
@@ -428,10 +488,9 @@ Class Contents
      */
     static public function parseRuby($string)
     {
-        $reg='/\{\{(.*?):(.*?)\}\}/s';
-        $rp='<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>';
-        $new=preg_replace($reg,$rp,$string);
-        return $new;
+        $reg = '/\{\{(.+?):(.+?)\}\}/us';
+        $rp = '<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>';
+        return preg_replace($reg, $rp, $string);
     }
 
     /**

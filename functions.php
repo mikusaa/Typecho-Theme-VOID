@@ -18,23 +18,95 @@ require_once('libs/Utils.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
 
+/**
+ * 统一 Typecho 1.2 / 1.3 的插件句柄格式，避免别名导致重复注册。
+ */
+function VOID_normalizePluginHandle($handle)
+{
+    if (defined('__TYPECHO_CLASS_ALIASES__')) {
+        $alias = array_search('\\' . ltrim($handle, '\\'), __TYPECHO_CLASS_ALIASES__, true);
+        if (false !== $alias) {
+            $handle = $alias;
+        }
+    }
+
+    if (class_exists('Typecho\\Common')) {
+        return Typecho\Common::nativeClassName($handle);
+    }
+
+    return trim(str_replace('\\', '_', $handle), '_');
+}
+
+/**
+ * 为内容解析相关 hook 同时兼容旧版别名和 1.3 命名空间类。
+ */
+function VOID_registerContentsHook($component, $callback)
+{
+    $targets = array('Widget_Abstract_Contents');
+    if (class_exists('Widget\Base\Contents')) {
+        $targets[] = 'Widget\Base\Contents';
+    }
+
+    $registered = array();
+    foreach ($targets as $target) {
+        $normalized = VOID_normalizePluginHandle($target);
+        if (isset($registered[$normalized])) {
+            continue;
+        }
+
+        Typecho_Plugin::factory($target)->{$component} = $callback;
+        $registered[$normalized] = true;
+    }
+}
+
+/**
+ * 清理当前文章已缓存的计算字段，避免 Typecho 1.3 在主题 hook 注册前缓存旧内容。
+ */
+function VOID_refreshArchiveComputedFields($archive)
+{
+    if (!($archive instanceof Widget_Archive) || !$archive->have()) {
+        return;
+    }
+
+    try {
+        $reflection = new ReflectionObject($archive);
+        while ($reflection && !$reflection->hasProperty('row')) {
+            $reflection = $reflection->getParentClass();
+        }
+
+        if ($reflection && $reflection->hasProperty('row')) {
+            $rowProperty = $reflection->getProperty('row');
+            $rowProperty->setAccessible(true);
+            $row = $rowProperty->getValue($archive);
+
+            if (is_array($row)) {
+                unset($row['#content'], $row['#excerpt'], $row['#plainExcerpt']);
+                $rowProperty->setValue($archive, $row);
+            }
+        }
+    } catch (Exception $e) {
+    }
+
+    $archive->archiveDescription = $archive->plainExcerpt;
+}
+
 Typecho_Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');
 Typecho_Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addButton');
 // 为防止友链解析与 Markdown 冲突，重写 Markdown 函数
-// 兼容 Typecho 1.3：按能力选择单一路径注册，避免同一 hook 重复注册
-$voidContentsHookTarget = class_exists('Widget\Base\Contents') ? 'Widget\Base\Contents' : 'Widget_Abstract_Contents';
-Typecho_Plugin::factory($voidContentsHookTarget)->markdown = array('Contents', 'markdown');
-Typecho_Plugin::factory($voidContentsHookTarget)->contentEx = array('Contents', 'contentEx');
-Typecho_Plugin::factory($voidContentsHookTarget)->excerptEx = array('Contents', 'excerptEx');
+VOID_registerContentsHook('markdown', array('Contents', 'markdown'));
+VOID_registerContentsHook('contentEx', array('Contents', 'contentEx'));
+VOID_registerContentsHook('excerptEx', array('Contents', 'excerptEx'));
 
 /**
  * 主题启用
  */
-function themeInit()
+function themeInit($archive = null)
 {
     Helper::options()->commentsAntiSpam = false;
     Helper::options()->commentsMaxNestingLevels = 999;
     Helper::options()->commentsOrder = 'DESC';
+
+    VOID_refreshArchiveComputedFields($archive);
 }
 
 $GLOBALS['VOIDPluginREQ'] = 1.2;
