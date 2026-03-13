@@ -59,11 +59,11 @@ if (isset($_POST['void_action'])) {
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-1e9bf597b1.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-2d4f7eae3e.css');?>">
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-b4f3f815e5.css');?>">
 
     <!--JS-->
-    <script src="<?php Utils::indexTheme('/assets/bundle-header-fe07bf5f02.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
     <script>
     VOIDConfig = {
         PJAX : <?php echo $setting['pjax'] ? 'true' : 'false'; ?>,
