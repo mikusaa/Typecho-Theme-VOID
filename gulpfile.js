@@ -16,7 +16,7 @@ var prefixerOptions = {
 
 // 删除旧版与临时文件
 gulp.task('clean', function () {
-    return del(['build']);
+    return del.deleteAsync(['build']);
 });
 
 // 依赖 CSS minify、打包，除 MathJax

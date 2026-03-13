@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "del": "^5.1.0",
+    "del": "^8.0.1",
     "eslint": "^7.32.0",
     "gulp": "^5.0.1",
     "gulp-autoprefixer": "^8.0.0",
@@ -12,6 +12,6 @@
     "gulp-uglify": "^3.0.2",
     "jsonfile": "^6.1.0",
     "pre-commit": "^1.2.2",
-    "sass": "^1.97.3"
+    "sass": "^1.98.0"
   }
 }
