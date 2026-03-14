@@ -364,11 +364,11 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             /** 截取评论 */
             $this->stack = array_slice($this->stack,
                 ($this->_currentPage - 1) * $this->options->commentsPageSize, $this->options->commentsPageSize);
-            
-            /** 评论置位 */
-            $this->row = current($this->stack);
-            $this->length = count($this->stack);
         }
+        
+        /** 评论置位 */
+        $this->length = count($this->stack);
+        $this->row = $this->length > 0 ? current($this->stack) : array();
         
         reset($this->stack);
     }
