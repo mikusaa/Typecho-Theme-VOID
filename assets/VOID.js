@@ -39,7 +39,7 @@ var VOID_Content = {
             tocbot.init(toc_option);
             $.each($('.toc-link'), function (i, item) {
                 $(item).click(function () {
-                    VOID_SmoothScroller.scrollTo($(this).attr('href'), -60);
+                    VOID_Ui.scrollToWithHeader($(this).attr('href'));
                     if (window.innerWidth < 1200) {
                         TOC.close();
                     }
@@ -644,7 +644,7 @@ var AjaxComment = {
         $(AjaxComment.textarea).val('');
         $(AjaxComment.submitBtn).attr('disabled', false);
         if ($('#comment-' + AjaxComment.newID).length > 0) {
-            VOID_SmoothScroller.scrollTo($('#comment-' + AjaxComment.newID).offset().top, -60);
+            VOID_Ui.scrollToWithHeader('#comment-' + AjaxComment.newID);
             $('#comment-' + AjaxComment.newID).fadeTo(500, 1);
         }
         $('.comment-num .num').html(parseInt($('.comment-num .num').html()) + 1);

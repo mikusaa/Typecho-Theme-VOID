@@ -44,6 +44,18 @@ VOID_Util = {
         return $(el).has(e.target).length || $(el).get(0) === e.target;
     },
 
+    getHashTarget: function (hash) {
+        if (typeof(hash) != 'string' || hash == '' || hash == '#') return null;
+        var id = hash.charAt(0) == '#' ? hash.slice(1) : hash;
+        if (id == '') return null;
+        try {
+            id = decodeURIComponent(id);
+        } catch (err) {
+            console.log(err);
+        }
+        return document.getElementById(id);
+    },
+
     getDeviceState: function (element) {
         var zIndex;
         if (window.getComputedStyle) {
@@ -261,10 +273,68 @@ VOID_Ui = {
         }
     },
 
+    resolveScrollTarget: function (target) {
+        if (target === null) return null;
+        if (typeof(target) == 'number') return target;
+        if (typeof(target) == 'object') {
+            return target.getBoundingClientRect().top + document.documentElement.scrollTop;
+        }
+        if (typeof(target) == 'string') {
+            var el = document.querySelector(target);
+            if (!el) return null;
+            return el.getBoundingClientRect().top + document.documentElement.scrollTop;
+        }
+        return null;
+    },
+
+    getHeaderOffset: function (targetTop) {
+        var header = document.querySelector('body>header');
+        if (!header) return 0;
+        if (VOIDConfig.headerMode == 2) return 0;
+
+        var offset = header.getBoundingClientRect().height || 0;
+        var mobileSearchForm = header.querySelector('.mobile-search-form.opened');
+        if (mobileSearchForm) {
+            offset += mobileSearchForm.getBoundingClientRect().height || 0;
+        }
+
+        if (VOIDConfig.headerMode == 0) {
+            var currentTop = document.documentElement.scrollTop || document.body.scrollTop;
+            if (typeof(targetTop) == 'number' && targetTop < currentTop) {
+                return Math.ceil(offset);
+            }
+            if (header.classList.contains('headroom--unpinned')) {
+                return 0;
+            }
+        }
+
+        return Math.ceil(offset);
+    },
+
+    scrollToWithHeader: function (target, extraOffset) {
+        var targetTop = VOID_Ui.resolveScrollTarget(target);
+        if (targetTop === null) return;
+
+        var offset = -VOID_Ui.getHeaderOffset(targetTop);
+        if (typeof(extraOffset) == 'number') {
+            offset += extraOffset;
+        }
+        VOID_SmoothScroller.scrollTo(targetTop, offset);
+    },
+
     checkScrollTop: function () {
         if (VOID_Util.getCookie('void_pos') != null && parseFloat(VOID_Util.getCookie('void_pos')) != -1) {
-            VOID_SmoothScroller.scrollTo(parseFloat(VOID_Util.getCookie('void_pos')), -60);
+            VOID_SmoothScroller.scrollTo(parseFloat(VOID_Util.getCookie('void_pos')));
             VOID_Util.setCookie('void_pos', -1);
+        } else if (window.location.hash) {
+            var hashTarget = VOID_Util.getHashTarget(window.location.hash);
+            if (hashTarget) {
+                setTimeout(function () {
+                    VOID_Ui.scrollToWithHeader(hashTarget);
+                }, 50);
+            } else {
+                VOID_SmoothScroller.stop();
+            }
         } else {
             VOID_SmoothScroller.stop();
         }
