@@ -132,9 +132,24 @@ $setting = $GLOBALS['VOIDSetting'];
         <?php endif; ?>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle-80ae7608fb.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
-        <script src='<?php Utils::indexTheme('/assets/libs/mathjax/2.7.4/MathJax.js'); ?>'></script>
+        <script>
+            window.MathJax = {
+                startup: {
+                    typeset: false
+                },
+                tex: {
+                    inlineMath: [['$', '$'], ['\\(', '\\)']],
+                    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                    processEscapes: true
+                },
+                svg: {
+                    fontCache: 'global'
+                }
+            };
+        </script>
+        <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-511c745708.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-e8046cf35e.js'); ?>"></script>
         <script>
         if($(".OwO").length > 0){
             new OwO({
