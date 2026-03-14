@@ -3,7 +3,7 @@
 if (document.getElementById('void-check-update')) {
     var container = document.getElementById('void-check-update');
     var ajax = new XMLHttpRequest();
-    ajax.open('get', 'https://api.github.com/repos/AlanDecode/Typecho-Theme-VOID/releases/latest');
+    ajax.open('get', 'https://api.github.com/repos/mikusaa/Typecho-Theme-VOID/releases/latest');
     ajax.send();
     ajax.onreadystatechange = function () {
         if (ajax.readyState == 4 && ajax.status == 200) {
