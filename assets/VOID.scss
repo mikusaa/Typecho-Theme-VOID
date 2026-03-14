@@ -655,7 +655,8 @@ p.notice {
 
 /* 对某些第三方插件的修正 */
 .douban-single{margin: 1rem auto}
-.MathJax_SVG_Display{overflow:hidden;max-width:100%}
+mjx-container[jax="SVG"]{max-width:100%}
+mjx-container[jax="SVG"][display="true"]{overflow-x:auto;overflow-y:hidden}
 .aplayer .aplayer-list ol{-webkit-overflow-scrolling:touch}
 .theme-dark .aplayer {
     color: $td-textColor;
@@ -695,10 +696,6 @@ p.notice {
         background-color: #656565!important;
     }
 }
-#MathJax_Message {
-    display: none!important;
-}
-
 iframe {
     width: 100%;
 }

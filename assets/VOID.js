@@ -318,16 +318,38 @@ var VOID_Content = {
     },
 
     math: function () {
-        if (VOIDConfig.enableMath && typeof MathJax !== 'undefined') {
-            MathJax.Hub.Config({
-                tex2jax: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
-            });
-            MathJax.Hub.Queue(['Typeset', MathJax.Hub]);
+        if (!VOIDConfig.enableMath || typeof MathJax === 'undefined') {
+            return;
         }
+
+        var container = document.getElementById('pjax-container') || document.body;
+        if (!MathJax.startup || !MathJax.startup.promise || typeof MathJax.typesetPromise !== 'function') {
+            return;
+        }
+
+        MathJax.startup.promise = MathJax.startup.promise
+            .then(function () {
+                if (typeof MathJax.typesetClear === 'function') {
+                    MathJax.typesetClear([container]);
+                }
+                return MathJax.typesetPromise([container]);
+            })
+            .catch(function (err) {
+                console.error('MathJax typeset failed:', err);
+            });
     },
 
     hyphenate: function () {
-        $('div.articleBody p, div.articleBody blockquote').hyphenate('en-us');
+        $.each($('div.articleBody p, div.articleBody blockquote'), function (index, item) {
+            var text = item.textContent || '';
+
+            // 避免在 MathJax 解析前把 TeX 命令打断（如 \begin 被插入软连字符）
+            if (/\\begin\{|\\\(|\\\[|(^|[^\\])\$\$|(^|[^\\])\$/.test(text)) {
+                return;
+            }
+
+            $(item).hyphenate('en-us');
+        });
     }
 };
 
