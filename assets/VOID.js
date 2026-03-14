@@ -9,6 +9,10 @@
 console.log(' %c Theme VOID %c https://blog.imalan.cn/archives/247/ ', 'color: #fadfa3; background: #23b7e5; padding:5px;', 'background: #1c2b36; padding:5px;');
 
 var VOID_Content = {
+    littlefootInstance: null,
+    littlefootTouchClickGuardBound: false,
+    littlefootLastTouchAt: 0,
+
     countWords: function () {
         if ($('#totalWordCount').length) {
             var total = 0;
@@ -123,15 +127,190 @@ var VOID_Content = {
         Prism.highlightAll();
     },
 
+    restoreLittlefootReferenceIds: function () {
+        $.each($('[data-lf-original-id]'), function (i, item) {
+            var originalId = $(item).attr('data-lf-original-id');
+            if (typeof originalId !== 'undefined' && originalId !== '') {
+                $(item).attr('id', originalId);
+            }
+            $(item).removeAttr('data-lf-original-id');
+        });
+    },
+
+    bridgeLittlefootBacklinks: function () {
+        $.each($('.littlefoot__button[id^="lf-"]'), function (i, item) {
+            var originalId = item.id.replace(/^lf-/, '');
+            if (originalId === '') {
+                return;
+            }
+
+            var printRef = document.getElementById(originalId);
+            if (printRef && printRef.classList.contains('littlefoot--print')) {
+                $(printRef).attr('data-lf-original-id', originalId);
+                $(printRef).attr('id', 'lf-print-' + originalId);
+            }
+
+            $(item).attr('id', originalId);
+        });
+    },
+
+    isPanguSpaceElement: function (node) {
+        if (!node || node.nodeType !== 1 || !node.tagName) {
+            return false;
+        }
+
+        if (node.tagName.toLowerCase() !== 'pangu') {
+            return false;
+        }
+
+        return /^\s*$/.test(node.textContent || '');
+    },
+
+    cleanupPanguAroundNode: function (node) {
+        if (!node || !node.parentNode) {
+            return;
+        }
+
+        var previousNode = node.previousSibling;
+        if (this.isPanguSpaceElement(previousNode)) {
+            previousNode.parentNode.removeChild(previousNode);
+        }
+
+        var nextNode = node.nextSibling;
+        if (this.isPanguSpaceElement(nextNode)) {
+            nextNode.parentNode.removeChild(nextNode);
+        }
+    },
+
+    cleanupLittlefootPanguSpacing: function () {
+        var self = this;
+
+        $.each($('.littlefoot'), function (i, item) {
+            self.cleanupPanguAroundNode(item);
+        });
+
+        $.each($('sup.littlefoot--print, a.littlefoot--print'), function (i, item) {
+            self.cleanupPanguAroundNode(item);
+        });
+    },
+
+    setLittlefootActiveState: function (button, isActive) {
+        if (!button || typeof button.closest !== 'function') {
+            return;
+        }
+
+        var footnoteHost = button.closest('.littlefoot');
+        if (!footnoteHost) {
+            return;
+        }
+
+        if (isActive) {
+            footnoteHost.classList.add('littlefoot--active');
+        } else {
+            footnoteHost.classList.remove('littlefoot--active');
+        }
+    },
+
+    clearLittlefootActiveState: function () {
+        $.each($('.littlefoot.littlefoot--active'), function (i, item) {
+            item.classList.remove('littlefoot--active');
+        });
+    },
+
+    prepareLittlefootMobileCompat: function () {
+        if (typeof window.AbortController !== 'function') {
+            window.AbortController = function () {
+                this.signal = undefined;
+                this.abort = function () {};
+            };
+        }
+
+        if (this.littlefootTouchClickGuardBound || !('ontouchstart' in window)) {
+            return;
+        }
+
+        this.littlefootTouchClickGuardBound = true;
+
+        document.addEventListener('touchend', function (event) {
+            var target = event.target;
+            if (!target || typeof target.closest !== 'function') {
+                return;
+            }
+            if (!target.closest('[data-footnote-button]')) {
+                return;
+            }
+            VOID_Content.littlefootLastTouchAt = Date.now();
+        }, true);
+
+        document.addEventListener('click', function (event) {
+            var target = event.target;
+            if (!target || typeof target.closest !== 'function') {
+                return;
+            }
+            if (!target.closest('[data-footnote-button]')) {
+                return;
+            }
+            if (Date.now() - VOID_Content.littlefootLastTouchAt > 600) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') {
+                event.stopImmediatePropagation();
+            }
+        }, true);
+    },
+
     bigfoot: function () {
-        // 初始化注脚
-        $.bigfoot({ actionOriginalFN: 'ignore' });
+        this.restoreLittlefootReferenceIds();
+        this.clearLittlefootActiveState();
+
+        if (this.littlefootInstance && typeof this.littlefootInstance.unmount === 'function') {
+            this.littlefootInstance.unmount();
+            this.littlefootInstance = null;
+        }
+
+        this.prepareLittlefootMobileCompat();
+
+        if (typeof littlefoot === 'undefined' || typeof littlefoot.littlefoot !== 'function') {
+            return;
+        }
+
+        this.littlefootInstance = littlefoot.littlefoot({
+            allowDuplicates: true,
+            activateCallback: function (popover, button) {
+                VOID_Content.setLittlefootActiveState(button, true);
+            },
+            dismissCallback: function (popover, button) {
+                VOID_Content.setLittlefootActiveState(button, false);
+            }
+        });
+
+        this.bridgeLittlefootBacklinks();
+        this.cleanupLittlefootPanguSpacing();
     },
 
     pangu: function () {
         if (typeof pangu === 'undefined' || typeof pangu.spacingNode !== 'function') {
             return;
         }
+
+        var footnoteAnchorPattern = /(fn|footnote|note)[:\-_\d]/i;
+        $.each($('a[href*="#"]'), function (index, item) {
+            var hrefAttr = item.getAttribute('href') || '';
+            var relAttr = item.getAttribute('rel') || '';
+            if (!(hrefAttr + relAttr).match(footnoteAnchorPattern)) {
+                return;
+            }
+
+            item.classList.add('no-pangu-spacing');
+            if (typeof item.closest === 'function') {
+                var supNode = item.closest('sup');
+                if (supNode) {
+                    supNode.classList.add('no-pangu-spacing');
+                }
+            }
+        });
 
         $.each($('p'), function (index, item) {
             pangu.spacingNode(item);
