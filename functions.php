@@ -132,7 +132,7 @@ function themeConfig($form)
 
     echo '<p id="void-check-update" class="notice">正在检查更新……</p>';
     echo '<script>var VOIDVersion='.$GLOBALS['VOIDVersion'].'</script>';
-    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-143d915008.js"></script>';
+    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-e2374266c6.js"></script>';
 
     $defaultBanner = new Typecho_Widget_Helper_Form_Element_Text('defaultBanner', null, '', '首页顶部大图', '可以填写随机图 API。');
     $form->addInput($defaultBanner);
