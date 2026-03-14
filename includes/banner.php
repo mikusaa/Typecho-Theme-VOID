@@ -67,7 +67,7 @@ if($this->is('post') || $this->is('page')) {
                     } else{ ?>
                         <span><a href="<?php $this->author->permalink(); ?>"><?php $this->author(); ?></a></span>&nbsp;•&nbsp;
                         <time datetime="<?php echo date('c', $this->created); ?>"><?php echo date('Y-m-d', $this->created); ?></time>
-                        &nbsp;•&nbsp;<a no-pjax target="_self" href="javascript:void(0);" onclick="VOID_SmoothScroller.scrollTo('#comments', -60)"><?php $this->commentsNum(); ?>&nbsp;评论</a>
+                        &nbsp;•&nbsp;<a no-pjax target="_self" href="javascript:void(0);" onclick="VOID_Ui.scrollToWithHeader('#comments')"><?php $this->commentsNum(); ?>&nbsp;评论</a>
                         <?php if($setting['VOIDPlugin']) echo '&nbsp;•&nbsp;<span>'.$this->viewsNum.'&nbsp;阅读</span>'; ?>
                         <?php if($this->user->hasLogin()): ?>
                             <?php if($this->is('post')): ?>

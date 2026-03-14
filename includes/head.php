@@ -59,8 +59,8 @@ if (isset($_POST['void_action'])) {
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-2d4f7eae3e.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-f8aff1d80d.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-fed2945964.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-5aa157c8b6.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
@@ -92,7 +92,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-c6259ac830.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-439f50c348.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
