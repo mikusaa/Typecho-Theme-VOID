@@ -173,10 +173,16 @@ $setting = $GLOBALS['VOIDSetting'];
                 if (item && item.length) {
                     $('.ins-close').click(); // 关闭搜索框
                     let url = item.attr('data-url'); // 获取目标页面 URL
-                    $.pjax({url: url, 
-                        container: '#pjax-container',
-                        fragment: '#pjax-container',
-                        timeout: 8000, }); // 发起一次 PJAX 请求
+                    if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
+                        window.VoidPjax.visit({
+                            url: url,
+                            container: '#pjax-container',
+                            fragment: '#pjax-container',
+                            timeout: 8000
+                        }); // 发起一次 PJAX 请求
+                    } else {
+                        window.open(url, '_self');
+                    }
                 }
             }
             <?php endif; ?>

@@ -101,11 +101,13 @@ var VOID_Content = {
                     $(item).addClass('pjax');
                 }
             });
-            $(document).pjax('a.pjax', {
-                container: '#pjax-container',
-                fragment: '#pjax-container',
-                timeout: 8000
-            });
+            if (window.VoidPjax && typeof window.VoidPjax.bind === 'function') {
+                window.VoidPjax.bind('a.pjax', {
+                    container: '#pjax-container',
+                    fragment: '#pjax-container',
+                    timeout: 8000
+                });
+            }
         }
     },
 
@@ -483,12 +485,12 @@ var VOID = {
             return;
         }
         var t = VOIDConfig.searchBase + c;
-        if (VOIDConfig.PJAX) {
-            $.pjax({
+        if (VOIDConfig.PJAX && window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
+            window.VoidPjax.visit({
                 url: t,
                 container: '#pjax-container',
                 fragment: '#pjax-container',
-                timeout: 8000,
+                timeout: 8000
             });
         } else {
             window.open(t, '_self');
