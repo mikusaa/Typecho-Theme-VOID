@@ -1,5 +1,34 @@
 # Change log | 更新日志
 
+**🍰 2026-03-15 Version 3.5.3**
+
+* 适配：[Typecho 1.3] 统一内容解析 Hook 挂载，兼容旧别名与新命名空间类，修复 1.3 下解析器可能失效的问题。
+* 适配：[Typecho 1.3] 新增归档计算字段刷新逻辑，避免主题初始化时序导致 `#content/#excerpt/#plainExcerpt` 复用旧缓存。
+* 适配：[Typecho 1.3] 评论组件对齐 1.3 行为：顶层判定、层级上限、`replyTo/commentPage` 读取方式、待审核评论可见范围。
+* 适配：[PHP 8] 修复 `parse_url`、`strpos` 等在严格模式下的类型兼容问题，减少警告与潜在崩溃点。
+* 修复：[内容解析] 修复 `[notice]`、`[photos]` 在正文/摘要/Feed 链路中的解析不一致问题。
+* 修复：[Feed] 输出时清理主题交互属性与冗余样式，降低阅读器内无效标记影响。
+* 修复：[SEO] 禁用重复社交 Meta 注入，避免描述信息中出现短代码残留。
+* 修复：[安全] 导航自定义链接字段统一 HTML 转义；`ldjson` URL 输出补充转义。
+* 修复：[登录] 修复 PJAX 后访客登录表单 `action` 可能被空响应覆盖导致提交异常的问题。
+* 新增：[代码块] 支持一键复制，并提供非 HTTPS / 旧设备环境下的剪贴板降级方案。
+* 优化：[滚动定位] 统一锚点与评论跳转逻辑为动态头部偏移，兼容移动端搜索栏展开状态。
+* 调整：[脚注] 使用 littlefoot 完整替换 bigfoot，补齐暗色样式、触屏兼容、PJAX 重挂载与状态同步。
+* 调整：[MathJax] 从 2.7.4 迁移到 4.1.1，改用 `tex-svg` + `typesetPromise` 流程，兼容 PJAX 场景公式重排。
+* 优化：[MathJax] 精简运行时资源包，仅保留主题实际使用模块，降低资源体积与维护成本。
+* 调整：[PJAX] 移除 `jquery.pjax`，新增原生 `VoidPjax` 实现，并保持 `pjax:*` 事件兼容。
+* 调整：[PJAX] 搜索结果跳转（ExSearch）与主题内跳转统一接入 `VoidPjax.visit`，并保留失败回退整页刷新。
+* 调整：[PJAX] 取消基于 `let/const` 的隐式脚本去重，改为显式一次性脚本标记（`data-pjax-once` / `data-void-pjax="once"`）。
+* 升级：[依赖] jQuery 3.7.1、Prism 1.30.0、fancybox 3.5.7、pangu 7.2.1、Headroom/tocbot 最新兼容版本。
+* 调整：[排版] pangu 切换新版 API，并规避脚注、数学公式周边的错误插空格问题。
+* 升级：[构建] 迁移 Sass 模块语法（`@use`/`meta.load-css`），升级 gulp-sass、sass、del、autoprefixer、rev。
+* 修复：[构建] 修复 Gulp 5 下二进制资源复制损坏问题（WebP/字体等），并调整 clean/move 任务实现。
+* 调整：[资源] 构建产物同步预览图为 `.webp`。
+* 调整：[工程] `.gitignore` 增加 `.playwright-cli/`，避免本地调试产物入库。
+* 调整：[维护] 后台检查更新仓库地址同步至 `mikusaa/Typecho-Theme-VOID`。
+* 维护：[版本] 同步主题版本号与文档版本标识至 3.5.3。
+
+
 **🍰 2026-03-10 Version 3.5.2**
 
 * 新增：[归档增强] 归档页新增年度文章发布统计。

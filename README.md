@@ -1,6 +1,6 @@
 
 
-# Typecho Theme VOID 3.5.2
+# Typecho Theme VOID 3.5.3
 
 > ✏ 一款简洁优雅的 Typecho 主题
 
@@ -208,6 +208,17 @@ gulp build
 </details>
 
 ## 更新日志
+
+**🍰 2026-03-15 Version 3.5.3**
+
+* 适配：[Typecho 1.3 / PHP 8] 全面补齐内容解析、评论链路与严格模式兼容。
+* 调整：[PJAX] 移除 `jquery.pjax`，切换为原生 `VoidPjax`，并修复访客登录表单在 PJAX 后的 action 刷新异常。
+* 调整：[MathJax] 迁移到 4.1.1 并精简运行资源，兼容 PJAX 场景公式重排。
+* 调整：[脚注] 使用 littlefoot 完整替换 bigfoot，增强移动端与暗色模式兼容。
+* 升级：[依赖] 升级 jQuery / Prism / fancybox / pangu / Headroom / tocbot 等前端库。
+* 升级：[构建] 迁移 Sass 模块语法并升级 Gulp 生态依赖，修复二进制资源复制损坏问题。
+* 维护：[版本] 同步版本号与更新文档，完整明细请查看 `change-log.md` 中 3.5.3 条目。
+
 
 **🍰 2026-03-10 Version 3.5.2**
 

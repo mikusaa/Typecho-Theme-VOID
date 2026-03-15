@@ -12,7 +12,7 @@ $setting = $GLOBALS['VOIDSetting'];
 
 if (isset($_POST['void_action'])) {
     if ($_POST['void_action'] == 'getLoginAction') {
-        if ($this->request->isPost() && Typecho_Cookie::get('__typecho_uid')) {
+        if ($this->request->isPost()) {
             echo $this->options->loginAction;
         }
         exit;
@@ -92,7 +92,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-439f50c348.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-c37340eacf.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
