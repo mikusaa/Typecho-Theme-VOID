@@ -166,7 +166,7 @@ header{
                     outline: none;
                     background: none;
                     border: solid 1px $headerTextColor;
-                    border-radius: 1rem;
+                    border-radius: 0;
                     color: inherit;
                     &:focus{
                         width: 11rem;

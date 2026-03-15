@@ -194,11 +194,11 @@
 }
 
 .yue table {
-    width: 100%;
+    width: max-content;
     max-width: 100%;
     border-collapse: collapse;
     border-spacing: 0;
-    margin-bottom: 1.5em;
+    margin: 0 auto 1.5em;
     font-size: 0.96em;
     box-sizing: border-box;
     display: block;
