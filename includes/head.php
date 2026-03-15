@@ -12,7 +12,7 @@ $setting = $GLOBALS['VOIDSetting'];
 
 if (isset($_POST['void_action'])) {
     if ($_POST['void_action'] == 'getLoginAction') {
-        if ($this->request->isPost() && Typecho_Cookie::get('__typecho_uid')) {
+        if ($this->request->isPost()) {
             echo $this->options->loginAction;
         }
         exit;

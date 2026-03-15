@@ -421,8 +421,10 @@ VOID_Ui = {
                 url: window.location.href,
                 data: {void_action: 'getLoginAction'},
                 success: function (data) {
-                    $('form#loggin-form').attr('action', data);
-                    $('#loggin-form').removeClass('need-refresh');
+                    if (typeof data == 'string' && data.trim() != '') {
+                        $('form#loggin-form').attr('action', data.trim());
+                        $('#loggin-form').removeClass('need-refresh');
+                    }
                 },
                 error: function () {
                     VOID.alert('请求登陆参数错误。请在刷新后尝试登陆。');

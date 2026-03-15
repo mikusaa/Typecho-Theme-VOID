@@ -17,7 +17,7 @@
         options: null,
         requestId: 0,
         controller: null,
-        lexicalScriptCache: {}
+        onceScriptCache: {}
     };
 
     function extend(base, extra) {
@@ -154,23 +154,57 @@
         return String(text || '').replace(/^\s+|\s+$/g, '');
     }
 
-    function hasLexicalDeclaration(code) {
-        return /(^|[\n\r;{}])\s*(let|const)\s+[A-Za-z_$]/.test(code);
-    }
-
-    function shouldSkipInlineScript(code) {
-        var scriptCode = trimText(code);
-        if (scriptCode === '' || !hasLexicalDeclaration(scriptCode)) {
+    function isOnceScript(script) {
+        if (!script) {
             return false;
         }
-        if (runtime.lexicalScriptCache[scriptCode]) {
+
+        var onceFlag = script.getAttribute('data-pjax-once');
+        if (onceFlag === '' || onceFlag === '1' || onceFlag === 'true') {
             return true;
         }
-        runtime.lexicalScriptCache[scriptCode] = true;
+
+        return script.getAttribute('data-void-pjax') === 'once';
+    }
+
+    function getOnceScriptKey(script) {
+        if (script.src) {
+            var src = normalizeUrl(script.src || script.getAttribute('src'));
+            return src ? 'src:' + src : '';
+        }
+
+        var explicitKey = trimText(script.getAttribute('data-pjax-once-id'));
+        if (explicitKey !== '') {
+            return 'id:' + explicitKey;
+        }
+
+        var scriptCode = trimText(script.textContent || '');
+        if (scriptCode === '') {
+            return '';
+        }
+
+        return 'inline:' + scriptCode;
+    }
+
+    function shouldSkipScript(script) {
+        if (!isOnceScript(script)) {
+            return false;
+        }
+
+        var key = getOnceScriptKey(script);
+        if (key === '') {
+            return false;
+        }
+
+        if (runtime.onceScriptCache[key]) {
+            return true;
+        }
+
+        runtime.onceScriptCache[key] = true;
         return false;
     }
 
-    function rememberLexicalScripts(root) {
+    function rememberOnceScripts(root) {
         if (!root) {
             return;
         }
@@ -178,10 +212,10 @@
         var i;
         for (i = 0; i < scripts.length; i++) {
             var script = scripts[i];
-            if (!isExecutableScript(script) || script.src) {
+            if (!isExecutableScript(script)) {
                 continue;
             }
-            shouldSkipInlineScript(script.textContent || '');
+            shouldSkipScript(script);
         }
     }
 
@@ -194,7 +228,7 @@
                 continue;
             }
 
-            if (!oldScript.src && shouldSkipInlineScript(oldScript.textContent || '')) {
+            if (shouldSkipScript(oldScript)) {
                 continue;
             }
 
@@ -458,7 +492,7 @@
             runtime.bound = true;
         }
 
-        rememberLexicalScripts(document.querySelector(runtime.options.container));
+        rememberOnceScripts(document.querySelector(runtime.options.container));
         ensureHistoryState();
         return true;
     }
