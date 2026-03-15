@@ -130,7 +130,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-80ae7608fb.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-7a4f82109a.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
@@ -149,7 +149,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-e8046cf35e.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-d51d7e3686.js'); ?>"></script>
         <script>
         if($(".OwO").length > 0){
             new OwO({
@@ -173,10 +173,16 @@ $setting = $GLOBALS['VOIDSetting'];
                 if (item && item.length) {
                     $('.ins-close').click(); // 关闭搜索框
                     let url = item.attr('data-url'); // 获取目标页面 URL
-                    $.pjax({url: url, 
-                        container: '#pjax-container',
-                        fragment: '#pjax-container',
-                        timeout: 8000, }); // 发起一次 PJAX 请求
+                    if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
+                        window.VoidPjax.visit({
+                            url: url,
+                            container: '#pjax-container',
+                            fragment: '#pjax-container',
+                            timeout: 8000
+                        }); // 发起一次 PJAX 请求
+                    } else {
+                        window.open(url, '_self');
+                    }
                 }
             }
             <?php endif; ?>
