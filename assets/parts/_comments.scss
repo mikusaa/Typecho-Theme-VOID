@@ -11,10 +11,25 @@
         background: none;
         border-color: rgba(#fff, 0.1)
     }
+
+    &.is-loading {
+        cursor: progress;
+
+        #comments {
+            opacity: 0.68;
+        }
+
+        .pager a,
+        .pager a.is-disabled {
+            pointer-events: none;
+            opacity: 0.45;
+        }
+    }
 }
 
 #comments {
     color: $textColor;
+    transition: opacity 0.2s ease;
     .theme-dark &{
         color: $td-textColor;
     }

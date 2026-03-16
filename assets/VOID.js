@@ -97,8 +97,15 @@ var VOID_Content = {
 
         if (VOIDConfig.PJAX) {
             $.each($('a:not(a[target="_blank"], a[no-pjax])'), function (i, item) {
+                var $item = $(item);
+
                 if (item.hostname == domain) {
-                    $(item).addClass('pjax');
+                    if ($item.is('.comments-container .pager a')) {
+                        $item.removeClass('pjax');
+                        return;
+                    }
+
+                    $item.addClass('pjax');
                 }
             });
             if (window.VoidPjax && typeof window.VoidPjax.bind === 'function') {
@@ -378,6 +385,7 @@ var VOID = {
         VOID_Content.hyphenate();
 
         VOID_Vote.reload();
+        VOID.initOwO();
         AjaxComment.init();
 
         $('body').on('click', function (e) {
@@ -397,6 +405,29 @@ var VOID = {
                 }
             }
         });
+    },
+
+    initOwO: function () {
+        var container = document.getElementsByClassName('OwO')[0];
+        var target = document.getElementsByClassName('input-area')[0];
+
+        if (!container || !target || container.querySelector('.OwO-logo')) {
+            return;
+        }
+
+        new OwO({
+            logo: 'OωO',
+            container: container,
+            target: target,
+            api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
+            position: 'down',
+            width: '400px',
+            maxHeight: '250px'
+        });
+    },
+
+    isMainPjaxRequest: function (options) {
+        return !options || options.container === '#pjax-container';
     },
 
     // PJAX 开始前
@@ -431,20 +462,7 @@ var VOID = {
         loadClipboard();
 
         VOID_Vote.reload();
-
-        // 重载表情
-        if ($('.OwO').length > 0) {
-            new OwO({
-                logo: 'OωO',
-                container: document.getElementsByClassName('OwO')[0],
-                target: document.getElementsByClassName('input-area')[0],
-                api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
-                position: 'down',
-                width: '400px',
-                maxHeight: '250px'
-            });
-        }
-
+        VOID.initOwO();
         AjaxComment.init();
     },
 
@@ -641,6 +659,7 @@ var AjaxComment = {
     commentReply: '.comment-reply',
     commentForm: '#comment-form',
     respond: '.respond',
+    commentPager: '.comments-container .pager a',
     textarea: '#textarea',
     submitBtn: '#comment-submit-button',
     newID: '',
@@ -650,6 +669,60 @@ var AjaxComment = {
     threadPaginationThreshold: 8,
     threadPagerWindow: 5,
     threadFocusPendingId: '',
+
+    isCommentPjaxRequest: function (options) {
+        return !!(options && options.container === '#comments');
+    },
+
+    setCommentPageLoading: function (isLoading) {
+        var $comments = $('#comments');
+        var $container = $comments.closest('.comments-container');
+
+        if ($comments.length === 0 || $container.length === 0) {
+            return;
+        }
+
+        $container.toggleClass('is-loading', isLoading);
+        $comments.toggleClass('is-loading', isLoading);
+        $(AjaxComment.commentPager)
+            .toggleClass('is-disabled', isLoading)
+            .attr('aria-disabled', isLoading ? 'true' : null);
+    },
+
+    bindPager: function () {
+        $(document).off('click', AjaxComment.commentPager);
+        $(document).on('click', AjaxComment.commentPager, function (event) {
+            var href = this.href || $(this).attr('href');
+
+            if (!window.VoidPjax || typeof window.VoidPjax.visit !== 'function' || !href) {
+                return true;
+            }
+
+            event.preventDefault();
+            window.VoidPjax.visit({
+                url: href,
+                container: '#comments',
+                fragment: '#comments',
+                timeout: 8000,
+                scrollTop: false,
+                push: true,
+                target: this
+            });
+            return false;
+        });
+    },
+
+    afterPagePjax: function () {
+        VOID_Content.parseUrl();
+        VOID_Content.highlight();
+        VOID_Vote.reload();
+        VOID.initOwO();
+        AjaxComment.init();
+    },
+
+    endPagePjax: function () {
+        AjaxComment.setCommentPageLoading(false);
+    },
 
     resolveCommentTarget: function ($trigger) {
         var $comment = $trigger.closest('[data-comment-id], .comment-body[id]');
@@ -949,9 +1022,10 @@ var AjaxComment = {
     },
 
     init: function () {
+        AjaxComment.bindPager();
         AjaxComment.bindClick();
         AjaxComment.applyThreadPanels();
-        $(AjaxComment.commentForm).submit(function () { // 提交事件
+        $(AjaxComment.commentForm).off('submit').on('submit', function () { // 提交事件
             $(AjaxComment.submitBtn).attr('disabled', true);
 
             /* 检查 */
@@ -1077,19 +1151,58 @@ var AjaxComment = {
 };
 
 (function () {
+    var resolvePjaxOptions = function (args) {
+        var index;
+
+        for (index = args.length - 1; index >= 0; index--) {
+            if (args[index] && typeof args[index] === 'object' && args[index].container) {
+                return args[index];
+            }
+        }
+
+        return null;
+    };
+
     $(document).ready(function () {
         VOID.init();
         if (VOIDConfig.PJAX) {
             $(document).on('pjax:send', function () {
-                VOID.beforePjax();
+                var options = resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.setCommentPageLoading(true);
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.beforePjax();
+                }
             });
 
             $(document).on('pjax:complete', function () {
-                VOID.afterPjax();
+                var options = resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.afterPagePjax();
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.afterPjax();
+                }
             });
 
             $(document).on('pjax:end', function () {
-                VOID.endPjax();
+                var options = resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.endPagePjax();
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.endPjax();
+                }
             });
         }
     });

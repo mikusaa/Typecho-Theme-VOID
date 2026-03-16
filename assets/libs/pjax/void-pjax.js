@@ -266,11 +266,42 @@
     function ensureHistoryState() {
         var current = window.history.state;
         if (!current || !current.__voidPjax) {
-            window.history.replaceState({
-                __voidPjax: true,
-                url: window.location.href
-            }, '', window.location.href);
+            window.history.replaceState(buildHistoryState(window.location.href, runtime.options), '', window.location.href);
         }
+    }
+
+    function buildHistoryState(url, options) {
+        var resolvedOptions = extend(runtime.options || defaults, options || {});
+
+        return {
+            __voidPjax: true,
+            url: normalizeUrl(url) || window.location.href,
+            container: resolvedOptions.container || defaults.container,
+            fragment: resolvedOptions.fragment || resolvedOptions.container || defaults.fragment,
+            scrollTop: !!resolvedOptions.scrollTop
+        };
+    }
+
+    function resolveStateOptions(state) {
+        var options = extend(runtime.options || defaults, null);
+
+        if (!state || typeof state !== 'object') {
+            return options;
+        }
+
+        if (state.container) {
+            options.container = state.container;
+        }
+
+        if (state.fragment) {
+            options.fragment = state.fragment;
+        }
+
+        if (typeof state.scrollTop !== 'undefined') {
+            options.scrollTop = !!state.scrollTop;
+        }
+
+        return options;
     }
 
     function fallbackNavigate(url) {
@@ -295,15 +326,10 @@
         rerunScripts(adoptedContainer);
 
         if (historyMode === 'push') {
-            window.history.pushState({
-                __voidPjax: true,
-                url: finalUrl
-            }, '', finalUrl);
+            window.history.replaceState(buildHistoryState(window.location.href, options), '', window.location.href);
+            window.history.pushState(buildHistoryState(finalUrl, options), '', finalUrl);
         } else if (historyMode === 'replace') {
-            window.history.replaceState({
-                __voidPjax: true,
-                url: finalUrl
-            }, '', finalUrl);
+            window.history.replaceState(buildHistoryState(finalUrl, options), '', finalUrl);
         }
 
         if (options.scrollTop && !options.fromPopstate) {
@@ -464,11 +490,13 @@
             return;
         }
 
+        var stateOptions = resolveStateOptions(event.state);
+
         visit({
-            url: window.location.href,
-            container: runtime.options.container,
-            fragment: runtime.options.fragment,
-            timeout: runtime.options.timeout,
+            url: event.state.url || window.location.href,
+            container: stateOptions.container,
+            fragment: stateOptions.fragment,
+            timeout: stateOptions.timeout,
             push: false,
             replace: false,
             fromPopstate: true,

@@ -151,21 +151,16 @@ $setting = $GLOBALS['VOIDSetting'];
         <?php endif; ?>
         <script src="<?php Utils::indexTheme('/assets/VOID.js'); ?>"></script>
         <script>
-        if($(".OwO").length > 0){
-            new OwO({
-                logo: 'OωO',
-                container: document.getElementsByClassName('OwO')[0],
-                target: document.getElementsByClassName('input-area')[0],
-                api: '<?php Utils::indexTheme('/assets/libs/owo/OwO_01.json'); ?>',
-                position: 'down',
-                width: '400px',
-                maxHeight: '250px'
-            });
+        if (window.VOID && typeof VOID.initOwO === 'function') {
+            VOID.initOwO();
         }
         </script>
         <?php if($setting['pjax']): ?>
         <script>
-            $(document).on('pjax:complete',function(){
+            $(document).on('pjax:complete', function(event, xhr, status, options){
+                if (options && options.container && options.container !== '#pjax-container') {
+                    return;
+                }
                 <?php echo $setting['pjaxreload']; ?>
             })
             <?php if(Utils::isPluginAvailable('ExSearch')): ?>
