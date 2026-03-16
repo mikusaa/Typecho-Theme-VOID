@@ -69,6 +69,68 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
     private $_security = NULL;
 
     /**
+     * 从 parentContent 读取字段（兼容 array / object）
+     *
+     * @access private
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    private function getParentContentField($key, $default = '')
+    {
+        $parentContent = $this->parameter->parentContent;
+        if (is_array($parentContent)) {
+            return isset($parentContent[$key]) ? $parentContent[$key] : $default;
+        }
+        if (is_object($parentContent)) {
+            // 兼容 Typecho Widget 的 __get
+            if (isset($parentContent->$key)) {
+                return $parentContent->$key;
+            }
+            if (property_exists($parentContent, $key)) {
+                return $parentContent->$key;
+            }
+            try {
+                $value = $parentContent->$key;
+                return ($value === NULL || $value === '') ? $default : $value;
+            } catch (Exception $e) {
+                return $default;
+            } catch (Throwable $e) {
+                return $default;
+            }
+        }
+        return $default;
+    }
+
+    /**
+     * 获取评论分页路由所需 permalink path（避免出现 /{permalink}/...）
+     *
+     * @access private
+     * @return string
+     */
+    private function getParentPath()
+    {
+        $path = trim((string)$this->getParentContentField('path', ''));
+
+        if ($path === '') {
+            $path = trim((string)$this->getParentContentField('pathinfo', ''));
+        }
+
+        if ($path === '' || strpos($path, '{') !== false) {
+            $permalink = trim((string)$this->getParentContentField('permalink', ''));
+            if ($permalink !== '') {
+                $parsedPath = parse_url($permalink, PHP_URL_PATH);
+                if (is_string($parsedPath) && $parsedPath !== '') {
+                    $path = $parsedPath;
+                }
+            }
+        }
+
+        $path = ltrim($path, '/');
+        return $path;
+    }
+
+    /**
      * 构造函数,初始化组件
      *
      * @access public
@@ -138,32 +200,6 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
                 $this->author();
                 $singleCommentOptions->afterAuthor(); ?></cite></b><span><?php echo $this->getParent(); ?></span>
             </div>
-            <span>
-                <a href="<?php $this->permalink(); ?>"><timedatetime="<?php $this->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
-                echo date('Y-m-d H:i', $this->created);
-                $singleCommentOptions->afterDate(); ?></time></a>
-                <?php if ('waiting' == $this->status) { ?>
-                <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em>
-                <?php } ?>
-                <?php if ($setting['VOIDPlugin']) { ?>
-                <a style="margin: 0 5px" no-pjax target="_self" class="comment-vote vote-button" 
-                    href="javascript:void(0)" 
-                    onclick="VOID_Vote.vote(this)"
-                    data-item-id="<?php echo $this->coid;?>" 
-                    data-type="up"
-                    data-table="comment"
-                ><i class="voidicon-thumbs-up"></i> <span class="value"><?php echo $metaArr['likes']?></span>
-                </a>
-                <a no-pjax target="_self" class="comment-vote vote-button" 
-                    href="javascript:void(0)" 
-                    onclick="VOID_Vote.vote(this)"
-                    data-item-id="<?php echo $this->coid;?>" 
-                    data-type="down"
-                    data-table="comment"
-                ><i class="voidicon-thumbs-down"></i> <span class="value"><?php echo $metaArr['dislikes']?></span>
-                </a>
-                <?php } ?>
-            </span>
         </div>
         <div class="comment-content yue">
             <?php if ($setting['VOIDPlugin'] && $metaArr['dislikes'] >= $setting['commentFoldThreshold'][0]
@@ -173,8 +209,34 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             <?php }?>
             <div class="comment-content-inner"><?php echo Contents::parseBiaoQing($this->content); ?></div>
         </div>
-        <div class="comment-reply">
-            <?php $this->reply($singleCommentOptions->replyWord); ?>
+        <div class="comment-actions">
+            <a href="<?php $this->permalink(); ?>"><timedatetime="<?php $this->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
+            echo date('Y-m-d H:i', $this->created);
+            $singleCommentOptions->afterDate(); ?></time></a>
+            <?php if ('waiting' == $this->status) { ?>
+            <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em>
+            <?php } ?>
+            <?php if ($setting['VOIDPlugin']) { ?>
+            <a no-pjax target="_self" class="comment-vote vote-button" 
+                href="javascript:void(0)" 
+                onclick="VOID_Vote.vote(this)"
+                data-item-id="<?php echo $this->coid;?>" 
+                data-type="up"
+                data-table="comment"
+            ><i class="voidicon-thumbs-up"></i> <span class="value"><?php echo $metaArr['likes']?></span>
+            </a>
+            <a no-pjax target="_self" class="comment-vote vote-button" 
+                href="javascript:void(0)" 
+                onclick="VOID_Vote.vote(this)"
+                data-item-id="<?php echo $this->coid;?>" 
+                data-type="down"
+                data-table="comment"
+            ><i class="voidicon-thumbs-down"></i> <span class="value"><?php echo $metaArr['dislikes']?></span>
+            </a>
+            <?php } ?>
+            <span class="comment-reply">
+                <?php $this->reply($singleCommentOptions->replyWord); ?>
+            </span>
         </div>
     </div>
     <?php if ($this->children) { ?>
@@ -187,21 +249,42 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
     }
   
     private function getParent(){
-        $db = Typecho_Db::get();
-        $parentID = $db->fetchRow($db->select('parent')->from('table.comments')->where('coid = ?', $this->coid));
-        $parentID=$parentID['parent'];
-        if($parentID=='0') return '';
-        else {
-            $author = $db->fetchRow($db->select()->from('table.comments')->where('coid = ?', $parentID));
-            if ($author === null) {
-                $author = array();
-            }
-            if (!array_key_exists('author', $author) || empty($author['author'])) {
-                $author['author'] = '已删除的评论';
-            }
-            return ' <span style="font-size: 0.9rem">回复</span> <b style="font-size:0.9rem;margin-right: 0.3em">@' . $author['author'] . '</b> ';
+        if ($this->levels <= 1) {
+            return '';
         }
-    }  
+
+        $parentId = 0;
+        if (is_array($this->row) && isset($this->row['realParent'])) {
+            $parentId = (int)$this->row['realParent'];
+        } elseif (is_array($this->row) && isset($this->row['parent'])) {
+            $parentId = (int)$this->row['parent'];
+        }
+
+        if ($parentId <= 0) {
+            return '';
+        }
+
+        $author = '';
+        if (isset($this->_commentAuthors[$parentId])) {
+            $author = trim((string)$this->_commentAuthors[$parentId]);
+        }
+
+        if ($author === '') {
+            $db = Typecho_Db::get();
+            $parentRow = $db->fetchRow($db->select('author')->from('table.comments')->where('coid = ?', $parentId));
+            if (is_array($parentRow) && !empty($parentRow['author'])) {
+                $author = trim((string)$parentRow['author']);
+            }
+            $this->_commentAuthors[$parentId] = $author;
+        }
+
+        if ($author === '') {
+            $author = '已删除的评论';
+        }
+
+        $safeAuthor = htmlspecialchars($author, ENT_QUOTES, 'UTF-8');
+        return ' <span class="comment-parent-label">回复</span> <b class="comment-parent-author">@' . $safeAuthor . '</b> ';
+    }
 
     /**
      * 获取评论赞踩
@@ -224,12 +307,14 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
     {
 
         if ($this->options->commentsPageBreak) {            
-            $pageRow = array('permalink' => $this->parameter->parentContent['pathinfo'], 'commentPage' => $this->_currentPage);
-            return Typecho_Router::url('comment_page',
-                        $pageRow, $this->options->index) . '#' . $this->theId;
+            $parentPath = $this->getParentPath();
+            if (!empty($parentPath)) {
+                $pageRow = array('permalink' => $parentPath, 'commentPage' => $this->_currentPage);
+                return Typecho_Router::url('comment_page', $pageRow, $this->options->index) . '#' . $this->theId;
+            }
         }
-        
-        return $this->parameter->parentContent['permalink'] . '#' . $this->theId;
+
+        return (string)$this->getParentContentField('permalink', '') . '#' . $this->theId;
     }
 
     /**
@@ -427,11 +512,14 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             }
 
             $template = array_merge($default, $config);
-
-            $pageRow = $this->parameter->parentContent;
-            $pageRow['permalink'] = $pageRow['pathinfo'];
-
-            $query = Typecho_Router::url('comment_page', $pageRow, $this->options->index);
+            $parentPath = $this->getParentPath();
+            if (empty($parentPath)) {
+                return;
+            }
+            $query = Typecho_Router::url('comment_page', array(
+                'permalink' => $parentPath,
+                'commentPage' => '{commentPage}'
+            ), $this->options->index);
 
             /** 使用盒状分页 */
             $nav = new Typecho_Widget_Helper_PageNavigator_Box($this->_total,
@@ -564,7 +652,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             if (!$plugged) {
                 echo '<a no-pjax href="' . substr($this->permalink, 0, - strlen($this->theId) - 1) . '?replyTo=' . $this->coid .
                     '#' . $this->parameter->respondId . '" rel="nofollow" onclick="return TypechoComment.reply(\'' .
-                    $this->theId . '\', ' . $this->coid . ');">' . $word . '</a>';
+                    $this->theId . '\', ' . $this->coid . ', this);">' . $word . '</a>';
             }
         }
     }
@@ -585,7 +673,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             if (!$plugged) {
                 // 兼容 Typecho 1.3：改为 get() 读取，避免使用已弃用的 request magic 属性
                 $replyId = $this->request->filter('int')->get('replyTo');
-                echo '<a id="cancel-comment-reply-link" href="' . $this->parameter->parentContent['permalink'] . '#' . $this->parameter->respondId .
+                echo '<a id="cancel-comment-reply-link" href="' . (string)$this->getParentContentField('permalink', '') . '#' . $this->parameter->respondId .
                 '" rel="nofollow"' . ($replyId ? '' : ' style="display:none"') . ' onclick="return TypechoComment.cancelReply();">' . $word . '</a>';
             }
         }
