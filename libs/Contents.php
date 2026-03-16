@@ -583,10 +583,12 @@ Class Contents
 
         $stat = array();
         foreach ($rows as $row) {
-            $row = $widget->filter($row);
+            // 用文章自身的内容组件计算 permalink，避免归档页上下文把链接统一解析成当前归档地址。
+            $post = Widget_Abstract_Contents::alloc();
+            $row = $post->push($row);
             $arr = array(
                 'title' => $row['title'],
-                'permalink' => $row['permalink'],
+                'permalink' => $post->permalink,
                 'categories' => self::getCategories($row['cid']));
 
             if(Utils::isPluginAvailable('VOID')) {
