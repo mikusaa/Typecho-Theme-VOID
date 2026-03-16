@@ -149,7 +149,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-d51d7e3686.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-13f70d1e68.js'); ?>"></script>
         <script>
         if($(".OwO").length > 0){
             new OwO({

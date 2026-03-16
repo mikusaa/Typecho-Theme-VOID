@@ -17,10 +17,11 @@ if ($commentsRequireUrl === null) {
 $commentsRequireUrl = !empty($commentsRequireUrl);
 $parameter = array(
     'parentId'      => $this->hidden ? 0 : $this->cid,
-    'parentContent' => $this->row,
+    // 对齐 Typecho 1.3：传递当前 Archive Widget，保证 path/permalink 等字段可用
+    'parentContent' => $this,
     'respondId'     => $this->respondId,
-    // 兼容 Typecho 1.3：避免使用已弃用的 request magic 属性读取
-    'commentPage'   => $this->request->filter('int')->get('commentPage'),
+    // 兼容 Typecho 1.3 CommentPage 路由：从 Archive 参数读取当前评论页码
+    'commentPage'   => (int)$this->parameter->commentPage,
     'allowComment'  => $this->allow('comment')
 );
 $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
