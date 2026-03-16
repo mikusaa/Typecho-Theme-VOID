@@ -130,7 +130,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-0d3f20f3a6.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-931f3e13f3.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
@@ -149,23 +149,18 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-13f70d1e68.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-bbd7a89c51.js'); ?>"></script>
         <script>
-        if($(".OwO").length > 0){
-            new OwO({
-                logo: 'OωO',
-                container: document.getElementsByClassName('OwO')[0],
-                target: document.getElementsByClassName('input-area')[0],
-                api: '<?php Utils::indexTheme('/assets/libs/owo/OwO_01.json'); ?>',
-                position: 'down',
-                width: '400px',
-                maxHeight: '250px'
-            });
+        if (window.VOID && typeof VOID.initOwO === 'function') {
+            VOID.initOwO();
         }
         </script>
         <?php if($setting['pjax']): ?>
         <script>
-            $(document).on('pjax:complete',function(){
+            $(document).on('pjax:complete', function(event, xhr, status, options){
+                if (options && options.container && options.container !== '#pjax-container') {
+                    return;
+                }
                 <?php echo $setting['pjaxreload']; ?>
             })
             <?php if(Utils::isPluginAvailable('ExSearch')): ?>
