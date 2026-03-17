@@ -53,19 +53,59 @@ var VOID_Content = {
         }
     },
 
+    getFigureImage: function (item) {
+        var $images = $(item).find('img').not('.blured-placeholder');
+        if (!$images.length) {
+            return null;
+        }
+
+        return $images.get($images.length - 1);
+    },
+
+    getFigureImageSrc: function (item) {
+        var image = this.getFigureImage(item);
+        if (!image) {
+            return '';
+        }
+
+        var $image = $(image);
+        return image.currentSrc || $image.attr('data-src') || $image.attr('src') || '';
+    },
+
+    applyFigureSize: function (item, width, height) {
+        if (!(width > 0 && height > 0)) {
+            return;
+        }
+
+        $(item).addClass('size-parsed');
+        $(item).css('width', width + 'px');
+        $(item).css('flex-grow', width * 50 / height);
+        $(item).find('a[data-fancybox="gallery"]').css('padding-top', height / width * 100 + '%');
+    },
+
     // 解析照片集
     parsePhotos: function () {
         $.each($('div.articleBody figure:not(.size-parsed)'), function (i, item) {
+            var sourceImage = VOID_Content.getFigureImage(item);
+            if (!sourceImage) {
+                return;
+            }
+
+            if (sourceImage.complete && sourceImage.naturalWidth > 0 && sourceImage.naturalHeight > 0) {
+                VOID_Content.applyFigureSize(item, parseFloat(sourceImage.naturalWidth), parseFloat(sourceImage.naturalHeight));
+                return;
+            }
+
+            var src = VOID_Content.getFigureImageSrc(item);
+            if (!src) {
+                return;
+            }
+
             var img = new Image();
             img.onload = function () {
-                var w = parseFloat(img.width);
-                var h = parseFloat(img.height);
-                $(item).addClass('size-parsed');
-                $(item).css('width', w + 'px');
-                $(item).css('flex-grow', w * 50 / h);
-                $(item).find('a').css('padding-top', h / w * 100 + '%');
+                VOID_Content.applyFigureSize(item, parseFloat(img.width), parseFloat(img.height));
             };
-            img.src = $(item).find('img').attr('data-src');
+            img.src = src;
         });
     },
 
