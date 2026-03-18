@@ -254,7 +254,6 @@ var VOID_Editor_Admin = (function ($) {
             content: $('#text').first(),
             excerpt: findFieldControl($scope, 'excerpt'),
             banner: findFieldControl($scope, 'banner'),
-            bannerStyle: findFieldControl($scope, 'bannerStyle'),
             bannerAsCover: findFieldControl($scope, 'bannerascover'),
             showFullContent: findFieldControl($scope, 'showfullcontent')
         };
@@ -274,18 +273,16 @@ var VOID_Editor_Admin = (function ($) {
             '    <div class="void-post-preview__badges">',
             '      <span class="void-post-preview__badge" data-role="index-mode"></span>',
             '      <span class="void-post-preview__badge" data-role="list-banner"></span>',
-            '      <span class="void-post-preview__badge" data-role="post-banner"></span>',
             '    </div>',
             '    <p class="void-post-preview__note"></p>',
             '    <p class="void-post-preview__status" data-state="idle"></p>',
             '    <a class="void-post-preview__link" href="" target="_blank" rel="noopener noreferrer" hidden>在新窗口打开主图</a>',
             '    <div class="void-post-preview__scenes">',
             '      <section class="void-post-preview__scene">',
-            '        <div class="void-post-preview__scene-title">PC 首页双栏单卡</div>',
             '        <div class="void-index-stage void-index-stage--desktop">',
             '          <article class="void-home-preview-card void-home-preview-card--desktop" data-list-style="0">',
             '            <div class="void-home-preview-card__banner" hidden>',
-            '              <img class="void-home-preview-card__image" alt="桌面端首页卡片主图预览" referrerpolicy="no-referrer">',
+            '              <img class="void-home-preview-card__image" alt="首页卡片主图预览" referrerpolicy="no-referrer">',
             '            </div>',
             '            <div class="void-home-preview-card__content">',
             '              <div class="void-home-preview-card__meta">PREVIEW</div>',
@@ -309,7 +306,6 @@ var VOID_Editor_Admin = (function ($) {
         var $link = $preview.find('.void-post-preview__link');
         var $indexModeBadge = $preview.find('[data-role="index-mode"]');
         var $listBannerBadge = $preview.find('[data-role="list-banner"]');
-        var $postBannerBadge = $preview.find('[data-role="post-banner"]');
         var updateTimer = null;
         var currentCardUrl = '';
         var cardVariants = [
@@ -392,24 +388,11 @@ var VOID_Editor_Admin = (function ($) {
             return chars.slice(0, limit).join('') + '...';
         }
 
-        function getPostBannerLabel(mode) {
-            if (mode === '1') {
-                return '文章页头图：顶部模糊，不参与此预览';
-            }
-
-            if (mode === '2') {
-                return '文章页头图：不显示，不参与此预览';
-            }
-
-            return '文章页头图：顶部展示，不参与此预览';
-        }
-
         function getPreviewData() {
             var rawContent = controls.content.length ? controls.content.val() : '';
             var normalizedContent = stripPreviewMarkup(rawContent);
             var customExcerpt = findValue(controls.excerpt);
             var bannerUrl = findValue(controls.banner);
-            var bannerStyle = findValue(controls.bannerStyle) || '0';
             var bannerAsCover = findValue(controls.bannerAsCover) || '1';
             var showFullContent = findValue(controls.showFullContent) === '1';
             var hasBanner = bannerUrl !== '';
@@ -431,7 +414,6 @@ var VOID_Editor_Admin = (function ($) {
                 title: findValue(controls.title) || '未填写标题',
                 customExcerpt: customExcerpt,
                 bannerUrl: bannerUrl,
-                bannerStyle: bannerStyle,
                 bannerAsCover: bannerAsCover,
                 showFullContent: showFullContent,
                 effectiveListStyle: effectiveListStyle,
@@ -467,25 +449,25 @@ var VOID_Editor_Admin = (function ($) {
         function getPreviewNote(data) {
             if (data.showFullContent) {
                 if (data.customExcerpt) {
-                    return '当前仅预览桌面端首页双栏下的单张卡片；首页会显示正文内容，自定义摘要仍会作为引文展示。';
+                    return '首页会显示正文内容，自定义摘要仍会作为引文展示。';
                 }
 
-                return '当前仅预览桌面端首页双栏下的单张卡片；正文区域会按首页规则生成缩略内容。';
+                return '正文区域会按首页规则生成缩略内容。';
             }
 
             if (data.customExcerpt) {
-                return '当前仅预览桌面端首页双栏下的单张卡片；当前摘要使用你填写的自定义内容。';
+                return '当前摘要使用你填写的自定义内容。';
             }
 
-            return '当前仅预览桌面端首页双栏下的单张卡片；当前摘要按首页规则从正文自动截取。';
+            return '当前摘要按首页规则从正文自动截取。';
         }
 
         function getClosedStatus(data) {
             if (!data.bannerUrl) {
-                return '未设置主图，展开后可查看桌面端首页双栏单卡的无图效果。';
+                return '未设置主图，展开后可查看首页卡片的无图效果。';
             }
 
-            return '当前设置已更新，展开后会按首页规则刷新桌面端首页双栏单卡。';
+            return '当前设置已更新，展开后会按首页规则刷新首页卡片。';
         }
 
         function renderCard(cardVariant, data) {
@@ -521,7 +503,6 @@ var VOID_Editor_Admin = (function ($) {
         function renderPreview(data) {
             $indexModeBadge.text(getIndexModeLabel(data));
             $listBannerBadge.text(getListBannerLabel(data));
-            $postBannerBadge.text(getPostBannerLabel(data.bannerStyle));
             $note.text(getPreviewNote(data));
             syncLink(data.bannerUrl);
 
@@ -536,7 +517,7 @@ var VOID_Editor_Admin = (function ($) {
                 $.each(cardVariants, function (_, cardVariant) {
                     resetCardImage(cardVariant.refs);
                 });
-                setStatus(data.bannerUrl ? '首页卡片当前不显示主图，已按桌面端首页样式更新预览。' : '未设置主图，当前按无图状态预览。', data.bannerUrl ? 'muted' : 'empty');
+                setStatus(data.bannerUrl ? '首页卡片当前不显示主图，已按首页样式更新预览。' : '未设置主图，当前按无图状态预览。', data.bannerUrl ? 'muted' : 'empty');
                 return;
             }
 
@@ -560,13 +541,13 @@ var VOID_Editor_Admin = (function ($) {
                 });
 
                 if (allLoaded) {
-                    setStatus('当前桌面端首页卡片预览已同步。', 'ready');
+                    setStatus('当前首页卡片预览已同步。', 'ready');
                     return;
                 }
             }
 
             currentCardUrl = data.bannerUrl;
-            setStatus('正在加载桌面端首页卡片...', 'loading');
+            setStatus('正在加载首页卡片...', 'loading');
 
             var pending = cardVariants.length;
             var hasError = false;
@@ -580,7 +561,7 @@ var VOID_Editor_Admin = (function ($) {
                     refs.banner.removeClass('is-loading');
                     pending--;
                     if (!hasError && pending === 0) {
-                        setStatus('当前桌面端首页卡片预览已同步。', 'ready');
+                        setStatus('当前首页卡片预览已同步。', 'ready');
                     }
                 });
                 refs.image.on('error.voidIndexPreview' + index, function () {

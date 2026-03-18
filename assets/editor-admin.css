@@ -309,15 +309,6 @@
     justify-items: start;
 }
 
-.typecho-post-area .void-post-preview__scene-title {
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    line-height: 1.4;
-    text-transform: uppercase;
-}
-
 .typecho-post-area .void-index-stage {
     padding: 14px;
     border: 1px solid #e2e8f0;
@@ -604,10 +595,6 @@
     }
 
     .typecho-post-area .void-post-preview__badge {
-        font-size: 10px;
-    }
-
-    .typecho-post-area .void-post-preview__scene-title {
         font-size: 10px;
     }
 
