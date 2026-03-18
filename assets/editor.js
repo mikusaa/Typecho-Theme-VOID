@@ -57,14 +57,14 @@ var VOID_Editor_Admin = (function ($) {
         {
             key: 'media',
             title: '摘要、主图与预览',
-            description: '把首页列表相关的摘要、主图和预览集中在一起调整。',
+            description: '设置首页摘要、主图与卡片效果。',
             full: true,
             fields: ['excerpt', 'banner', 'bannerStyle', 'bannerascover']
         },
         {
             key: 'behavior',
             title: '展示行为',
-            description: '调整首页展示方式与文章目录等 VOID 主题行为。',
+            description: '控制首页展示方式与文章目录。',
             fields: ['posttype', 'showfullcontent', 'showTOC']
         }
     ];
@@ -267,16 +267,15 @@ var VOID_Editor_Admin = (function ($) {
             '<details class="void-post-preview">',
             '  <summary>',
             '    <span class="void-post-preview__title">首页卡片预览</span>',
-            '    <span class="void-post-preview__tip">展开后加载主图</span>',
+            '    <span class="void-post-preview__tip">展开查看效果</span>',
             '  </summary>',
             '  <div class="void-post-preview__body">',
             '    <div class="void-post-preview__badges">',
             '      <span class="void-post-preview__badge" data-role="index-mode"></span>',
             '      <span class="void-post-preview__badge" data-role="list-banner"></span>',
+            '      <span class="void-post-preview__badge" data-role="excerpt-mode"></span>',
             '    </div>',
-            '    <p class="void-post-preview__note"></p>',
             '    <p class="void-post-preview__status" data-state="idle"></p>',
-            '    <a class="void-post-preview__link" href="" target="_blank" rel="noopener noreferrer" hidden>在新窗口打开主图</a>',
             '    <div class="void-post-preview__scenes">',
             '      <section class="void-post-preview__scene">',
             '        <div class="void-index-stage void-index-stage--desktop">',
@@ -302,10 +301,9 @@ var VOID_Editor_Admin = (function ($) {
 
         var $preview = $mediaGroup.find('.void-post-preview').last();
         var $status = $preview.find('.void-post-preview__status');
-        var $note = $preview.find('.void-post-preview__note');
-        var $link = $preview.find('.void-post-preview__link');
         var $indexModeBadge = $preview.find('[data-role="index-mode"]');
         var $listBannerBadge = $preview.find('[data-role="list-banner"]');
+        var $excerptModeBadge = $preview.find('[data-role="excerpt-mode"]');
         var updateTimer = null;
         var currentCardUrl = '';
         var cardVariants = [
@@ -319,15 +317,6 @@ var VOID_Editor_Admin = (function ($) {
 
         function setStatus(text, state) {
             $status.text(text).attr('data-state', state);
-        }
-
-        function syncLink(url) {
-            if (!url) {
-                $link.attr('href', '').prop('hidden', true);
-                return;
-            }
-
-            $link.attr('href', url).prop('hidden', false);
         }
 
         function collectCardRefs($root) {
@@ -446,28 +435,28 @@ var VOID_Editor_Admin = (function ($) {
             return '首页主图：标题上方';
         }
 
-        function getPreviewNote(data) {
+        function getExcerptModeLabel(data) {
             if (data.showFullContent) {
                 if (data.customExcerpt) {
-                    return '首页会显示正文内容，自定义摘要仍会作为引文展示。';
+                    return '摘要：自定义引文';
                 }
 
-                return '正文区域会按首页规则生成缩略内容。';
+                return '摘要：正文截取';
             }
 
             if (data.customExcerpt) {
-                return '当前摘要使用你填写的自定义内容。';
+                return '摘要：自定义';
             }
 
-            return '当前摘要按首页规则从正文自动截取。';
+            return '摘要：自动';
         }
 
         function getClosedStatus(data) {
             if (!data.bannerUrl) {
-                return '未设置主图，展开后可查看首页卡片的无图效果。';
+                return '未设置主图，当前为无图卡片。';
             }
 
-            return '当前设置已更新，展开后会按首页规则刷新首页卡片。';
+            return '展开后按首页样式预览卡片效果。';
         }
 
         function renderCard(cardVariant, data) {
@@ -503,8 +492,7 @@ var VOID_Editor_Admin = (function ($) {
         function renderPreview(data) {
             $indexModeBadge.text(getIndexModeLabel(data));
             $listBannerBadge.text(getListBannerLabel(data));
-            $note.text(getPreviewNote(data));
-            syncLink(data.bannerUrl);
+            $excerptModeBadge.text(getExcerptModeLabel(data));
 
             $.each(cardVariants, function (_, cardVariant) {
                 renderCard(cardVariant, data);

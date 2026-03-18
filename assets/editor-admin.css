@@ -243,6 +243,7 @@
 .typecho-post-area .void-post-preview__body {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 10px;
     padding: 0 11px 11px;
 }
@@ -251,6 +252,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    justify-content: center;
+    width: 100%;
 }
 
 .typecho-post-area .void-post-preview__badge {
@@ -266,12 +269,13 @@
     line-height: 1.4;
 }
 
-.typecho-post-area .void-post-preview__note,
 .typecho-post-area .void-post-preview__status {
     margin: 0;
     color: var(--void-admin-panel-muted);
     font-size: 12px;
     line-height: 1.7;
+    width: min(100%, 477px);
+    text-align: center;
 }
 
 .typecho-post-area .void-post-preview__status[data-state="loading"] {
@@ -286,11 +290,6 @@
     color: #b91c1c;
 }
 
-.typecho-post-area .void-post-preview__link {
-    align-self: flex-start;
-    font-size: 12px;
-}
-
 .typecho-post-area .void-post-preview__status[data-state="collapsed"],
 .typecho-post-area .void-post-preview__status[data-state="empty"],
 .typecho-post-area .void-post-preview__status[data-state="muted"] {
@@ -301,12 +300,14 @@
     display: grid;
     gap: 12px;
     padding-top: 2px;
+    justify-items: center;
 }
 
 .typecho-post-area .void-post-preview__scene {
     display: grid;
     gap: 8px;
-    justify-items: start;
+    justify-items: center;
+    width: 100%;
 }
 
 .typecho-post-area .void-index-stage {
@@ -315,6 +316,7 @@
     border-radius: 10px;
     background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
     overflow: hidden;
+    margin: 0 auto;
 }
 
 .typecho-post-area .void-index-stage--desktop {
@@ -587,7 +589,6 @@
 
     .typecho-post-area .void-editor-fields__group-description,
     .typecho-post-area .void-editor-field__control .description,
-    .typecho-post-area .void-post-preview__note,
     .typecho-post-area .void-post-preview__status,
     .typecho-post-area .void-post-preview__tip {
         font-size: 11px;
