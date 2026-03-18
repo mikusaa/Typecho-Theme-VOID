@@ -16,7 +16,7 @@ var prefixerOptions = {
 
 // 删除旧版与临时文件
 gulp.task('clean', function () {
-    return del.deleteAsync(['build']);
+    return del.deleteAsync(['build', 'temp']);
 });
 
 // 依赖 CSS minify、打包，除 MathJax
@@ -40,6 +40,17 @@ gulp.task('pack:css:main', function () {
         .pipe(gulp.dest('./build/assets/'))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./temp/rev/css_main'));
+});
+
+// 编辑器后台 CSS 处理
+gulp.task('pack:css:admin', function () {
+    return gulp.src('./assets/editor-admin.css')
+        .pipe(prefix(prefixerOptions))
+        .pipe(minify())
+        .pipe(rev())
+        .pipe(gulp.dest('./build/assets/'))
+        .pipe(rev.manifest())
+        .pipe(gulp.dest('./temp/rev/css_admin'));
 });
 
 // 依赖 JS 压缩混淆，除 Mathjax
@@ -86,7 +97,9 @@ gulp.task('md5', function () {
 gulp.task('move', function () {
     gulp.src(['./assets/libs/owo/**/*', './assets/libs/mathjax/**/*'], { base: './assets/libs/', encoding: false })
         .pipe(gulp.dest('./build/assets/libs/'));
-    gulp.src(['./assets/sw-toolbox.js', './assets/VOIDCacheRule.js'])
+    gulp.src([
+        './assets/sw-toolbox.js',
+        './assets/VOIDCacheRule.js'])
         .pipe(gulp.dest('./build/assets/'));
     gulp.src(['./assets/fonts/*'], { encoding: false })
         .pipe(gulp.dest('./build/assets/fonts/'));
@@ -98,7 +111,7 @@ gulp.task('move', function () {
         .pipe(gulp.dest('./build/'));
 });
 
-gulp.task('build', gulp.series('clean', gulp.parallel('pack:css:main', 'pack:css:dep', 'pack:js:main', 'pack:js:dep'), 'md5', 'move'));
+gulp.task('build', gulp.series('clean', gulp.parallel('pack:css:main', 'pack:css:admin', 'pack:css:dep', 'pack:js:main', 'pack:js:dep'), 'md5', 'move'));
 
 // 开发过程，处理一次依赖
 gulp.task('dev', function () {
