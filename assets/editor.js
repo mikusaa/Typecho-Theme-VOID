@@ -65,14 +65,54 @@ var VOID_Editor_Admin = (function ($) {
             key: 'behavior',
             title: '展示行为',
             description: '控制首页展示方式与文章目录。',
+            full: true,
             fields: ['posttype', 'showfullcontent', 'showTOC']
         }
     ];
+    var VOID_SEGMENTED_FIELDS = {
+        bannerStyle: {
+            labels: {
+                0: '正常顶部',
+                1: '顶部模糊',
+                2: '不显示'
+            }
+        },
+        bannerascover: {
+            labels: {
+                1: '标题上方',
+                2: '标题背景',
+                0: '不显示'
+            }
+        },
+        posttype: {
+            labels: {
+                0: '一般文章',
+                1: '封面文章'
+            }
+        }
+    };
+    var VOID_SWITCH_FIELDS = {
+        showTOC: {
+            label: '显示文章目录',
+            description: '在文章详情页侧边栏显示',
+            onValue: '1',
+            offValue: '0'
+        },
+        showfullcontent: {
+            label: '首页显示完整内容',
+            description: '卡片将直接展示文章全文',
+            onValue: '1',
+            offValue: '0'
+        }
+    };
 
     function init() {
         var $panel = buildVoidFieldPanel();
         if ($panel && $panel.length) {
             compactFieldDescriptions($panel);
+            initBehaviorFieldLayout($panel);
+            initSegmentedSelects($panel);
+            initSwitchControls($panel);
             initPostCardPreview($panel);
         }
     }
@@ -208,6 +248,233 @@ var VOID_Editor_Admin = (function ($) {
         }
     }
 
+    function initBehaviorFieldLayout($scope) {
+        var $groupBody = $scope.find('[data-group="behavior"] .void-editor-fields__group-body').first();
+        if (!$groupBody.length || $groupBody.data('voidBehaviorLayoutReady')) {
+            return;
+        }
+
+        var $postTypeField = $groupBody.find('[data-void-field="posttype"]').first();
+        var $tocField = $groupBody.find('[data-void-field="showTOC"]').first();
+        var $fullContentField = $groupBody.find('[data-void-field="showfullcontent"]').first();
+
+        if (!$postTypeField.length && !$tocField.length && !$fullContentField.length) {
+            return;
+        }
+
+        if ($postTypeField.length) {
+            $postTypeField.addClass('void-editor-field--behavior-type');
+            applyFieldCopy($postTypeField, {
+                label: '文章类型'
+            });
+        }
+
+        if ($tocField.length) {
+            $tocField.addClass('void-editor-field--switch');
+            applyFieldCopy($tocField, VOID_SWITCH_FIELDS.showTOC);
+        }
+
+        if ($fullContentField.length) {
+            $fullContentField.addClass('void-editor-field--switch');
+            applyFieldCopy($fullContentField, VOID_SWITCH_FIELDS.showfullcontent);
+        }
+
+        if ($postTypeField.length) {
+            $groupBody.append($postTypeField);
+        }
+        if ($tocField.length) {
+            $groupBody.append($tocField);
+        }
+        if ($fullContentField.length) {
+            $groupBody.append($fullContentField);
+        }
+
+        $groupBody.data('voidBehaviorLayoutReady', true);
+    }
+
+    function applyFieldCopy($field, copy) {
+        var $labelWrap = $field.find('.void-editor-field__label').first();
+        if (!$labelWrap.length || !copy) {
+            return;
+        }
+
+        var labelText = normalizeDescription(copy.label);
+        var descriptionText = normalizeDescription(copy.description);
+
+        $labelWrap.empty();
+        if (labelText) {
+            $labelWrap.append($('<label class="typecho-label"></label>').text(labelText));
+        }
+        if (descriptionText) {
+            $labelWrap.append($('<p class="void-editor-field__meta"></p>').text(descriptionText));
+        }
+    }
+
+    function initSegmentedSelects($scope) {
+        $.each(VOID_SEGMENTED_FIELDS, function (fieldName, config) {
+            var $field = $scope.find('[data-void-field="' + fieldName + '"]').first();
+            var $select = $field.find('select').first();
+
+            if (!$field.length || !$select.length || $field.data('voidSegmentedReady')) {
+                return;
+            }
+
+            var $options = $select.find('option');
+            if ($options.length < 2) {
+                return;
+            }
+
+            var fieldLabel = normalizeDescription($field.find('.void-editor-field__label').text()) || '选项';
+            var controlTitle = normalizeDescription($select.attr('title'));
+            var $segmentedControl = $('<div class="void-segmented-control" role="radiogroup"></div>');
+
+            $segmentedControl.attr('aria-label', fieldLabel);
+            $segmentedControl.css('--void-segment-count', String($options.length));
+
+            if (controlTitle) {
+                $segmentedControl.attr('title', controlTitle);
+            }
+
+            $options.each(function () {
+                var $option = $(this);
+                var optionValue = String($option.attr('value'));
+                var optionLabel = getSegmentedOptionLabel(config, optionValue, $option.text());
+                var $button = $('<button type="button" class="void-segmented-control__item" role="radio"></button>');
+
+                $button.attr('data-value', optionValue).text(optionLabel);
+                if (controlTitle) {
+                    $button.attr('title', controlTitle);
+                }
+
+                $segmentedControl.append($button);
+            });
+
+            $select.after($segmentedControl);
+            $field.addClass('void-editor-field--segmented').data('voidSegmentedReady', true);
+
+            function syncSegmentedControl() {
+                var currentValue = String($select.val());
+                var isDisabled = $select.prop('disabled');
+
+                $segmentedControl.attr('aria-disabled', isDisabled ? 'true' : 'false');
+                $segmentedControl.find('.void-segmented-control__item').each(function () {
+                    var $button = $(this);
+                    var isActive = $button.attr('data-value') === currentValue;
+
+                    $button.toggleClass('is-active', isActive);
+                    $button.attr('aria-checked', isActive ? 'true' : 'false');
+                    $button.attr('tabindex', isActive ? '0' : '-1');
+                    $button.prop('disabled', isDisabled);
+                });
+            }
+
+            $segmentedControl.on('click', '.void-segmented-control__item', function () {
+                var nextValue = $(this).attr('data-value');
+                if ($select.prop('disabled')) {
+                    return;
+                }
+
+                if (String($select.val()) !== nextValue) {
+                    $select.val(nextValue).trigger('change');
+                    return;
+                }
+
+                syncSegmentedControl();
+            });
+
+            $segmentedControl.on('keydown', '.void-segmented-control__item', function (event) {
+                var supportedKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+                if ($.inArray(event.key, supportedKeys) === -1) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                var $buttons = $segmentedControl.find('.void-segmented-control__item:not(:disabled)');
+                var currentIndex = $buttons.index(this);
+                var nextIndex = currentIndex;
+
+                if (!$buttons.length) {
+                    return;
+                }
+
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    nextIndex = currentIndex <= 0 ? $buttons.length - 1 : currentIndex - 1;
+                } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    nextIndex = currentIndex >= $buttons.length - 1 ? 0 : currentIndex + 1;
+                } else if (event.key === 'Home') {
+                    nextIndex = 0;
+                } else if (event.key === 'End') {
+                    nextIndex = $buttons.length - 1;
+                }
+
+                $buttons.eq(nextIndex).focus().trigger('click');
+            });
+
+            $select.on('change.voidSegmentedControl', syncSegmentedControl);
+            syncSegmentedControl();
+        });
+    }
+
+    function initSwitchControls($scope) {
+        $.each(VOID_SWITCH_FIELDS, function (fieldName, config) {
+            var $field = $scope.find('[data-void-field="' + fieldName + '"]').first();
+            var $select = $field.find('select').first();
+            var controlTitle = normalizeDescription($select.attr('title'));
+            var onValue = String(config.onValue || '1');
+            var offValue = String(config.offValue || '0');
+            var $switchControl;
+
+            if (!$field.length || !$select.length || $field.data('voidSwitchReady')) {
+                return;
+            }
+
+            $switchControl = $(
+                '<button type="button" class="void-switch-control" role="switch">' +
+                '  <span class="void-switch-control__thumb" aria-hidden="true"></span>' +
+                '</button>'
+            );
+
+            if (controlTitle) {
+                $switchControl.attr('title', controlTitle);
+            }
+
+            $select.after($switchControl);
+            $field.addClass('void-editor-field--switch-ready').data('voidSwitchReady', true);
+
+            function syncSwitchControl() {
+                var isChecked = String($select.val()) === onValue;
+                var isDisabled = $select.prop('disabled');
+
+                $switchControl.toggleClass('is-on', isChecked);
+                $switchControl.attr('aria-checked', isChecked ? 'true' : 'false');
+                $switchControl.prop('disabled', isDisabled);
+            }
+
+            $switchControl.on('click', function () {
+                var nextValue;
+                if ($select.prop('disabled')) {
+                    return;
+                }
+
+                nextValue = String($select.val()) === onValue ? offValue : onValue;
+                $select.val(nextValue).trigger('change');
+            });
+
+            $switchControl.on('keydown', function (event) {
+                if (event.key !== ' ' && event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                $(this).trigger('click');
+            });
+
+            $select.on('change.voidSwitchControl', syncSwitchControl);
+            syncSwitchControl();
+        });
+    }
+
     function compactFieldDescriptions($scope) {
         $scope.find('.void-editor-field').each(function () {
             var $field = $(this);
@@ -241,6 +508,18 @@ var VOID_Editor_Admin = (function ($) {
 
     function normalizeDescription(text) {
         return $.trim(String(text || '').replace(/\s+/g, ' '));
+    }
+
+    function getSegmentedOptionLabel(config, value, fallbackLabel) {
+        if (
+            config &&
+            config.labels &&
+            Object.prototype.hasOwnProperty.call(config.labels, value)
+        ) {
+            return config.labels[value];
+        }
+
+        return normalizeDescription(fallbackLabel);
     }
 
     function initPostCardPreview($scope) {
@@ -333,7 +612,26 @@ var VOID_Editor_Admin = (function ($) {
 
         function resetCardImage(refs) {
             refs.banner.removeClass('is-loading is-error');
+            refs.image.removeAttr('data-void-preview-url');
             refs.image.removeAttr('src');
+        }
+
+        function getCardImageState(refs, url) {
+            var imageEl = refs.image.get(0);
+
+            if (!imageEl || !url || refs.image.attr('data-void-preview-url') !== url || !refs.image.attr('src')) {
+                return 'idle';
+            }
+
+            if (refs.banner.hasClass('is-error')) {
+                return 'error';
+            }
+
+            if (imageEl.complete) {
+                return imageEl.naturalWidth > 0 ? 'loaded' : 'error';
+            }
+
+            return 'loading';
         }
 
         function findValue($control) {
@@ -522,11 +820,23 @@ var VOID_Editor_Admin = (function ($) {
 
             if (!forceRefresh && currentCardUrl === data.bannerUrl) {
                 var allLoaded = true;
+                var hasStoredError = false;
+
                 $.each(cardVariants, function (_, cardVariant) {
-                    if (!cardVariant.refs.image.attr('src')) {
+                    var imageState = getCardImageState(cardVariant.refs, data.bannerUrl);
+                    if (imageState === 'error') {
+                        hasStoredError = true;
+                    }
+
+                    if (imageState !== 'loaded') {
                         allLoaded = false;
                     }
                 });
+
+                if (hasStoredError) {
+                    setStatus('主图加载失败，请检查链接是否可访问。', 'error');
+                    return;
+                }
 
                 if (allLoaded) {
                     setStatus('当前首页卡片预览已同步。', 'ready');
@@ -537,30 +847,50 @@ var VOID_Editor_Admin = (function ($) {
             currentCardUrl = data.bannerUrl;
             setStatus('正在加载首页卡片...', 'loading');
 
-            var pending = cardVariants.length;
+            var pending = 0;
             var hasError = false;
 
             $.each(cardVariants, function (index, cardVariant) {
                 var refs = cardVariant.refs;
+                var imageEl = refs.image.get(0);
+                var imageState = getCardImageState(refs, data.bannerUrl);
+
+                if (imageState === 'loaded') {
+                    refs.banner.removeClass('is-loading is-error').prop('hidden', false);
+                    return;
+                }
 
                 refs.banner.addClass('is-loading').removeClass('is-error').prop('hidden', false);
                 refs.image.off('.voidIndexPreview' + index);
-                refs.image.on('load.voidIndexPreview' + index, function () {
+                pending++;
+                refs.image.one('load.voidIndexPreview' + index, function () {
                     refs.banner.removeClass('is-loading');
                     pending--;
                     if (!hasError && pending === 0) {
                         setStatus('当前首页卡片预览已同步。', 'ready');
                     }
                 });
-                refs.image.on('error.voidIndexPreview' + index, function () {
+                refs.image.one('error.voidIndexPreview' + index, function () {
                     refs.banner.removeClass('is-loading').addClass('is-error');
+                    pending--;
                     if (!hasError) {
                         hasError = true;
                         setStatus('主图加载失败，请检查链接是否可访问。', 'error');
+                    } else if (pending === 0) {
+                        setStatus('主图加载失败，请检查链接是否可访问。', 'error');
                     }
                 });
+                refs.image.attr('data-void-preview-url', data.bannerUrl);
                 refs.image.attr('src', data.bannerUrl);
+
+                if (imageEl && imageEl.complete) {
+                    refs.image.triggerHandler(imageEl.naturalWidth > 0 ? 'load' : 'error');
+                }
             });
+
+            if (!hasError && pending === 0) {
+                setStatus('当前首页卡片预览已同步。', 'ready');
+            }
         }
 
         function updatePreview(forceRefresh) {
