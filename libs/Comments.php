@@ -647,11 +647,16 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         // 对齐 Typecho 1.3：达到顶层时不再显示回复入口
         if ($this->options->commentsThreaded && !$this->isTopLevel && $this->parameter->allowComment) {
             $word = empty($word) ? '回复' : $word;
+            $cancelWord = '取消回复';
             $this->pluginHandle()->trigger($plugged)->reply($word, $this);
             
             if (!$plugged) {
                 echo '<a no-pjax href="' . substr($this->permalink, 0, - strlen($this->theId) - 1) . '?replyTo=' . $this->coid .
-                    '#' . $this->parameter->respondId . '" rel="nofollow" onclick="return TypechoComment.reply(\'' .
+                    '#' . $this->parameter->respondId . '" rel="nofollow" data-comment-id="' . $this->theId .
+                    '" data-comment-coid="' . $this->coid .
+                    '" data-reply-word="' . htmlspecialchars((string)$word, ENT_QUOTES, 'UTF-8') .
+                    '" data-cancel-word="' . htmlspecialchars($cancelWord, ENT_QUOTES, 'UTF-8') .
+                    '" data-reply-state="idle" aria-pressed="false" onclick="return AjaxComment.handleReplyClick(\'' .
                     $this->theId . '\', ' . $this->coid . ', this);">' . $word . '</a>';
             }
         }
@@ -674,7 +679,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
                 // 兼容 Typecho 1.3：改为 get() 读取，避免使用已弃用的 request magic 属性
                 $replyId = $this->request->filter('int')->get('replyTo');
                 echo '<a id="cancel-comment-reply-link" href="' . (string)$this->getParentContentField('permalink', '') . '#' . $this->parameter->respondId .
-                '" rel="nofollow"' . ($replyId ? '' : ' style="display:none"') . ' onclick="return TypechoComment.cancelReply();">' . $word . '</a>';
+                '" rel="nofollow"' . ($replyId ? '' : ' style="display:none"') . ' onclick="return AjaxComment.cancelActiveReply();">' . $word . '</a>';
             }
         }
     }
