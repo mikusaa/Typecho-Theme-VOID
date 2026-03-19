@@ -196,6 +196,8 @@ function themeFields(Typecho_Widget_Helper_Layout $layout)
     $layout->addItem($showfullcontent);
     $showTOC = new Typecho_Widget_Helper_Form_Element_Select('showTOC', array('0' => '不显示目录', '1' => '显示目录'), '0', '文章目录', '是否显示文章目录。');
     $layout->addItem($showTOC);
+    $showOutdated = new Typecho_Widget_Helper_Form_Element_Select('showOutdated', array('0' => '不显示', '1' => '显示'), '0', '过时提示', '控制文章正文顶部是否显示过时提醒');
+    $layout->addItem($showOutdated);
 }
 
 $GLOBALS['VOIDSetting'] = Utils::getVOIDSettings();

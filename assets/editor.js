@@ -65,7 +65,7 @@ var VOID_Editor_Admin = (function ($) {
             title: '展示行为',
             description: '控制首页展示方式与文章目录。',
             full: true,
-            fields: ['posttype', 'showfullcontent', 'showTOC']
+            fields: ['posttype', 'showOutdated', 'showfullcontent', 'showTOC']
         }
     ];
     var VOID_SEGMENTED_FIELDS = {
@@ -100,6 +100,12 @@ var VOID_Editor_Admin = (function ($) {
         showfullcontent: {
             label: '首页显示完整内容',
             description: '卡片将直接展示文章全文',
+            onValue: '1',
+            offValue: '0'
+        },
+        showOutdated: {
+            label: '显示过时提示',
+            description: '在文章正文顶部显示过时提醒',
             onValue: '1',
             offValue: '0'
         }
@@ -256,8 +262,9 @@ var VOID_Editor_Admin = (function ($) {
         var $postTypeField = $groupBody.find('[data-void-field="posttype"]').first();
         var $tocField = $groupBody.find('[data-void-field="showTOC"]').first();
         var $fullContentField = $groupBody.find('[data-void-field="showfullcontent"]').first();
+        var $outdatedField = $groupBody.find('[data-void-field="showOutdated"]').first();
 
-        if (!$postTypeField.length && !$tocField.length && !$fullContentField.length) {
+        if (!$postTypeField.length && !$tocField.length && !$fullContentField.length && !$outdatedField.length) {
             return;
         }
 
@@ -278,8 +285,16 @@ var VOID_Editor_Admin = (function ($) {
             applyFieldCopy($fullContentField, VOID_SWITCH_FIELDS.showfullcontent);
         }
 
+        if ($outdatedField.length) {
+            $outdatedField.addClass('void-editor-field--switch');
+            applyFieldCopy($outdatedField, VOID_SWITCH_FIELDS.showOutdated);
+        }
+
         if ($postTypeField.length) {
             $groupBody.append($postTypeField);
+        }
+        if ($outdatedField.length) {
+            $groupBody.append($outdatedField);
         }
         if ($tocField.length) {
             $groupBody.append($tocField);

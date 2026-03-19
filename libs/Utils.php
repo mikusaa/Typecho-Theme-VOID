@@ -171,6 +171,25 @@ class Utils
     }
 
     /**
+     * 判定是否显示过时提示
+     *
+     * @return bool
+     */
+    public static function shouldShowOutdatedNotice($archive)
+    {
+        if (!is_object($archive)) {
+            return false;
+        }
+
+        $fields = $archive->fields;
+        if (!is_object($fields)) {
+            return false;
+        }
+
+        return '1' === $fields->showOutdated;
+    }
+
+    /**
      * 输出建站时间（最早一篇文章的写作时间）
      * 
      * @return array

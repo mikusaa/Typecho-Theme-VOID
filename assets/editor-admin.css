@@ -375,6 +375,10 @@
     border-left: 1px solid var(--void-admin-panel-border-soft);
 }
 
+.typecho-post-area .void-editor-field--switch[data-void-field="showOutdated"] {
+    grid-column: 1 / -1;
+}
+
 .typecho-post-area .void-editor-field--switch .void-editor-field__label {
     margin: 0;
     min-width: 0;
