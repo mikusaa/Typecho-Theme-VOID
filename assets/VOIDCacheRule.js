@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable indent */
-/* eslint-disable linebreak-style */
 'use strict';
 
 (function () {
