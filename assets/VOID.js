@@ -711,6 +711,10 @@ var AjaxComment = {
     submitBtn: '#comment-submit-button',
     newID: '',
     parentID: '',
+    activeReplyCommentId: '',
+    activeReplyCoid: '',
+    replyWord: '回复',
+    cancelReplyWord: '取消回复',
     threadPreviewSize: 1,
     threadPageSize: 8,
     threadPaginationThreshold: 8,
@@ -780,15 +784,249 @@ var AjaxComment = {
         return $comment.attr('data-comment-id') || $comment.attr('id') || '';
     },
 
+    getReplyText: function ($trigger, attrName, fallback) {
+        var value;
+
+        if (!$trigger || !$trigger.length) {
+            return fallback;
+        }
+
+        value = $.trim(String($trigger.attr(attrName) || ''));
+        return value || fallback;
+    },
+
+    resolveReplyTrigger: function (matcher) {
+        var $triggers = $(AjaxComment.commentReply + ' a');
+        var $match = $();
+
+        if (typeof matcher !== 'function') {
+            return $match;
+        }
+
+        $triggers.each(function () {
+            var $trigger = $(this);
+
+            if (matcher($trigger)) {
+                $match = $trigger;
+                return false;
+            }
+
+            return undefined;
+        });
+
+        return $match;
+    },
+
+    findReplyTriggerByCommentId: function (commentId) {
+        commentId = String(commentId || '');
+        if (!commentId) {
+            return $();
+        }
+
+        return AjaxComment.resolveReplyTrigger(function ($trigger) {
+            return String($trigger.attr('data-comment-id') || '') === commentId;
+        });
+    },
+
+    findReplyTriggerByCoid: function (coid) {
+        coid = String(coid || '');
+        if (!coid) {
+            return $();
+        }
+
+        return AjaxComment.resolveReplyTrigger(function ($trigger) {
+            return String($trigger.attr('data-comment-coid') || '') === coid;
+        });
+    },
+
+    setReplyTriggerState: function ($trigger, isActive) {
+        var replyWord;
+        var cancelWord;
+
+        if (!$trigger || !$trigger.length) {
+            return;
+        }
+
+        replyWord = AjaxComment.getReplyText($trigger, 'data-reply-word', AjaxComment.replyWord);
+        cancelWord = AjaxComment.getReplyText($trigger, 'data-cancel-word', AjaxComment.cancelReplyWord);
+
+        $trigger.text(isActive ? cancelWord : replyWord);
+        $trigger.attr('aria-pressed', isActive ? 'true' : 'false');
+        $trigger.attr('data-reply-state', isActive ? 'active' : 'idle');
+        $trigger.toggleClass('is-reply-active', isActive);
+    },
+
+    resetReplyTriggerState: function () {
+        var $activeTrigger = AjaxComment.findReplyTriggerByCommentId(AjaxComment.activeReplyCommentId);
+
+        if ($activeTrigger.length) {
+            AjaxComment.setReplyTriggerState($activeTrigger, false);
+        }
+
+        AjaxComment.activeReplyCommentId = '';
+        AjaxComment.activeReplyCoid = '';
+        AjaxComment.parentID = '';
+    },
+
+    activateReplyTrigger: function ($trigger, commentId, coid) {
+        if (!$trigger || !$trigger.length) {
+            AjaxComment.resetReplyTriggerState();
+            return;
+        }
+
+        if (AjaxComment.activeReplyCommentId && AjaxComment.activeReplyCommentId !== String(commentId || '')) {
+            AjaxComment.setReplyTriggerState(
+                AjaxComment.findReplyTriggerByCommentId(AjaxComment.activeReplyCommentId),
+                false
+            );
+        }
+
+        commentId = String(commentId || '');
+        coid = String(coid || '');
+
+        AjaxComment.setReplyTriggerState($trigger, true);
+        AjaxComment.activeReplyCommentId = commentId;
+        AjaxComment.activeReplyCoid = coid;
+        AjaxComment.parentID = commentId;
+    },
+
+    getHashCommentSelector: function () {
+        var hash = window.location.hash || '';
+
+        if (!/^#comment-\d+$/.test(hash)) {
+            return '';
+        }
+
+        return hash;
+    },
+
+    getHashCommentId: function () {
+        var selector = AjaxComment.getHashCommentSelector();
+
+        return selector ? selector.replace(/^#comment-/, '') : '';
+    },
+
+    scheduleHashCommentScroll: function () {
+        var selector = AjaxComment.getHashCommentSelector();
+        var scroll = function () {
+            if (!selector || $(selector).length === 0) {
+                return;
+            }
+
+            VOID_Ui.scrollToWithHeader(selector);
+        };
+
+        if (!selector) {
+            return;
+        }
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(scroll);
+            return;
+        }
+
+        window.setTimeout(scroll, 0);
+    },
+
+    syncThreadFocusFromHash: function (shouldScroll) {
+        var hashCommentId = AjaxComment.getHashCommentId();
+
+        if (hashCommentId) {
+            AjaxComment.threadFocusPendingId = hashCommentId;
+        }
+
+        AjaxComment.applyThreadPanels();
+
+        if (hashCommentId && shouldScroll !== false) {
+            AjaxComment.scheduleHashCommentScroll();
+        }
+    },
+
+    bindHashChange: function () {
+        $(window).off('hashchange.ajaxComment');
+        $(window).on('hashchange.ajaxComment', function () {
+            AjaxComment.syncThreadFocusFromHash(true);
+        });
+    },
+
+    getReplyToFromLocation: function () {
+        var query = window.location.search || '';
+        var matched = query.match(/[?&]replyTo=(\d+)/);
+
+        return matched ? matched[1] : '';
+    },
+
+    getCurrentReplyCoid: function () {
+        var parentValue = $.trim(String($(AjaxComment.commentForm).find('input[name="parent"]').val() || ''));
+
+        if (parentValue) {
+            return parentValue;
+        }
+
+        if ($('#cancel-comment-reply-link').is(':visible')) {
+            return AjaxComment.getReplyToFromLocation();
+        }
+
+        return '';
+    },
+
+    syncReplyTriggerState: function () {
+        var coid = AjaxComment.getCurrentReplyCoid();
+        var $trigger;
+        var commentId;
+
+        if (!coid) {
+            AjaxComment.resetReplyTriggerState();
+            return;
+        }
+
+        $trigger = AjaxComment.findReplyTriggerByCoid(coid);
+        if (!$trigger.length) {
+            AjaxComment.resetReplyTriggerState();
+            return;
+        }
+
+        commentId = String($trigger.attr('data-comment-id') || AjaxComment.resolveCommentTarget($trigger));
+        AjaxComment.activateReplyTrigger($trigger, commentId, coid);
+    },
+
+    handleReplyClick: function (commentId, coid, trigger) {
+        var $trigger = $(trigger);
+        var nextCommentId = String(commentId || AjaxComment.resolveCommentTarget($trigger));
+        var nextCoid = String(coid || $trigger.attr('data-comment-coid') || '');
+        var currentCoid = AjaxComment.getCurrentReplyCoid();
+
+        if (AjaxComment.activeReplyCommentId === nextCommentId && currentCoid === nextCoid) {
+            return AjaxComment.cancelActiveReply();
+        }
+
+        TypechoComment.reply(nextCommentId, coid, trigger);
+        AjaxComment.activateReplyTrigger($trigger, nextCommentId, nextCoid);
+        return false;
+    },
+
+    cancelActiveReply: function () {
+        TypechoComment.cancelReply();
+        AjaxComment.resetReplyTriggerState();
+        return false;
+    },
+
     bindClick: function () {
-        $(AjaxComment.commentReply + ' a, #cancel-comment-reply-link').off('click');
-        $(AjaxComment.commentReply + ' a').on('click', function () { // 回复
-            AjaxComment.parentID = AjaxComment.resolveCommentTarget($(this));
-            $(AjaxComment.textarea).focus();
+        $(AjaxComment.commentReply + ' a').each(function () {
+            var $trigger = $(this);
+
+            if (!$trigger.attr('data-reply-word')) {
+                $trigger.attr('data-reply-word', $.trim($trigger.text()) || AjaxComment.replyWord);
+            }
+
+            if (!$trigger.attr('data-cancel-word')) {
+                $trigger.attr('data-cancel-word', AjaxComment.cancelReplyWord);
+            }
+
+            AjaxComment.setReplyTriggerState($trigger, false);
         });
-        $('#cancel-comment-reply-link').on('click', function () { // 取消
-            AjaxComment.parentID = '';
-        });
+
+        AjaxComment.syncReplyTriggerState();
     },
 
     collectThreadItems: function ($children) {
@@ -1045,6 +1283,8 @@ var AjaxComment = {
             }
             AjaxComment.renderThreadPage($children);
         });
+
+        AjaxComment.threadFocusPendingId = '';
     },
 
     err: function () {
@@ -1053,7 +1293,7 @@ var AjaxComment = {
     },
 
     finish: function () {
-        TypechoComment.cancelReply();
+        AjaxComment.cancelActiveReply();
         $(AjaxComment.submitBtn).html('提交评论');
         $(AjaxComment.textarea).val('');
         $(AjaxComment.submitBtn).attr('disabled', false);
@@ -1070,8 +1310,9 @@ var AjaxComment = {
 
     init: function () {
         AjaxComment.bindPager();
+        AjaxComment.bindHashChange();
         AjaxComment.bindClick();
-        AjaxComment.applyThreadPanels();
+        AjaxComment.syncThreadFocusFromHash(true);
         $(AjaxComment.commentForm).off('submit').on('submit', function () { // 提交事件
             $(AjaxComment.submitBtn).attr('disabled', true);
 
