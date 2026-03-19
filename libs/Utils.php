@@ -143,40 +143,16 @@ class Utils
         echo '"></script>';
 
         echo '<script src="';
-        self::indexTheme('/assets/editor-9b799630b7.js');
+        self::indexTheme('/assets/editor-6b618a771b.js');
         echo '"></script>';
 
         echo '<link rel="stylesheet" href="';
         self::indexTheme('/assets/libs/owo/owo.min.css');
         echo '" />';
-       
-        echo '<style>#custom-field textarea,#custom-field input{width:100%}
-        .OwO span{background:none!important;width:unset!important;height:unset!important}
-        .OwO .OwO-body .OwO-items{
-            -webkit-overflow-scrolling: touch;
-            overflow-x: hidden;
-        }
-        .OwO .OwO-body .OwO-items-image .OwO-item{
-            max-width:-moz-calc(20% - 10px);
-            max-width:-webkit-calc(20% - 10px);
-            max-width:calc(20% - 10px)
-        }
-        @media screen and (max-width:767px){	
-            .comment-info-input{flex-direction:column;}
-            .comment-info-input input{max-width:100%;margin-top:5px}
-            #comments .comment-author .avatar{
-                width: 2.5rem;
-                height: 2.5rem;
-            }
-        }
-        @media screen and (max-width:760px){
-            .OwO .OwO-body .OwO-items-image .OwO-item{
-                max-width:-moz-calc(25% - 10px);
-                max-width:-webkit-calc(25% - 10px);
-                max-width:calc(25% - 10px)
-            }
-        }
-        .wmd-button-row{height:unset}</style>';
+
+        echo '<link rel="stylesheet" href="';
+        self::indexTheme('/assets/editor-admin-c474ce73a2.css');
+        echo '" />';
     }
 
     /**
