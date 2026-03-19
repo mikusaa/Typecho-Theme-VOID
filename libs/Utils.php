@@ -143,7 +143,7 @@ class Utils
         echo '"></script>';
 
         echo '<script src="';
-        self::indexTheme('/assets/editor-1112b30690.js');
+        self::indexTheme('/assets/editor-8516f86662.js');
         echo '"></script>';
 
         echo '<link rel="stylesheet" href="';
@@ -151,7 +151,7 @@ class Utils
         echo '" />';
 
         echo '<link rel="stylesheet" href="';
-        self::indexTheme('/assets/editor-admin-c474ce73a2.css');
+        self::indexTheme('/assets/editor-admin-de97a00dac.css');
         echo '" />';
     }
 
@@ -168,6 +168,25 @@ class Utils
         return array("is" => $created > 90,
                     "created" => $created,
                     "updated" => $updated);
+    }
+
+    /**
+     * 判定是否显示过时提示
+     *
+     * @return bool
+     */
+    public static function shouldShowOutdatedNotice($archive)
+    {
+        if (!is_object($archive)) {
+            return false;
+        }
+
+        $fields = $archive->fields;
+        if (!is_object($fields)) {
+            return false;
+        }
+
+        return '1' === $fields->showOutdated;
     }
 
     /**
