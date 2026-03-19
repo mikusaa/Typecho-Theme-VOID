@@ -1,4 +1,3 @@
-/* eslint-disable linebreak-style */
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 
@@ -196,8 +195,8 @@ var VOID_Editor_Admin = (function ($) {
             return null;
         }
 
-        var $labelSource = $();
-        var $valueSource = $();
+        var $labelSource;
+        var $valueSource;
         if ($row.is('li')) {
             $labelSource = $row.children('.field-name').first();
             $valueSource = $row.children('.field-value').first();

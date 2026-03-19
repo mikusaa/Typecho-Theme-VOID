@@ -1,5 +1,3 @@
-/* eslint-disable linebreak-style */
-/* eslint-disable no-undef */
 var gulp = require('gulp');
 var sass = require('gulp-sass')(require('sass'));
 var prefix = require('gulp-autoprefixer').default;

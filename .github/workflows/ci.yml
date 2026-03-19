@@ -17,10 +17,17 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint
+      run: npm run lint
 
     - name: Build
-      run: |
-        make
+      run: make build
+
     - name: Deploy Build
       uses: docker://peaceiris/gh-pages:v2
       env:

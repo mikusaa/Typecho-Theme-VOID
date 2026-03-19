@@ -1,4 +1,3 @@
-/* eslint-disable linebreak-style */
 /* eslint-disable no-undef */
 if (document.getElementById('void-check-update')) {
     var container = document.getElementById('void-check-update');

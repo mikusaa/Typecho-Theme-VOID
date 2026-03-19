@@ -1,7 +1,12 @@
 {
+  "scripts": {
+    "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js"
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "del": "^8.0.1",
-    "eslint": "^7.32.0",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
     "gulp": "^5.0.1",
     "gulp-autoprefixer": "^10.0.0",
     "gulp-clean-css": "^4.3.0",
@@ -11,7 +16,6 @@
     "gulp-sass": "^6.0.1",
     "gulp-uglify": "^3.0.2",
     "jsonfile": "^6.1.0",
-    "pre-commit": "^1.2.2",
     "sass": "^1.98.0"
   }
 }

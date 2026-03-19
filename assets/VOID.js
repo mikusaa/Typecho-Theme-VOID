@@ -1,7 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable linebreak-style */
 /* eslint-disable no-undef */
-/* eslint-disable no-console */
 // VOID
 // Author: 熊猫小A
 // Link: https://blog.imalan.cn/archives/247/
@@ -593,9 +591,7 @@ var VOID_Vote = {
 
         // 当是评论投票时检查是否已经投过另一个选项
         if ($(item).hasClass('comment-vote')) {
-            var type_2 = '';
-            if (type == 'up') type_2 = 'down';
-            else type_2 = 'up';
+            var type_2 = type == 'up' ? 'down' : 'up';
             if (VOID_Vote.checkVoted(type_2, id, table)) {
                 VOID.alert('暂不支持更改投票哦～');
                 return;
@@ -1314,9 +1310,9 @@ $(document).ready(function () {
         var btn = $(this);
         var code = btn.closest('pre').find('code').text() || btn.closest('pre').text();
         copyToClipboard(code).then(function () {
-            VOID.alert("复制成功");
+            VOID.alert('复制成功');
         }).catch(function () {
-            VOID.alert("复制失败");
+            VOID.alert('复制失败');
         });
     });
 });

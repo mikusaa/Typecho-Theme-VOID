@@ -5,10 +5,10 @@ node_modules: package.json
 	npm install
 
 clean: node_modules
-	gulp clean
+	npx gulp clean
 
 dev: node_modules
-	gulp dev
+	npx gulp dev
 
 build: node_modules
-	gulp build
+	npx gulp build
