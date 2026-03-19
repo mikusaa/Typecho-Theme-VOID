@@ -465,7 +465,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px 12px;
     padding: 9px 11px;
     color: var(--void-admin-panel-title);
     cursor: pointer;
@@ -489,6 +490,62 @@
     font-weight: 600;
 }
 
+.typecho-post-area .void-post-preview__summary-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.typecho-post-area .void-post-preview__status {
+    --void-preview-status-color: #9a6b16;
+    --void-preview-status-bg: rgba(245, 158, 11, 0.08);
+    --void-preview-status-border: rgba(245, 158, 11, 0.12);
+    --void-preview-status-glow: rgba(245, 158, 11, 0.16);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--void-preview-status-border);
+    border-radius: 999px;
+    background: var(--void-preview-status-bg);
+    color: var(--void-preview-status-color);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.typecho-post-area .void-post-preview__status[data-state="ready"] {
+    --void-preview-status-color: #0f8a6a;
+    --void-preview-status-bg: rgba(16, 185, 129, 0.08);
+    --void-preview-status-border: rgba(16, 185, 129, 0.12);
+    --void-preview-status-glow: rgba(16, 185, 129, 0.16);
+}
+
+.typecho-post-area .void-post-preview__status[data-state="error"] {
+    --void-preview-status-color: #c05656;
+    --void-preview-status-bg: rgba(239, 68, 68, 0.08);
+    --void-preview-status-border: rgba(239, 68, 68, 0.12);
+    --void-preview-status-glow: rgba(239, 68, 68, 0.14);
+}
+
+.typecho-post-area .void-post-preview__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 0 var(--void-preview-status-glow);
+    animation: void-preview-status-pulse 2s ease-out infinite;
+    opacity: 0.9;
+}
+
+.typecho-post-area .void-post-preview__status-text {
+    white-space: nowrap;
+}
+
 .typecho-post-area .void-post-preview__tip {
     color: var(--void-admin-panel-muted);
     font-size: 12px;
@@ -500,8 +557,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 0 11px 11px;
+    gap: 12px;
+    padding: 14px 11px 11px;
 }
 
 .typecho-post-area .void-post-preview__badges {
@@ -525,38 +582,34 @@
     line-height: 1.4;
 }
 
-.typecho-post-area .void-post-preview__status {
-    margin: 0;
-    color: var(--void-admin-panel-muted);
-    font-size: 12px;
-    line-height: 1.7;
-    width: min(100%, 477px);
-    text-align: center;
-}
-
-.typecho-post-area .void-post-preview__status[data-state="loading"] {
-    color: #2563eb;
-}
-
-.typecho-post-area .void-post-preview__status[data-state="ready"] {
-    color: #0f766e;
-}
-
-.typecho-post-area .void-post-preview__status[data-state="error"] {
-    color: #b91c1c;
-}
-
-.typecho-post-area .void-post-preview__status[data-state="collapsed"],
-.typecho-post-area .void-post-preview__status[data-state="empty"],
-.typecho-post-area .void-post-preview__status[data-state="muted"] {
-    color: #94a3b8;
-}
-
 .typecho-post-area .void-post-preview__scenes {
     display: grid;
     gap: 12px;
     padding-top: 2px;
     justify-items: center;
+}
+
+@keyframes void-preview-status-pulse {
+    0% {
+        transform: scale(0.94);
+        box-shadow: 0 0 0 0 var(--void-preview-status-glow);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+    }
+
+    100% {
+        transform: scale(0.94);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .typecho-post-area .void-post-preview__status-dot {
+        animation: none;
+    }
 }
 
 .typecho-post-area .void-post-preview__scene {
@@ -891,10 +944,19 @@
 
     .typecho-post-area .void-editor-fields__group-description,
     .typecho-post-area .void-editor-field__control .description,
-    .typecho-post-area .void-post-preview__status,
     .typecho-post-area .void-post-preview__tip {
         font-size: 11px;
         line-height: 1.5;
+    }
+
+    .typecho-post-area .void-post-preview__summary-main {
+        gap: 8px;
+    }
+
+    .typecho-post-area .void-post-preview__status {
+        min-height: 24px;
+        padding: 0 9px;
+        font-size: 11px;
     }
 
     .typecho-post-area .void-post-preview__badge {

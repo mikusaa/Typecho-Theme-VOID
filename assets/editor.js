@@ -559,7 +559,13 @@ var VOID_Editor_Admin = (function ($) {
         $mediaGroup.append([
             '<details class="void-post-preview">',
             '  <summary>',
-            '    <span class="void-post-preview__title">首页卡片预览</span>',
+            '    <span class="void-post-preview__summary-main">',
+            '      <span class="void-post-preview__title">首页卡片预览</span>',
+            '      <span class="void-post-preview__status" data-state="pending" role="status" aria-live="polite" aria-atomic="true" title="待同步" aria-label="待同步">',
+            '        <span class="void-post-preview__status-dot" aria-hidden="true"></span>',
+            '        <span class="void-post-preview__status-text">待同步</span>',
+            '      </span>',
+            '    </span>',
             '    <span class="void-post-preview__tip">展开查看效果</span>',
             '  </summary>',
             '  <div class="void-post-preview__body">',
@@ -568,7 +574,6 @@ var VOID_Editor_Admin = (function ($) {
             '      <span class="void-post-preview__badge" data-role="list-banner"></span>',
             '      <span class="void-post-preview__badge" data-role="excerpt-mode"></span>',
             '    </div>',
-            '    <p class="void-post-preview__status" data-state="idle"></p>',
             '    <div class="void-post-preview__scenes">',
             '      <section class="void-post-preview__scene">',
             '        <div class="void-index-stage void-index-stage--desktop">',
@@ -594,6 +599,7 @@ var VOID_Editor_Admin = (function ($) {
 
         var $preview = $mediaGroup.find('.void-post-preview').last();
         var $status = $preview.find('.void-post-preview__status');
+        var $statusText = $preview.find('.void-post-preview__status-text');
         var $indexModeBadge = $preview.find('[data-role="index-mode"]');
         var $listBannerBadge = $preview.find('[data-role="list-banner"]');
         var $excerptModeBadge = $preview.find('[data-role="excerpt-mode"]');
@@ -609,7 +615,38 @@ var VOID_Editor_Admin = (function ($) {
         ];
 
         function setStatus(text, state) {
-            $status.text(text).attr('data-state', state);
+            var normalizedState = getStatusState(state);
+            var label = getStatusLabel(normalizedState);
+            var title = text || label;
+
+            $status.attr('data-state', normalizedState);
+            $status.attr('title', title);
+            $status.attr('aria-label', title);
+            $statusText.text(label);
+        }
+
+        function getStatusState(state) {
+            if (state === 'ready') {
+                return 'ready';
+            }
+
+            if (state === 'error') {
+                return 'error';
+            }
+
+            return 'pending';
+        }
+
+        function getStatusLabel(state) {
+            if (state === 'ready') {
+                return '已同步';
+            }
+
+            if (state === 'error') {
+                return '同步失败';
+            }
+
+            return '待同步';
         }
 
         function collectCardRefs($root) {
