@@ -411,7 +411,7 @@
             >.comment-children.comment-thread-panel > .comment-list > .comment-body.comment-thread-item > .comment-children{
                 display: none !important;
             }
-            >.comment-children.comment-thread-panel.is-thread-collapsed > .comment-list > .comment-body.comment-thread-item .comment-content{
+            >.comment-children.comment-thread-panel.is-thread-collapsed:not(.no-thread-footer) > .comment-list > .comment-body.comment-thread-item .comment-content{
                 line-height: 1.55;
                 .comment-content-inner{
                     display: -webkit-box;

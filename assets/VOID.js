@@ -1200,22 +1200,29 @@ var AjaxComment = {
     renderThreadPage: function ($children, targetPage) {
         var $list = $children.children('.comment-thread-list');
         var $items = $list.children('.comment-thread-item');
-        var $newComment = AjaxComment.threadFocusPendingId ? $children.find('#comment-' + AjaxComment.threadFocusPendingId).first() : $();
+        var focusCommentId = String(AjaxComment.threadFocusPendingId || '');
+        var parentCommentId = String($children.parent().attr('id') || '').replace(/^comment-/, '');
+        var $newComment = focusCommentId ? $children.find('#comment-' + focusCommentId).first() : $();
         var totalItems = $items.length;
         var previewSize = AjaxComment.threadPreviewSize;
         var pageSize = AjaxComment.threadPageSize;
         var paginationThreshold = AjaxComment.threadPaginationThreshold;
+        var canCollapseThread = totalItems > previewSize;
         var shouldPaginate = totalItems > paginationThreshold;
         var totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalItems / pageSize)) : 1;
-        var shouldShowThreadFooter = totalItems > previewSize;
+        var shouldShowThreadFooter = canCollapseThread;
         var currentPage = targetPage || parseInt($children.attr('data-thread-page'), 10) || 1;
         var preferredPage = 0;
         var isExpanded = $children.attr('data-thread-expanded') === 'true';
+        var shouldExpandForFocus = !!focusCommentId && (focusCommentId === parentCommentId || $newComment.length > 0);
         var startIndex;
         var endIndex;
 
         if ($newComment.length > 0) {
             preferredPage = shouldPaginate ? Math.ceil(($items.index($newComment) + 1) / pageSize) : 1;
+        }
+
+        if (shouldExpandForFocus) {
             isExpanded = true;
             AjaxComment.threadFocusPendingId = '';
         }
@@ -1224,7 +1231,9 @@ var AjaxComment = {
             currentPage = preferredPage;
         }
 
-        if (totalPages > 1 && !$children.attr('data-thread-expanded')) {
+        if (!canCollapseThread) {
+            isExpanded = true;
+        } else if (totalPages > 1 && !$children.attr('data-thread-expanded') && !shouldExpandForFocus) {
             isExpanded = false;
         }
 
@@ -1246,7 +1255,7 @@ var AjaxComment = {
         $children.attr('data-thread-expanded', isExpanded ? 'true' : 'false');
         $children
             .toggleClass('is-thread-expanded', isExpanded)
-            .toggleClass('is-thread-collapsed', !isExpanded)
+            .toggleClass('is-thread-collapsed', canCollapseThread && !isExpanded)
             .toggleClass('no-thread-footer', !shouldShowThreadFooter);
 
         $items.each(function (index) {
