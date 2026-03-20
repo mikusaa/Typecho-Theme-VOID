@@ -118,7 +118,7 @@ var VOID_Editor_Admin = (function ($) {
             initBehaviorFieldLayout($panel);
             initSegmentedSelects($panel);
             initSwitchControls($panel);
-            initPostCardPreview($panel);
+            initMediaFieldLayout($panel, initPostCardPreview($panel));
         }
     }
 
@@ -305,6 +305,119 @@ var VOID_Editor_Admin = (function ($) {
 
         $groupBody.data('voidBehaviorLayoutReady', true);
     }
+
+    function initMediaFieldLayout($scope, previewController) {
+        var $groupBody = $scope.find('[data-group="media"] .void-editor-fields__group-body').first();
+        var $bannerControl = findFieldControl($scope, 'banner');
+        var $targets = $();
+        var visibilityState = null;
+        var motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+        if (!$groupBody.length || !$bannerControl.length || $groupBody.data('voidMediaLayoutReady')) {
+            return;
+        }
+
+        $.each(['bannerSource', 'bannerStyle', 'bannerascover'], function (_, fieldName) {
+            var $field = $groupBody.find('[data-void-field="' + fieldName + '"]').first();
+
+            if ($field.length) {
+                $targets = $targets.add($field.addClass('void-editor-media-dependent'));
+            }
+        });
+
+        if (previewController && previewController.element && previewController.element.length) {
+            $targets = $targets.add(previewController.element.addClass('void-editor-media-dependent'));
+        }
+
+        if (!$targets.length) {
+            return;
+        }
+
+        function toggleDependent($target, shouldShow, skipAnimation) {
+            var duration = !skipAnimation && !(motionQuery && motionQuery.matches) ? 180 : 0;
+
+            $target.stop(true, true);
+            $target.attr('aria-hidden', shouldShow ? 'false' : 'true');
+
+            if (!duration) {
+                $target.prop('hidden', !shouldShow).css({
+                    opacity: '',
+                    display: '',
+                    height: '',
+                    overflow: ''
+                });
+                return;
+            }
+
+            if (shouldShow) {
+                $target.prop('hidden', false);
+                $target
+                    .css('opacity', 0)
+                    .hide()
+                    .slideDown(duration)
+                    .animate(
+                        { opacity: 1 },
+                        {
+                            duration: duration,
+                            queue: false,
+                            complete: function () {
+                                $target.css({
+                                    opacity: '',
+                                    display: '',
+                                    height: '',
+                                    overflow: ''
+                                });
+                            }
+                        }
+                    );
+                return;
+            }
+
+            $target.animate({ opacity: 0 }, { duration: duration, queue: false });
+            $target.slideUp(duration, function () {
+                $target.prop('hidden', true).css({
+                    opacity: '',
+                    display: '',
+                    height: '',
+                    overflow: ''
+                });
+            });
+        }
+
+        function syncMediaDependents() {
+            var shouldShow = normalizeDescription($bannerControl.val()) !== '';
+            var isInitialSync = visibilityState === null;
+
+            if (shouldShow === visibilityState) {
+                return;
+            }
+
+            visibilityState = shouldShow;
+
+            if (!shouldShow) {
+                if (previewController && typeof previewController.reset === 'function') {
+                    previewController.reset();
+                }
+            }
+
+            $targets.each(function () {
+                toggleDependent($(this), shouldShow, isInitialSync);
+            });
+
+            if (!shouldShow) {
+                return;
+            }
+
+            if (previewController && typeof previewController.refresh === 'function') {
+                previewController.refresh(true);
+            }
+        }
+
+        $bannerControl.on('input.voidMediaLayout change.voidMediaLayout', syncMediaDependents);
+        syncMediaDependents();
+        $groupBody.data('voidMediaLayoutReady', true);
+    }
+
     function applyFieldCopy($field, copy) {
         var $labelWrap = $field.find('.void-editor-field__label').first();
         if (!$labelWrap.length || !copy) {
@@ -538,7 +651,7 @@ var VOID_Editor_Admin = (function ($) {
     function initPostCardPreview($scope) {
         var $mediaGroup = $scope.find('[data-group="media"] .void-editor-fields__group-body').first();
         if (!$mediaGroup.length || $mediaGroup.data('voidPostPreviewReady')) {
-            return;
+            return null;
         }
 
         var controls = {
@@ -551,7 +664,7 @@ var VOID_Editor_Admin = (function ($) {
         };
 
         if (!controls.banner.length) {
-            return;
+            return null;
         }
 
         $mediaGroup.data('voidPostPreviewReady', true);
@@ -943,6 +1056,21 @@ var VOID_Editor_Admin = (function ($) {
             }
         }
 
+        function resetPreviewState() {
+            currentCardUrl = '';
+
+            if ($preview.prop('open')) {
+                $preview.prop('open', false);
+            }
+
+            $.each(cardVariants, function (_, cardVariant) {
+                resetCardImage(cardVariant.refs);
+                cardVariant.refs.banner.prop('hidden', true);
+            });
+
+            setStatus('填写主图后可预览首页卡片效果。', 'pending');
+        }
+
         function updatePreview(forceRefresh) {
             var data = getPreviewData();
             renderPreview(data);
@@ -978,6 +1106,14 @@ var VOID_Editor_Admin = (function ($) {
         });
 
         updatePreview(false);
+
+        return {
+            element: $preview,
+            refresh: function (forceRefresh) {
+                schedulePreview(forceRefresh);
+            },
+            reset: resetPreviewState
+        };
     }
 
     function findFieldControl($scope, fieldName) {

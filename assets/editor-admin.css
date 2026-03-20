@@ -117,6 +117,10 @@
     min-width: 0;
 }
 
+.typecho-post-area .void-editor-media-dependent[hidden] {
+    display: none !important;
+}
+
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="excerpt"],
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="banner"],
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="bannerSource"],
