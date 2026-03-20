@@ -119,6 +119,7 @@
 
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="excerpt"],
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="banner"],
+.typecho-post-area .void-editor-fields__group[data-group="media"] .void-editor-field[data-void-field="bannerSource"],
 .typecho-post-area .void-editor-fields__group[data-group="media"] .void-post-preview {
     grid-column: 1 / -1;
 }

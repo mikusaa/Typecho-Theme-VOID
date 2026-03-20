@@ -183,6 +183,8 @@ function themeFields(Typecho_Widget_Helper_Layout $layout)
     $layout->addItem($excerpt);
     $banner = new Typecho_Widget_Helper_Form_Element_Text('banner', null, null, '文章主图', '输入图片URL，该图片会用于主页文章列表的显示。');
     $layout->addItem($banner);
+    $bannerSource = new Typecho_Widget_Helper_Form_Element_Text('bannerSource', null, null, '主图来源', '输入来源信息，该信息会显示在文章题图下方。支持 markdown 格式。');
+    $layout->addItem($bannerSource);
     $bannerStyle = new Typecho_Widget_Helper_Form_Element_Select('bannerStyle', array(
         0 => '显示在顶部',
         1 => '显示在顶部并添加模糊效果',

@@ -1,6 +1,62 @@
 @use "./var" as *;
 @use "./yue";
 
+.banner-source {
+    padding-top: 1rem;
+    .banner-source__inner {
+        display: flex;
+        justify-content: flex-end;
+    }
+    .banner-source__text {
+        width: 100%;
+        max-width: 32rem;
+        margin: 0;
+        text-align: right;
+        font-size: 0.95rem;
+        line-height: 1.75;
+        color: rgba(0, 0, 0, 0.42);
+        .theme-dark & {
+            color: $td-textColor-dark;
+        }
+        a {
+            color: inherit;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+            transition: $animationTime $animationTimingFunc color,
+                        $animationTime $animationTimingFunc border-color;
+            .theme-dark & {
+                border-color: rgba(255, 255, 255, 0.16);
+            }
+            &:hover {
+                color: $textColor;
+                .theme-dark & {
+                    color: $td-textColor;
+                }
+            }
+        }
+    }
+    &--dark {
+        padding: 0 0 1rem;
+        .banner-source__text {
+            color: rgba(255, 255, 255, 0.72);
+            a {
+                color: #fff;
+                border-color: rgba(255, 255, 255, 0.24);
+            }
+        }
+    }
+    @media screen and (max-width: 767px) {
+        padding-top: 0.75rem;
+        .banner-source__text {
+            max-width: 100%;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+        &--dark {
+            padding-bottom: 0.75rem;
+        }
+    }
+}
+
 section#post {
     .post-pager {
         margin-top: 2rem;
@@ -601,6 +657,7 @@ article {
 @media screen and (min-width: 1199.5px) {
     div.contents-wrap,
     main>.lazy-wrap,
+    .banner-source,
     // Keep layout shift on the outer wrapper so float-up animation can live on #comments.
     .comments-container,
     body>footer {
@@ -612,6 +669,7 @@ article {
     .sidebar-show{
         div.contents-wrap,
         main>.lazy-wrap,
+        .banner-source,
         .comments-container,
         >footer{
             transform: translateX(-135px);

@@ -58,7 +58,7 @@ var VOID_Editor_Admin = (function ($) {
             title: '摘要、主图与预览',
             description: '设置首页摘要、主图与卡片效果。',
             full: true,
-            fields: ['excerpt', 'banner', 'bannerStyle', 'bannerascover']
+            fields: ['excerpt', 'banner', 'bannerSource', 'bannerStyle', 'bannerascover']
         },
         {
             key: 'behavior',
@@ -305,7 +305,6 @@ var VOID_Editor_Admin = (function ($) {
 
         $groupBody.data('voidBehaviorLayoutReady', true);
     }
-
     function applyFieldCopy($field, copy) {
         var $labelWrap = $field.find('.void-editor-field__label').first();
         if (!$labelWrap.length || !copy) {
