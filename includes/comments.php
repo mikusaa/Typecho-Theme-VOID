@@ -27,8 +27,8 @@ $parameter = array(
 $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
 ?>
 
-<div class="comments-container float-up">
-    <section id="comments" class="container">
+<div class="comments-container">
+    <section id="comments" class="container float-up">
         <!--评论框-->
         <?php if($this->allow('comment')): ?>
             <?php $this->header('commentReply=1&description=0&keywords=0&generator=0&template=0&pingback=0&xmlrpc=0&wlw=0&rss2=0&rss1=0&antiSpam=0&atom&social=0'); ?>
