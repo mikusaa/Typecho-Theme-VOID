@@ -26,6 +26,10 @@ $setting = $GLOBALS['VOIDSetting'];
     <div class="app-landscape theme-dark">
         <div class="mask" id="bg"><div class="mask"></div></div>
         <div class="container" style="margin-bottom: 2rem">
+            <?php $bannerSourceTheme = 'dark'; ?>
+            <?php $bannerSourceDisplayMode = 'cover'; ?>
+            <?php $bannerSourceUseContainer = false; ?>
+            <?php $this->need('includes/banner-source.php'); ?>
             <article class="yue">
                 <div class="articleBody">
                     <?php $this->content(); ?>

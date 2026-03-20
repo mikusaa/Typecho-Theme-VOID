@@ -455,6 +455,75 @@ Class Contents
     }
 
     /**
+     * 主图来源是否应在当前布局中显示
+     *
+     * @return bool
+     */
+    static public function shouldShowBannerSource($archive, $displayMode = 'normal')
+    {
+        if (!is_object($archive) || !isset($archive->fields) || !is_object($archive->fields)) {
+            return false;
+        }
+
+        $bannerSource = trim((string) $archive->fields->bannerSource);
+        $banner = trim((string) $archive->fields->banner);
+        if ($bannerSource === '' || $banner === '') {
+            return false;
+        }
+
+        if ('cover' === $displayMode) {
+            return true;
+        }
+
+        return '2' !== trim((string) $archive->fields->bannerStyle);
+    }
+
+    /**
+     * 输出主图来源说明 HTML
+     *
+     * @return string
+     */
+    static public function getBannerSourceHtml($text)
+    {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return '';
+        }
+
+        $content = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+
+        if (preg_match('/^\[(.+)\]\((.+)\)$/u', $text, $matches)) {
+            $label = trim($matches[1]);
+            $url = trim($matches[2]);
+
+            if ($label !== '' && self::isSafeBannerSourceUrl($url)) {
+                $content = '<a no-pjax target="_blank" rel="noopener noreferrer nofollow" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+            }
+        }
+
+        return '题图来自 ' . $content;
+    }
+
+    /**
+     * 校验主图来源链接是否安全
+     *
+     * @return bool
+     */
+    static private function isSafeBannerSourceUrl($url)
+    {
+        if (!is_string($url) || $url === '') {
+            return false;
+        }
+
+        if (false === filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        return in_array($scheme, array('http', 'https'), true);
+    }
+
+    /**
      * 去除换行
      * 
      * @return string

@@ -18,6 +18,7 @@ $setting = $GLOBALS['VOIDSetting'];
 
     <?php $this->need('includes/ldjson.php'); ?>
     <?php $this->need('includes/banner.php'); ?>
+    <?php $this->need('includes/banner-source.php'); ?>
 
     <div class="wrapper container">
         <div class="contents-wrap"> <!--start .contents-wrap-->
