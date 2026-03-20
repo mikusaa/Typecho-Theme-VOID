@@ -143,7 +143,7 @@ class Utils
         echo '"></script>';
 
         echo '<script src="';
-        self::indexTheme('/assets/editor-8ebdb0cf5d.js');
+        self::indexTheme('/assets/editor-2b5efa398b.js');
         echo '"></script>';
 
         echo '<link rel="stylesheet" href="';
@@ -151,7 +151,7 @@ class Utils
         echo '" />';
 
         echo '<link rel="stylesheet" href="';
-        self::indexTheme('/assets/editor-admin-2261e5c930.css');
+        self::indexTheme('/assets/editor-admin-df4f7aa926.css');
         echo '" />';
     }
 
