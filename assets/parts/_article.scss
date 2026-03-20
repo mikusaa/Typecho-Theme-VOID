@@ -601,7 +601,8 @@ article {
 @media screen and (min-width: 1199.5px) {
     div.contents-wrap,
     main>.lazy-wrap,
-    #comments,
+    // Keep layout shift on the outer wrapper so float-up animation can live on #comments.
+    .comments-container,
     body>footer {
         transition: $animationTime $animationTimingFunc transform;
     }
@@ -611,7 +612,7 @@ article {
     .sidebar-show{
         div.contents-wrap,
         main>.lazy-wrap,
-        #comments,
+        .comments-container,
         >footer{
             transform: translateX(-135px);
             .banner-title {
