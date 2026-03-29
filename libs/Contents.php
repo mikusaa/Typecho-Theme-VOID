@@ -490,18 +490,306 @@ Class Contents
             return '';
         }
 
-        $content = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $content = '';
+        $segments = self::splitBannerSourceSegments($text);
 
-        if (preg_match('/^\[(.+)\]\((.+)\)$/u', $text, $matches)) {
-            $label = trim($matches[1]);
-            $url = trim($matches[2]);
-
-            if ($label !== '' && self::isSafeBannerSourceUrl($url)) {
-                $content = '<a no-pjax target="_blank" rel="noopener noreferrer nofollow" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
+        foreach ($segments as $segment) {
+            if ($segment['type'] === 'text') {
+                $content .= htmlspecialchars($segment['content'], ENT_QUOTES, 'UTF-8');
+                continue;
             }
+
+            $linkHtml = self::renderBannerSourceLink($segment['label'], $segment['url']);
+            if ($linkHtml === '') {
+                $content .= htmlspecialchars($segment['raw'], ENT_QUOTES, 'UTF-8');
+                continue;
+            }
+
+            $content .= $linkHtml;
         }
 
         return '题图来自 ' . $content;
+    }
+
+    /**
+     * 将主图来源文本拆分为普通文本与链接片段
+     *
+     * @return array
+     */
+    static private function splitBannerSourceSegments($text)
+    {
+        $segments = array();
+        $offset = 0;
+        $length = strlen($text);
+
+        while ($offset < $length) {
+            $nextPosition = self::findNextBannerSourceTokenPosition($text, $offset);
+
+            if ($nextPosition === false) {
+                self::appendBannerSourceTextSegment($segments, substr($text, $offset));
+                break;
+            }
+
+            if ($nextPosition > $offset) {
+                self::appendBannerSourceTextSegment($segments, substr($text, $offset, $nextPosition - $offset));
+            }
+
+            $segment = self::parseBannerSourceTokenAt($text, $nextPosition);
+            if (is_array($segment)) {
+                $segments[] = $segment;
+                $offset = $nextPosition + strlen($segment['raw']);
+                continue;
+            }
+
+            self::appendBannerSourceTextSegment($segments, substr($text, $nextPosition, 1));
+            $offset = $nextPosition + 1;
+        }
+
+        if (empty($segments)) {
+            self::appendBannerSourceTextSegment($segments, $text);
+        }
+
+        return $segments;
+    }
+
+    /**
+     * 查找下一个可解析的主图来源 token 起点
+     *
+     * @return int|false
+     */
+    static private function findNextBannerSourceTokenPosition($text, $offset)
+    {
+        $markdownPosition = strpos($text, '[', $offset);
+        $htmlPosition = false;
+
+        if (preg_match('/<a\b/isu', $text, $matches, PREG_OFFSET_CAPTURE, $offset)) {
+            $htmlPosition = $matches[0][1];
+        }
+
+        if ($markdownPosition === false) {
+            return $htmlPosition;
+        }
+
+        if ($htmlPosition === false) {
+            return $markdownPosition;
+        }
+
+        return min($markdownPosition, $htmlPosition);
+    }
+
+    /**
+     * 解析指定位置的主图来源 token
+     *
+     * @return array|null
+     */
+    static private function parseBannerSourceTokenAt($text, $offset)
+    {
+        $htmlSegment = self::parseBannerSourceHtmlLinkAt($text, $offset);
+        if (is_array($htmlSegment)) {
+            return $htmlSegment;
+        }
+
+        return self::parseBannerSourceMarkdownLinkAt($text, $offset);
+    }
+
+    /**
+     * 解析指定位置的 HTML 链接
+     *
+     * @return array|null
+     */
+    static private function parseBannerSourceHtmlLinkAt($text, $offset)
+    {
+        if (!preg_match('/\G<a\b(?<htmlAttrs>[^>]*)>(?<htmlLabel>.*?)<\/a>/isu', $text, $matches, 0, $offset)) {
+            return null;
+        }
+
+        return array(
+            'type' => 'link',
+            'label' => self::extractBannerSourceHtmlLabel($matches['htmlLabel']),
+            'url' => self::extractBannerSourceHtmlHref($matches['htmlAttrs']),
+            'raw' => $matches[0]
+        );
+    }
+
+    /**
+     * 解析指定位置的 Markdown 链接，兼容 URL 中的括号
+     *
+     * @return array|null
+     */
+    static private function parseBannerSourceMarkdownLinkAt($text, $offset)
+    {
+        $length = strlen($text);
+        if ($offset >= $length || substr($text, $offset, 1) !== '[') {
+            return null;
+        }
+
+        $labelEnd = self::findBannerSourceMarkdownDelimiter($text, $offset + 1, ']');
+        if ($labelEnd === false || $labelEnd + 1 >= $length || substr($text, $labelEnd + 1, 1) !== '(') {
+            return null;
+        }
+
+        $urlStart = $labelEnd + 2;
+        $urlEnd = self::findBannerSourceMarkdownUrlEnd($text, $urlStart);
+        if ($urlEnd === false) {
+            return null;
+        }
+
+        $raw = substr($text, $offset, $urlEnd - $offset + 1);
+        $label = substr($text, $offset + 1, $labelEnd - $offset - 1);
+        $url = substr($text, $urlStart, $urlEnd - $urlStart);
+
+        return array(
+            'type' => 'link',
+            'label' => trim(self::decodeBannerSourceMarkdownText($label)),
+            'url' => trim(self::decodeBannerSourceMarkdownText($url)),
+            'raw' => $raw
+        );
+    }
+
+    /**
+     * 查找 Markdown 文本中的结束分隔符
+     *
+     * @return int|false
+     */
+    static private function findBannerSourceMarkdownDelimiter($text, $offset, $delimiter)
+    {
+        $length = strlen($text);
+        while ($offset < $length) {
+            $char = substr($text, $offset, 1);
+            if ($char === '\\') {
+                $offset += 2;
+                continue;
+            }
+
+            if ($char === $delimiter) {
+                return $offset;
+            }
+
+            if ($char === "\r" || $char === "\n") {
+                return false;
+            }
+
+            $offset++;
+        }
+
+        return false;
+    }
+
+    /**
+     * 查找 Markdown 链接 URL 的结束位置，兼容嵌套括号
+     *
+     * @return int|false
+     */
+    static private function findBannerSourceMarkdownUrlEnd($text, $offset)
+    {
+        $length = strlen($text);
+        $depth = 1;
+
+        while ($offset < $length) {
+            $char = substr($text, $offset, 1);
+            if ($char === '\\') {
+                $offset += 2;
+                continue;
+            }
+
+            if ($char === '(') {
+                $depth++;
+            } elseif ($char === ')') {
+                $depth--;
+                if ($depth === 0) {
+                    return $offset;
+                }
+            } elseif ($char === "\r" || $char === "\n") {
+                return false;
+            }
+
+            $offset++;
+        }
+
+        return false;
+    }
+
+    /**
+     * 解码 Markdown 链接中的转义字符
+     *
+     * @return string
+     */
+    static private function decodeBannerSourceMarkdownText($text)
+    {
+        return preg_replace('/\\\\([\\\\\[\]\(\)])/u', '$1', (string) $text);
+    }
+
+    /**
+     * 追加主图来源文本片段，并合并相邻文本节点
+     *
+     * @return void
+     */
+    static private function appendBannerSourceTextSegment(&$segments, $content)
+    {
+        if (!is_string($content) || $content === '') {
+            return;
+        }
+
+        $lastIndex = count($segments) - 1;
+        if ($lastIndex >= 0 && $segments[$lastIndex]['type'] === 'text') {
+            $segments[$lastIndex]['content'] .= $content;
+            return;
+        }
+
+        $segments[] = array(
+            'type' => 'text',
+            'content' => $content
+        );
+    }
+
+    /**
+     * 从 HTML 链接属性中提取 href
+     *
+     * @return string
+     */
+    static private function extractBannerSourceHtmlHref($attributes)
+    {
+        if (!is_string($attributes) || $attributes === '') {
+            return '';
+        }
+
+        if (preg_match('/\bhref\s*=\s*(["\'])(.*?)\1/isu', $attributes, $matches)) {
+            return trim(html_entity_decode($matches[2], ENT_QUOTES, 'UTF-8'));
+        }
+
+        if (preg_match('/\bhref\s*=\s*([^\s>]+)/isu', $attributes, $matches)) {
+            return trim(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'));
+        }
+
+        return '';
+    }
+
+    /**
+     * 从 HTML 链接片段中提取文本
+     *
+     * @return string
+     */
+    static private function extractBannerSourceHtmlLabel($label)
+    {
+        $label = strip_tags((string) $label);
+        return trim(html_entity_decode($label, ENT_QUOTES, 'UTF-8'));
+    }
+
+    /**
+     * 输出安全的主图来源链接
+     *
+     * @return string
+     */
+    static private function renderBannerSourceLink($label, $url)
+    {
+        $label = trim((string) $label);
+        $url = trim((string) $url);
+
+        if ($label === '' || !self::isSafeBannerSourceUrl($url)) {
+            return '';
+        }
+
+        return '<a no-pjax target="_blank" rel="noopener noreferrer nofollow" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
     }
 
     /**
