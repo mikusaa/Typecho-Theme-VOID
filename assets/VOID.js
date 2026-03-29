@@ -4,6 +4,30 @@
 // Author: 熊猫小A
 // Link: https://blog.imalan.cn/archives/247/
 
+(function (window) {
+    if (typeof window.requestIdleCallback !== 'function') {
+        window.requestIdleCallback = function (callback, options) {
+            var start = Date.now();
+            var timeout = options && typeof options.timeout === 'number' ? options.timeout : 0;
+
+            return window.setTimeout(function () {
+                callback({
+                    didTimeout: timeout > 0 && (Date.now() - start) >= timeout,
+                    timeRemaining: function () {
+                        return Math.max(0, 50 - (Date.now() - start));
+                    }
+                });
+            }, 1);
+        };
+    }
+
+    if (typeof window.cancelIdleCallback !== 'function') {
+        window.cancelIdleCallback = function (id) {
+            window.clearTimeout(id);
+        };
+    }
+})(window);
+
 console.log(' %c Theme VOID %c https://blog.imalan.cn/archives/247/ ', 'color: #fadfa3; background: #23b7e5; padding:5px;', 'background: #1c2b36; padding:5px;');
 
 var VOID_Content = {
@@ -401,11 +425,80 @@ var VOID_Content = {
 };
 
 var VOID = {
+    pjaxLifecycleBound: false,
+
     configureFancybox: function () {
         // fancybox 的 hash/history 会和 VoidPjax 的 popstate 处理冲突
         if (window.jQuery && window.jQuery.fancybox && window.jQuery.fancybox.defaults) {
             window.jQuery.fancybox.defaults.hash = false;
         }
+    },
+
+    safeRunPangu: function () {
+        try {
+            VOID_Content.pangu();
+        } catch (err) {
+            console.error('Pangu init failed:', err);
+        }
+    },
+
+    resolvePjaxOptions: function (args) {
+        var index;
+
+        for (index = args.length - 1; index >= 0; index--) {
+            if (args[index] && typeof args[index] === 'object' && args[index].container) {
+                return args[index];
+            }
+        }
+
+        return null;
+    },
+
+    bindPjaxLifecycle: function () {
+        if (!VOIDConfig.PJAX || this.pjaxLifecycleBound) {
+            return;
+        }
+
+        this.pjaxLifecycleBound = true;
+
+        $(document).on('pjax:send', function () {
+            var options = VOID.resolvePjaxOptions(arguments);
+
+            if (AjaxComment.isCommentPjaxRequest(options)) {
+                AjaxComment.setCommentPageLoading(true);
+                return;
+            }
+
+            if (VOID.isMainPjaxRequest(options)) {
+                VOID.beforePjax();
+            }
+        });
+
+        $(document).on('pjax:complete', function () {
+            var options = VOID.resolvePjaxOptions(arguments);
+
+            if (AjaxComment.isCommentPjaxRequest(options)) {
+                AjaxComment.afterPagePjax();
+                return;
+            }
+
+            if (VOID.isMainPjaxRequest(options)) {
+                VOID.afterPjax();
+            }
+        });
+
+        $(document).on('pjax:end', function () {
+            var options = VOID.resolvePjaxOptions(arguments);
+
+            if (AjaxComment.isCommentPjaxRequest(options)) {
+                AjaxComment.endPagePjax();
+                return;
+            }
+
+            if (VOID.isMainPjaxRequest(options)) {
+                VOID.endPjax();
+            }
+        });
     },
 
     // 初始化单页应用
@@ -426,7 +519,7 @@ var VOID = {
         VOID_Content.parsePhotos();
         VOID_Content.highlight();
         VOID_Content.parseUrl();
-        VOID_Content.pangu();
+        VOID.safeRunPangu();
         VOID_Content.bigfoot();
         VOID_Content.math();
         VOID_Content.hyphenate();
@@ -506,7 +599,7 @@ var VOID = {
         VOID_Content.highlight();
         VOID_Content.math();
         VOID_Content.hyphenate();
-        VOID_Content.pangu();
+        VOID.safeRunPangu();
         VOID_Content.bigfoot();
         loadClipboard();
 
@@ -1448,60 +1541,11 @@ var AjaxComment = {
 };
 
 (function () {
-    var resolvePjaxOptions = function (args) {
-        var index;
-
-        for (index = args.length - 1; index >= 0; index--) {
-            if (args[index] && typeof args[index] === 'object' && args[index].container) {
-                return args[index];
-            }
-        }
-
-        return null;
-    };
-
     $(document).ready(function () {
-        VOID.init();
         if (VOIDConfig.PJAX) {
-            $(document).on('pjax:send', function () {
-                var options = resolvePjaxOptions(arguments);
-
-                if (AjaxComment.isCommentPjaxRequest(options)) {
-                    AjaxComment.setCommentPageLoading(true);
-                    return;
-                }
-
-                if (VOID.isMainPjaxRequest(options)) {
-                    VOID.beforePjax();
-                }
-            });
-
-            $(document).on('pjax:complete', function () {
-                var options = resolvePjaxOptions(arguments);
-
-                if (AjaxComment.isCommentPjaxRequest(options)) {
-                    AjaxComment.afterPagePjax();
-                    return;
-                }
-
-                if (VOID.isMainPjaxRequest(options)) {
-                    VOID.afterPjax();
-                }
-            });
-
-            $(document).on('pjax:end', function () {
-                var options = resolvePjaxOptions(arguments);
-
-                if (AjaxComment.isCommentPjaxRequest(options)) {
-                    AjaxComment.endPagePjax();
-                    return;
-                }
-
-                if (VOID.isMainPjaxRequest(options)) {
-                    VOID.endPjax();
-                }
-            });
+            VOID.bindPjaxLifecycle();
         }
+        VOID.init();
     });
 
     window.setInterval(function () {

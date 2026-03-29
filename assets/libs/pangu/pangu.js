@@ -348,6 +348,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   __publicField(DomWalker, "spaceLikeTags", /^(br|hr|i|img|pangu)$/i);
   __publicField(DomWalker, "spaceSensitiveTags", /^(a|del|pre|s|strike|u)$/i);
   __publicField(DomWalker, "ignoredClass", "no-pangu-spacing");
+  const scheduleIdleTask = typeof requestIdleCallback === "function" ? requestIdleCallback : (callback, options) => setTimeout(() => callback({
+    didTimeout: !!(options && options.timeout === 0),
+    timeRemaining: () => 16
+  }), 1);
   class TaskQueue {
     constructor() {
       __publicField(this, "queue", []);
@@ -371,7 +375,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     scheduleProcessing() {
       if (!this.isProcessing && this.queue.length > 0) {
         this.isProcessing = true;
-        requestIdleCallback((deadline) => this.process(deadline), { timeout: 5e3 });
+        scheduleIdleTask((deadline) => this.process(deadline), { timeout: 5e3 });
       }
     }
     process(deadline) {
