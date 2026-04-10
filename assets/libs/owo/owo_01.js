@@ -196,7 +196,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 if (packageActive) {
                     packageActive.classList.remove('OwO-package-active');
                 }
-                this.packagesEle.getElementsByTagName('li')[index].classList.add('OwO-package-active');
+                var activePackage = this.packagesEle.getElementsByTagName('li')[index];
+                activePackage.classList.add('OwO-package-active');
+
+                var itemLeft = activePackage.offsetLeft;
+                var itemRight = itemLeft + activePackage.offsetWidth;
+                var visibleLeft = this.packagesEle.scrollLeft;
+                var visibleRight = visibleLeft + this.packagesEle.clientWidth;
+
+                if (itemLeft < visibleLeft) {
+                    this.packagesEle.scrollLeft = itemLeft;
+                } else if (itemRight > visibleRight) {
+                    this.packagesEle.scrollLeft = itemRight - this.packagesEle.clientWidth;
+                }
             }
         }]);
 

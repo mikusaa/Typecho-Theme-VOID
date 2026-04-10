@@ -130,7 +130,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-df7c662e73.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-f6fa0b58f0.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
