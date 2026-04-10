@@ -130,7 +130,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-f6fa0b58f0.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-670d26d956.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
@@ -149,7 +149,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-0c88bb0a6b.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-c6c81aa640.js'); ?>"></script>
         <script>
         if (window.VOID && typeof VOID.initOwO === 'function') {
             VOID.initOwO();
