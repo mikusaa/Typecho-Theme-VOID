@@ -52,6 +52,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 logo: 'OwO',
                 container: document.getElementsByClassName('OwO')[0],
                 target: document.getElementsByTagName('textarea')[0],
+                preferredPosition: 'down',
                 position: 'down',
                 width: '100%',
                 maxHeight: '250px',
@@ -64,9 +65,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
             this.container = option.container;
             this.target = option.target;
-            if (option.position === 'up') {
-                this.container.classList.add('OwO-up');
-            }
+            this.option = option;
+            this.preferredPosition = option.preferredPosition || option.position || 'down';
+            this.viewportHandler = null;
+            this.outsideClickHandler = null;
 
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
@@ -119,6 +121,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 html += '\n                    </ul>\n                </div>\n            </div>\n            ';
                 this.container.innerHTML = html;
+                this.body = this.container.getElementsByClassName('OwO-body')[0];
 
                 // bind event
                 this.logo = this.container.getElementsByClassName('OwO-logo')[0];
@@ -163,15 +166,145 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }
 
                 this.tab(0);
+                this.updatePanelDirection();
+            }
+        }, {
+            key: 'open',
+            value: function open() {
+                this.updatePanelDirection();
+                this.container.classList.add('OwO-open');
+                this.bindViewportEvents();
+                this.bindOutsideClick();
+            }
+        }, {
+            key: 'close',
+            value: function close() {
+                this.container.classList.remove('OwO-open');
+                this.unbindViewportEvents();
+                this.unbindOutsideClick();
             }
         }, {
             key: 'toggle',
             value: function toggle() {
                 if (this.container.classList.contains('OwO-open')) {
-                    this.container.classList.remove('OwO-open');
+                    this.close();
                 } else {
-                    this.container.classList.add('OwO-open');
+                    this.open();
                 }
+            }
+        }, {
+            key: 'bindViewportEvents',
+            value: function bindViewportEvents() {
+                var _this3 = this;
+
+                if (this.viewportHandler) {
+                    return;
+                }
+
+                this.viewportHandler = function () {
+                    _this3.updatePanelDirection();
+                };
+
+                window.addEventListener('resize', this.viewportHandler);
+                window.addEventListener('scroll', this.viewportHandler, true);
+            }
+        }, {
+            key: 'bindOutsideClick',
+            value: function bindOutsideClick() {
+                var _this4 = this;
+
+                if (this.outsideClickHandler) {
+                    return;
+                }
+
+                this.outsideClickHandler = function (event) {
+                    if (!_this4.container.contains(event.target)) {
+                        _this4.close();
+                    }
+                };
+
+                document.addEventListener('click', this.outsideClickHandler);
+            }
+        }, {
+            key: 'unbindViewportEvents',
+            value: function unbindViewportEvents() {
+                if (!this.viewportHandler) {
+                    return;
+                }
+
+                window.removeEventListener('resize', this.viewportHandler);
+                window.removeEventListener('scroll', this.viewportHandler, true);
+                this.viewportHandler = null;
+            }
+        }, {
+            key: 'unbindOutsideClick',
+            value: function unbindOutsideClick() {
+                if (!this.outsideClickHandler) {
+                    return;
+                }
+
+                document.removeEventListener('click', this.outsideClickHandler);
+                this.outsideClickHandler = null;
+            }
+        }, {
+            key: 'setDirection',
+            value: function setDirection(openUp) {
+                if (openUp) {
+                    this.container.classList.add('OwO-up');
+                } else {
+                    this.container.classList.remove('OwO-up');
+                }
+            }
+        }, {
+            key: 'getPanelHeight',
+            value: function getPanelHeight() {
+                var fallbackHeight = parseInt(this.option.maxHeight, 10) + 53;
+
+                if (!this.body) {
+                    return fallbackHeight;
+                }
+
+                var computedDisplay = window.getComputedStyle(this.body).display;
+                var inlineDisplay = this.body.style.display;
+                var inlineVisibility = this.body.style.visibility;
+
+                if (computedDisplay === 'none') {
+                    this.body.style.visibility = 'hidden';
+                    this.body.style.display = 'block';
+                }
+
+                var panelHeight = this.body.offsetHeight || fallbackHeight;
+
+                if (computedDisplay === 'none') {
+                    this.body.style.display = inlineDisplay;
+                    this.body.style.visibility = inlineVisibility;
+                }
+
+                return panelHeight;
+            }
+        }, {
+            key: 'updatePanelDirection',
+            value: function updatePanelDirection() {
+                var containerRect = this.container.getBoundingClientRect();
+                var panelHeight = this.getPanelHeight();
+                var spaceAbove = containerRect.top;
+                var spaceBelow = window.innerHeight - containerRect.bottom;
+                var preferredUp = this.preferredPosition === 'up';
+                var preferredFits = preferredUp ? spaceAbove >= panelHeight : spaceBelow >= panelHeight;
+                var alternateFits = preferredUp ? spaceBelow >= panelHeight : spaceAbove >= panelHeight;
+                var shouldOpenUp = preferredUp;
+
+                if (preferredFits) {
+                    shouldOpenUp = preferredUp;
+                } else if (alternateFits) {
+                    shouldOpenUp = !preferredUp;
+                } else if (spaceAbove === spaceBelow) {
+                    shouldOpenUp = preferredUp;
+                } else {
+                    shouldOpenUp = spaceAbove > spaceBelow;
+                }
+
+                this.setDirection(shouldOpenUp);
             }
         }, {
             key: 'tab',

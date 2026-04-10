@@ -560,7 +560,8 @@ var VOID = {
             container: container,
             target: target,
             api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
-            position: 'down',
+            preferredPosition: 'up',
+            position: 'up',
             width: '400px',
             maxHeight: '250px'
         });

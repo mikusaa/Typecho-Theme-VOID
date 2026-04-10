@@ -39,6 +39,7 @@ function initEditorToolbar() {
             container: document.getElementsByClassName('OwO')[0],
             target: document.getElementById('text'),
             api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
+            preferredPosition: 'down',
             position: 'down',
             width: '400px',
             maxHeight: '250px'
