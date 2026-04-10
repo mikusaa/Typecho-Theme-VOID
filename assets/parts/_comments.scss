@@ -131,7 +131,7 @@
                 }
                 .OwO-body{
                     .OwO-bar{
-                        overflow-y: hidden;
+                        min-height: 30px;
                     }
                     .theme-dark &, .theme-dark & .OwO-bar{
                         background: $td-bgColor-dark;
@@ -156,6 +156,20 @@
                     .OwO-items{
                         -webkit-overflow-scrolling: touch;
                         overflow-x: hidden;
+                    }
+                    .OwO-packages{
+                        display: flex;
+                        flex-wrap: nowrap;
+                        min-width: 100%;
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        scrollbar-width: thin;
+                        white-space: nowrap;
+                        -webkit-overflow-scrolling: touch;
+                    }
+                    .OwO-packages li{
+                        flex: 0 0 auto;
+                        white-space: nowrap;
                     }
                     .OwO-items-image .OwO-item{
                         max-width:calc(20% - 10px);

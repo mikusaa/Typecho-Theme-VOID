@@ -9,6 +9,26 @@
     overflow-x: hidden;
 }
 
+.OwO .OwO-body .OwO-bar {
+    min-height: 30px;
+}
+
+.OwO .OwO-body .OwO-packages {
+    display: flex;
+    flex-wrap: nowrap;
+    min-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+.OwO .OwO-body .OwO-packages li {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .OwO .OwO-body .OwO-items-image .OwO-item {
     max-width: -moz-calc(20% - 10px);
     max-width: -webkit-calc(20% - 10px);
