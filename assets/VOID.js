@@ -1251,6 +1251,10 @@ var AjaxComment = {
         if (shouldPaginate) {
             pages = AjaxComment.buildThreadPages(currentPage, totalPages);
 
+            if (currentPage > 1) {
+                $pagination.append('<button type="button" class="comment-thread-prev" data-thread-page="' + (currentPage - 1) + '">上一页</button>');
+            }
+
             $.each(pages, function (_, page) {
                 var $button;
 
