@@ -109,8 +109,8 @@ function themeInit($archive = null)
     VOID_refreshArchiveComputedFields($archive);
 }
 
-$GLOBALS['VOIDPluginREQ'] = 1.2;
-$GLOBALS['VOIDVersion'] = 3.53;
+$GLOBALS['VOIDPluginREQ'] = 1.4;
+$GLOBALS['VOIDVersion'] = 3.54;
 
 /**
  * 主题设置
