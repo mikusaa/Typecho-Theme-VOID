@@ -1,12 +1,12 @@
 
 
-# Typecho Theme VOID 3.5.3
+# Typecho Theme VOID
 
 > ✏ 一款简洁优雅的 Typecho 主题
 
 作为计算机术语时，VOID 的意思是「无类型」。
 
-![](https://raw.githubusercontent.com/mikusaa/Typecho-Theme-VOID/master/screenshot.png)
+![](https://raw.githubusercontent.com/mikusaa/Typecho-Theme-VOID/master/screenshot.webp)
 
 [![Build](https://github.com/mikusaa/Typecho-Theme-VOID/workflows/Build/badge.svg)](https://github.com/mikusaa/Typecho-Theme-VOID/actions) [![downloads](https://img.shields.io/github/downloads/mikusaa/Typecho-Theme-VOID/total.svg?style=flat-square)](https://github.com/mikusaa/Typecho-Theme-VOID/releases) [![](https://img.shields.io/github/release/mikusaa/Typecho-Theme-VOID.svg?style=flat-square)](https://github.com/mikusaa/Typecho-Theme-VOID/releases) ![](https://img.shields.io/github/license/mikusaa/Typecho-Theme-VOID.svg?style=flat-square)
 
@@ -46,17 +46,24 @@
 
 ## 开始使用
 
+### 安装主题
+
 1. 下载主题：[发布版](https://github.com/mikusaa/Typecho-Theme-VOID/releases)，注意是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code
 2. 解压
-3. 将**主题文件夹下**的 VOID 文件夹上传至站点 /usr/themes 目录下
+3. 将主题文件夹重命名为 `VOID`，上传至站点 /usr/themes 目录下
 4. 后台启用主题
-5. 将**配套插件文件夹下**的 VOID 文件夹上传至站点 /usr/plugins 目录下
-6. 后台启用插件
 
 * 可选：将主题 `assets` 文件夹下的 `VOIDCacheRule.js` 复制一份到站点根目录，并在主题设置中启用 Service Worker 缓存。
 * 可选：主题文件夹下 advanceSetting.sample.json 中有一些高级设置，可以看看。
 
 开发版主题可以在这里获取：[开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
+
+### 安装插件
+
+1. 下载插件：[传送门](https://github.com/mikusaa/Typecho-Plugin-VOID/releases)，注意是下载 VOID-x.zip 这个压缩包，而不是 Source code
+2. 解压
+3. 将插件文件夹重命名为 `VOID`，上传至站点 /usr/plugins 目录下
+4. 后台启用插件
 
 ## **常见问题（请务必仔细阅读）**
 
@@ -209,6 +216,26 @@ gulp build
 
 ## 更新日志
 
+**🍰 2026-03-29 Version 3.5.4**
+
+* 新增：[后台编辑器] 重构文章字段面板与行为控制区域，优化字段分组、预览状态展示与后台交互体验。
+* 新增：[后台设置] 增加过期文章提示开关，支持按需显示内容过时提醒。
+* 新增：[主图来源] 支持为文章主图与封面模式输出来源说明，并在后台编辑器中提供对应字段配置。
+* 优化：[主图来源] 增强来源链接解析能力，兼容 Markdown 链接、HTML 链接及 URL 中包含括号等复杂情况。
+* 优化：[主图来源] 当未设置头图时折叠相关媒体扩展字段，减少后台无效配置干扰。
+* 优化：[评论交互] 改进嵌套评论回复体验、楼层展开状态与 Typecho 1.3 下的线程评论行为。
+* 优化：[评论/OwO] 扩充颜文字与 Emoji 选项，并修正表情分组过多时底栏可视区域不足的问题。
+* 优化：[评论/OwO] 表情面板支持按场景自动翻转，并可通过点击组件外空白区域快速关闭。
+* 修复：[评论/PJAX] 将评论分页 PJAX 范围限定到评论容器，避免翻页时误触发整页刷新。
+* 修复：[评论] 避免评论区展开逻辑与目录滚动偏移冲突，减少交互抖动。
+* 修复：[评论] 修复多层评论折叠分页缺少“上一页”按钮，改善线程回复翻页体验。
+* 修复：[归档] 修正归档页文章永久链接生成错误。
+* 修复：[图片/Fancybox] 避免关闭 fancybox 时误触发 PJAX reload。
+* 修复：[懒加载] 恢复浏览器原生懒加载场景下的图片尺寸回退逻辑，降低版式错乱风险。
+* 修复：[PJAX/Safari] 修复 Safari 下 `requestIdleCallback` 参与 PJAX 初始化时的兼容性问题。
+* 优化：[样式] 统一样式细节，改善友链页、表格与评论区排版表现。
+* 调整：[工程] 迁移 ESLint 至新配置格式，并同步更新相关构建与校验脚本。
+
 **🍰 2026-03-15 Version 3.5.3**
 
 * 适配：[Typecho 1.3 / PHP 8] 全面补齐内容解析、评论链路与严格模式兼容。
@@ -235,26 +262,6 @@ gulp build
 
 * 修复：iframe 尺寸错误（#42）
 * 修复：归档页面显示未发布的文章（#45）
-
-**🍰 2020-05-01 Version 3.5.0**
-
-*该版本依赖 VOID 插件 1.20 及以上版本，请先禁用原插件，上传新插件后重新启用插件*
-
-* 新增：[高级设置]图片懒加载渐变（需要 CDN 支持）
-* 新增：JSON-LD 结构化数据支持
-* 新增：重新设计的 404 页面
-* 新增：[高级设置]站点标题设置自定义字体
-* 优化：Bilibili 播放器自适应
-* 优化：图题不再影响灯箱展开
-* 调整：默认西文字体替换为 OpenSans
-* 调整：简化头图设置
-* 修复：某些情况下懒加载可能不触发的问题
-* 修复：懒加载导致归档页面错乱
-* 修复：Safari 平滑滚动无法打断, thank @Reedo0910
-* 修复：[#32](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/32)
-* 修复：[#34](https://github.com/AlanDecode/Typecho-Theme-VOID/issues/34)
-* 移除：Microdata
-* 其它细节优化
 
 从 2.2 版本起，主题部分功能需要配套插件支持，例如文章点赞、浏览量统计、字数统计等。**请先卸载**原来的 Likes、TePostViews 插件，否则数据会出现错误！TePostViews 插件卸载前请设置为**卸载后保留数据**，以防丢失浏览数据。
 
