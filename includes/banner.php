@@ -26,14 +26,7 @@ if($this->is('post') || $this->is('page')) {
 
     <?php if(!empty($banner)): ?>
         <div id="banner" class="<?php if($blur) echo 'blur'; ?>">
-            <?php if($setting['browserLevelLoadingLazy']): ?>
-                <img class="lazyload browserlevel-lazy" src="<?php echo $banner; ?>" loading="lazy">
-            <?php else: ?>
-                <?php if($setting['bluredLazyload']): ?>
-                    <img src="<?php echo Contents::genBluredPlaceholderSrc($banner); ?>" class="blured-placeholder remove-after">
-                <?php endif; ?>
-                <img class="lazyload" data-src="<?php echo $banner; ?>">
-            <?php endif; ?>
+            <img src="<?php echo $banner; ?>" alt="" fetchpriority="high" decoding="async">
         </div>
         <script>$('body>header').removeClass('force-dark').removeClass('no-banner');</script>
     <?php else: ?>
