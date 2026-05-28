@@ -29,6 +29,7 @@ if(!Utils::isPjax()){
     <div class="wrapper container <?php if($setting['indexStyle'] == 1) echo 'narrow'; else echo 'wide'; ?>">
         <section id="index-list" class="float-up">
             <ul id="masonry">
+            <?php $priorityBannerCount = 0; ?>
             <?php while($this->next()): ?>
                 <?php $bannerAsCover = $this->fields->bannerascover; if($this->fields->banner == '') $bannerAsCover='0'; ?>
                 <li id="p-<?php $this->cid(); ?>" class="masonry-item style-<?php 
@@ -50,17 +51,13 @@ if(!Utils::isPjax()){
                                 <a href="<?php $this->permalink(); ?>">
                             <?php endif; ?>
                                 <div class="banner">
-                                    <?php if (Helper::options()->lazyload == '1'): ?>
-                                        <?php if($setting['browserLevelLoadingLazy']): ?>
-                                            <img class="lazyload browserlevel-lazy" src="<?php echo $this->fields->banner;?>" loading="lazy">
-                                        <?php else: ?>
-                                            <?php if($setting['bluredLazyload']): ?>
-                                                <img src="<?php echo Contents::genBluredPlaceholderSrc($this->fields->banner); ?>" class="blured-placeholder">
-                                            <?php endif; ?>
-                                            <img class="lazyload" data-src="<?php echo $this->fields->banner;?>">
-                                        <?php endif; ?>
+                                    <?php $priorityBannerCount++; ?>
+                                    <?php if ($priorityBannerCount == 1): ?>
+                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="eager" fetchpriority="high" decoding="async">
+                                    <?php elseif ($priorityBannerCount == 2): ?>
+                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="eager" decoding="async">
                                     <?php else: ?>
-                                        <img src="<?php echo $this->fields->banner;?>">
+                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
                             <?php if($this->fields->showfullcontent == '1'): ?>
