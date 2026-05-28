@@ -283,11 +283,7 @@ section#index-list{
                 border-color: $td-borderColor;
             }
             margin-bottom: 30px;
-            opacity: 0;
             transition: $animationTime-fast $animationTimingFunc opacity, $animationTime-fast $animationTimingFunc border;
-            &.done {
-                opacity: 1;
-            }
             @media screen and (min-width: 767.5px) {
                 padding-bottom: 0;
                 border: none;
