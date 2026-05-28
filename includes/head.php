@@ -92,7 +92,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-c37340eacf.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-b8025358ac.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
@@ -114,6 +114,7 @@ if (isset($_POST['void_action'])) {
     @font-face {
         font-family: "BrandFont";
         src: url("<?php echo $setting['brandFont']['src']; ?>");
+        font-display: swap;
     }
     .brand {
         font-family: BrandFont, sans-serif;
@@ -123,13 +124,13 @@ if (isset($_POST['void_action'])) {
     </style>
     <?php endif; ?>
 
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700&display=swap" rel="stylesheet">
+    <link href="https://google-fonts.mirrors.sjtug.sjtu.edu.cn/css?family=Open+Sans:300,400,700&display=swap" rel="stylesheet">
     <?php if(Utils::isSerif($setting)): ?>
-        <link id="stylesheet_noto" href="https://fonts.googleapis.com/css?family=Noto+Serif+SC:300,400,700&display=swap&subset=chinese-simplified" rel="stylesheet">
+        <link id="stylesheet_noto" href="https://google-fonts.mirrors.sjtug.sjtu.edu.cn/css?family=Noto+Serif+SC:300,400,700&display=swap&subset=chinese-simplified" rel="stylesheet">
     <?php endif; ?>
 
     <?php if($setting['useFiraCodeFont']): ?>
-        <link href="https://fonts.googleapis.com/css?family=Fira+Code&display=swap" rel="stylesheet">
+        <link href="https://google-fonts.mirrors.sjtug.sjtu.edu.cn/css?family=Fira+Code&display=swap" rel="stylesheet">
         <style>.yue code, .yue tt {font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace}</style>
     <?php endif; ?>
 
