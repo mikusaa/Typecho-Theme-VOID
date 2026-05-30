@@ -378,12 +378,12 @@ VOID_Ui = {
         $(item).addClass('checked');
         if (serif) {
             if ($('#stylesheet_noto').length < 1)
-                $('body').append('<link id="stylesheet_noto" href="https://google-fonts.mirrors.sjtug.sjtu.edu.cn/css?family=Noto+Serif+SC:400,700&amp;display=swap&amp;subset=chinese-simplified" rel="stylesheet">');
+                $('body').append('<link id="stylesheet_noto" href="https://fonts.googleapis.cn/css?family=Noto+Serif+SC:400,700&amp;display=swap&amp;subset=chinese-simplified" rel="stylesheet">');
             $('body').addClass('serif');
             VOID_Util.setCookie('serif', '1', 2592000); // 一个月
         } else {
             if ($('#stylesheet_droid').length < 1)
-                $('body').append('<link id="stylesheet_droid" href="https://google-fonts.mirrors.sjtug.sjtu.edu.cn/css?family=Droid+Serif:400,700&amp;display=swap" rel="stylesheet">');
+                $('body').append('<link id="stylesheet_droid" href="https://fonts.googleapis.cn/css?family=Droid+Serif:400,700&amp;display=swap" rel="stylesheet">');
             $('body').removeClass('serif');
             VOID_Util.setCookie('serif', '0', 2592000);
         }
