@@ -151,7 +151,7 @@ class Utils
         echo '" />';
 
         echo '<link rel="stylesheet" href="';
-        self::indexTheme('/assets/editor-admin-9cc3316f05.css');
+        self::indexTheme('/assets/editor-admin-e095a3042b.css');
         echo '" />';
     }
 
