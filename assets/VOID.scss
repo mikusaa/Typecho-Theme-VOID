@@ -381,16 +381,22 @@ p.notice {
             .theme-dark & {
                 border-color: rgba(#fff, 0.1);
             }
-            &.switching a {
+            &.switching button {
                 animation: switch 1.2s $animationTimingFunc;
             }
-            a {
+            button {
                 display: block;
                 width: 62px;
                 height: 62px;
                 line-height: 62px;
                 color: #ffe150;
+                padding: 0;
+                border: 0;
                 border-radius: 50%;
+                background: transparent;
+                cursor: pointer;
+                font: inherit;
+                appearance: none;
                 &:hover {
                     background: #f5f5f5;
                     .theme-dark & {
@@ -643,13 +649,9 @@ p.notice {
     }    
 }
 
-.dark-mode-state-indicator {
-    position: absolute;
-    top: -999em;
-    left: -999em;
-    z-index: 1;
-    @media (prefers-color-scheme: dark) {
-        z-index: 11;
+@media (prefers-reduced-motion: reduce) {
+    #setting-panel #toggle-night.switching button {
+        animation: none;
     }
 }
 

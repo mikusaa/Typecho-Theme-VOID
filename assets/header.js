@@ -54,25 +54,6 @@ VOID_Util = {
         return document.getElementById(id);
     },
 
-    getDeviceState: function (element) {
-        var zIndex;
-        if (window.getComputedStyle) {
-            // 现代浏览器
-            zIndex = window.getComputedStyle(element).getPropertyValue('z-index');
-        } else if (element.currentStyle) {
-            // ie8-
-            zIndex = element.currentStyle['z-index'];
-        }
-        return parseInt(zIndex, 10);
-    },
-
-    getPrefersDarkModeState: function () {
-        var indicator = document.createElement('div');
-        indicator.className = 'dark-mode-state-indicator';
-        document.body.appendChild(indicator);
-        return VOID_Util.getDeviceState(indicator) === 11;
-    },
-
     setCookie: function (name, value, time) {
         if (time > 0) {
             document.cookie = name + '=' + escape(value) + ';max-age=' + String(time) + ';path=/';
@@ -526,73 +507,173 @@ VOID_Ui = {
     },
 
     DarkModeSwitcher: {
-        checkColorScheme: function () {
-            // 非自动模式
-            if (VOIDConfig.colorScheme != 0) {
+        timer: null,
+        mediaQuery: null,
+        mediaListener: null,
+
+        getOverride: function () {
+            var value = VOID_Util.getCookie('void_theme_override');
+            return value === 'light' || value === 'dark' ? value : null;
+        },
+
+        getMode: function () {
+            var mode = parseInt(VOIDConfig.colorScheme, 10);
+            return mode >= 0 && mode <= 3 ? mode : 1;
+        },
+
+        isTimeDark: function (date) {
+            var start = Number(VOIDConfig.darkModeTime.start);
+            var end = Number(VOIDConfig.darkModeTime.end);
+            var current = date.getHours() + date.getMinutes() / 60;
+
+            if (!isFinite(start) || !isFinite(end) || start === end) {
+                return false;
+            }
+
+            return start < end
+                ? current >= start && current < end
+                : current >= start || current < end;
+        },
+
+        getConfiguredState: function () {
+            var mode = this.getMode();
+
+            if (mode === 2) {
+                return true;
+            }
+            if (mode === 3) {
+                return window.matchMedia
+                    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                    : false;
+            }
+            if (mode === 0) {
+                return this.isTimeDark(new Date());
+            }
+            return false;
+        },
+
+        apply: function (isDark) {
+            document.documentElement.classList.toggle('theme-dark', isDark);
+            if (document.body) {
+                document.body.classList.toggle('theme-dark', isDark);
+            }
+            document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+            this.updateControl(isDark);
+        },
+
+        updateControl: function (isDark) {
+            var control = document.querySelector('#toggle-night button');
+            var label;
+
+            if (!control) {
                 return;
             }
-    
-            if (VOIDConfig.followSystemColorScheme && VOID_Util.getPrefersDarkModeState()) { // 自动模式跟随系统
-                document.body.classList.add('theme-dark');
-                var night = VOID_Util.getCookie('theme_dark');
-                if (night != '1') {
-                    VOID.alert('已为您开启深色模式。');
-                }
-                VOID_Util.setCookie('theme_dark', '1', 7200);
-            } else { // 自动模式，定时            
-                // 若不存在 cookie，根据时间判断，并设置 cookie
-                if (VOID_Util.getCookie('theme_dark') == null) {
-                    // 全部转换至当天
-                    sunset = new Date(new Date().setHours(
-                        Math.floor(VOIDConfig.darkModeTime.start),
-                        60 * (VOIDConfig.darkModeTime.start - Math.floor(VOIDConfig.darkModeTime.start)), 0));
-                    sunrise = new Date(new Date().setHours(
-                        Math.floor(VOIDConfig.darkModeTime.end),
-                        60 * (VOIDConfig.darkModeTime.end - Math.floor(VOIDConfig.darkModeTime.end)), 0));
-        
-                    var current = new Date();
-                    // 格式化为小时
-                    var sunset_s = VOIDConfig.darkModeTime.start;
-                    var sunrise_s = VOIDConfig.darkModeTime.end;
-                    var current_s = current.getHours() + current.getMinutes() / 60;
 
-                    if (current_s > sunset_s || current_s < sunrise_s) {
-                        document.body.classList.add('theme-dark');
-                        if (current_s > sunset_s) // 如果当前为夜晚，日出时间应该切换至第二日
-                            sunrise = new Date(sunrise.getTime() + 3600000 * 24);
-                        // 现在距日出还有 (s)
-                        var toSunrise = (sunrise.getTime() - current.getTime()) / 1000;
-                        // 设置 cookie
-                        VOID_Util.setCookie('theme_dark', '1', parseInt(toSunrise));
-                        VOID.alert('日落了，夜间模式已开启。');
-                    } else {
-                        document.body.classList.remove('theme-dark');
-                    }
-                } else {
-                    // 若存在 cookie，根据 cookie 判断
-                    night = VOID_Util.getCookie('theme_dark');
-                    if (night == '0') {
-                        document.body.classList.remove('theme-dark');
-                    } else if (night == '1') {
-                        document.body.classList.add('theme-dark');
-                    }
+            label = isDark ? '切换至日间模式' : '切换至夜间模式';
+            control.setAttribute('aria-label', label);
+            control.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            control.setAttribute('title', label);
+        },
+
+        stopAutomation: function () {
+            if (this.timer) {
+                window.clearTimeout(this.timer);
+                this.timer = null;
+            }
+
+            if (this.mediaQuery && this.mediaListener) {
+                if (this.mediaQuery.removeEventListener) {
+                    this.mediaQuery.removeEventListener('change', this.mediaListener);
+                } else if (this.mediaQuery.removeListener) {
+                    this.mediaQuery.removeListener(this.mediaListener);
                 }
             }
+            this.mediaQuery = null;
+            this.mediaListener = null;
         },
-    
-        toggleByHand: function () {
-            $('#toggle-night').addClass('switching');
-            setTimeout(function () {
-                $('body').toggleClass('theme-dark');
-                if ($('body').hasClass('theme-dark')) {
-                    VOID_Util.setCookie('theme_dark', '1', 0);
-                } else {
-                    VOID_Util.setCookie('theme_dark', '0', 0);
+
+        scheduleTimeChange: function () {
+            var self = this;
+            var now = new Date();
+            var isDark = this.isTimeDark(now);
+            var target = Number(isDark ? VOIDConfig.darkModeTime.end : VOIDConfig.darkModeTime.start);
+            var boundary;
+            var hours;
+            var minutes;
+
+            if (!isFinite(target) || Number(VOIDConfig.darkModeTime.start) === Number(VOIDConfig.darkModeTime.end)) {
+                return;
+            }
+
+            hours = Math.floor(target);
+            minutes = Math.round((target - hours) * 60);
+            boundary = new Date(now.getTime());
+            boundary.setHours(hours, minutes, 0, 0);
+            if (boundary <= now) {
+                boundary.setDate(boundary.getDate() + 1);
+            }
+
+            this.timer = window.setTimeout(function () {
+                if (!self.getOverride() && self.getMode() === 0) {
+                    self.apply(self.isTimeDark(new Date()));
+                    self.scheduleTimeChange();
                 }
-                setTimeout(function () {
+            }, boundary.getTime() - now.getTime() + 100);
+        },
+
+        startDeviceListener: function () {
+            var self = this;
+
+            if (!window.matchMedia) {
+                return;
+            }
+
+            this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            this.mediaListener = function (event) {
+                if (!self.getOverride() && self.getMode() === 3) {
+                    self.apply(event.matches);
+                }
+            };
+
+            if (this.mediaQuery.addEventListener) {
+                this.mediaQuery.addEventListener('change', this.mediaListener);
+            } else if (this.mediaQuery.addListener) {
+                this.mediaQuery.addListener(this.mediaListener);
+            }
+        },
+
+        checkColorScheme: function () {
+            var override = this.getOverride();
+            var mode = this.getMode();
+
+            this.stopAutomation();
+            this.apply(override ? override === 'dark' : this.getConfiguredState());
+
+            if (override) {
+                return;
+            }
+            if (mode === 3) {
+                this.startDeviceListener();
+            } else if (mode === 0) {
+                this.scheduleTimeChange();
+            }
+        },
+
+        toggleByHand: function () {
+            var self = this;
+            var reducedMotion = window.matchMedia
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            $('#toggle-night').addClass('switching');
+            window.setTimeout(function () {
+                var isDark = !document.documentElement.classList.contains('theme-dark');
+                VOID_Util.setCookie('void_theme_override', isDark ? 'dark' : 'light', 0);
+                self.stopAutomation();
+                self.apply(isDark);
+                window.setTimeout(function () {
                     $('#toggle-night').removeClass('switching');
-                }, 1000);
-            }, 600);
+                }, reducedMotion ? 0 : 1000);
+            }, reducedMotion ? 0 : 600);
         }
     },
 
