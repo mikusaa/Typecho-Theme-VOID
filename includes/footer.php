@@ -50,7 +50,7 @@ $setting = $GLOBALS['VOIDSetting'];
         <aside hidden id="setting-panel">
             <section>
                 <div id="toggle-night">
-                    <a target="_self" href="javascript:void(0)" onclick="VOID_Ui.DarkModeSwitcher.toggleByHand();"><i></i></a>
+                    <button type="button" aria-label="切换主题颜色" title="切换主题颜色" onclick="VOID_Ui.DarkModeSwitcher.toggleByHand();"><i aria-hidden="true"></i></button>
                 </div>
                 <div id="adjust-text-container">
                     <div class="adjust-text-item">

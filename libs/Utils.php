@@ -284,7 +284,7 @@ class Utils
             'indexBannerTitle' => '',
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
-            'colorScheme' => 0, // 0: 自动，1: 日间，2: 夜间
+            'colorScheme' => 0, // 0: 按时间自动，1: 日间，2: 夜间，3: 跟随设备
             'reward' => ''
         );
 
@@ -319,7 +319,6 @@ class Utils
             'headerMode' => 1,
             'defaultFontSize' => 3,
             'useFiraCodeFont' => false,
-            'followSystemColorScheme' => false,
             'largePhotoSet' => true,
             'macStyleCodeBlock' => true,
             'lineNumbers' => true,

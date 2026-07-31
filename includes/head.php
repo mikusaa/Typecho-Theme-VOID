@@ -27,6 +27,32 @@ if (isset($_POST['void_action'])) {
     <meta name="renderer" content="webkit">
     <meta name="HandheldFriendly" content="true">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <script>
+    (function () {
+        var mode = <?php echo intval($setting['colorScheme']); ?>;
+        var start = <?php echo floatval($setting['darkModeTime']['start']); ?>;
+        var end = <?php echo floatval($setting['darkModeTime']['end']); ?>;
+        var override = document.cookie.match(/(?:^|; )void_theme_override=(light|dark)(?:;|$)/);
+        var current = new Date();
+        var currentHour = current.getHours() + current.getMinutes() / 60;
+        var isDark = false;
+
+        if (override) {
+            isDark = override[1] === 'dark';
+        } else if (mode === 2) {
+            isDark = true;
+        } else if (mode === 3) {
+            isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } else if (mode === 0 && start !== end) {
+            isDark = start < end
+                ? currentHour >= start && currentHour < end
+                : currentHour >= start || currentHour < end;
+        }
+
+        document.documentElement.classList.toggle('theme-dark', isDark);
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    })();
+    </script>
     <?php 
     $banner = '';
     $description = '';
@@ -60,7 +86,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-fed2945964.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-1536a7812c.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-0a65693c5e.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
@@ -74,7 +100,6 @@ if (isset($_POST['void_action'])) {
         lazyload : <?php echo $setting['lazyload'] ? 'true' : 'false'; ?>,
         colorScheme:  <?php echo $setting['colorScheme']; ?>,
         headerMode: <?php echo $setting['headerMode']; ?>,
-        followSystemColorScheme: <?php echo $setting['followSystemColorScheme'] ? 'true' : 'false'; ?>,
         browserLevelLoadingLazy: <?php echo $setting['browserLevelLoadingLazy'] ? 'true' : 'false'; ?>,
         VOIDPlugin: <?php echo $setting['VOIDPlugin'] ? 'true' : 'false'; ?>,
         votePath: "<?php Utils::index('/action/void?'); ?>",
@@ -92,7 +117,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-e6566a6586.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-9452659a17.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>

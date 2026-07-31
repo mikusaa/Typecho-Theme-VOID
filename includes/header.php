@@ -16,9 +16,8 @@ if($this->is('post') || $this->is('page')) {
 ?>
 
 <body fontsize="<?php echo Utils::getTextSize($setting); ?>" class="<?php 
-        if($setting['colorScheme'] == 0){
-            echo((isset($_COOKIE['theme_dark']) && $_COOKIE['theme_dark'] == '1') ? 'theme-dark' : '');
-        } elseif ($setting['colorScheme'] == 2) {
+        $themeOverride = isset($_COOKIE['void_theme_override']) ? $_COOKIE['void_theme_override'] : null;
+        if ($themeOverride === 'dark' || ($themeOverride !== 'light' && $setting['colorScheme'] == 2)) {
             echo 'theme-dark';
         }
         if($setting['macStyleCodeBlock']) {
@@ -46,6 +45,9 @@ if($this->is('post') || $this->is('page')) {
             echo ' lazyload-img';
         }
     ?>">
+    <script>
+        document.body.classList.toggle('theme-dark', document.documentElement.classList.contains('theme-dark'));
+    </script>
     
     <header class="header-mode-<?php echo $setting['headerMode']; ?> <?php if(empty($banner)) echo 'force-dark no-banner'; ?>">
         <div class="container wider">
