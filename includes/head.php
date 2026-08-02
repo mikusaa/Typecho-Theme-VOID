@@ -86,7 +86,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-fed2945964.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-0a65693c5e.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-b260a58257.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
@@ -113,11 +113,11 @@ if (isset($_POST['void_action'])) {
         horizontalBg: <?php echo empty($setting['siteBg']) ? 'false' : 'true'; ?>,
         verticalBg: <?php echo empty($setting['siteBgVertical']) ? 'false' : 'true'; ?>,
         indexStyle: <?php echo $setting['indexStyle']; ?>,
-        version: <?php echo $GLOBALS['VOIDVersion'] ?>,
+        version: <?php echo json_encode($GLOBALS['VOIDVersion']); ?>,
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-9452659a17.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-98af310459.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>

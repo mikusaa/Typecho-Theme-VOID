@@ -284,13 +284,13 @@ class Utils
             'indexBannerTitle' => '',
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
-            'colorScheme' => 0, // 0: 按时间自动，1: 日间，2: 夜间，3: 跟随设备
+            'colorScheme' => 3, // 0: 定时切换，1: 日间，2: 夜间，3: 跟随设备
             'reward' => ''
         );
 
         $keys = array_keys($themeSetting);
         foreach ($keys as $key) {
-            if(!empty($options->{$key})){
+            if($options->{$key} !== null && $options->{$key} !== ''){
                 $themeSetting[$key] = $options->{$key};
             }
         }
@@ -319,6 +319,7 @@ class Utils
             'headerMode' => 1,
             'defaultFontSize' => 3,
             'useFiraCodeFont' => false,
+            'followSystemColorScheme' => false,
             'largePhotoSet' => true,
             'macStyleCodeBlock' => true,
             'lineNumbers' => true,
@@ -344,6 +345,11 @@ class Utils
 
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
             $advanceSetting['headerMode'] = $advanceSetting['headerModeMobile'];
+        }
+
+        // 旧版隐藏配置声明跟随系统时，迁移为新的独立模式。
+        if($themeSetting['colorScheme'] === 0 && !empty($advanceSetting['followSystemColorScheme'])){
+            $themeSetting['colorScheme'] = 3;
         }
 
         $output = array_merge($themeSetting, $advanceSetting);

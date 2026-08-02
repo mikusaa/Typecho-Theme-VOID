@@ -110,7 +110,7 @@ function themeInit($archive = null)
 }
 
 $GLOBALS['VOIDPluginREQ'] = 1.4;
-$GLOBALS['VOIDVersion'] = 3.54;
+$GLOBALS['VOIDVersion'] = '3.5.4.1';
 
 /**
  * 主题设置
@@ -131,8 +131,8 @@ function themeConfig($form)
     }
 
     echo '<p id="void-check-update" class="notice">正在检查更新……</p>';
-    echo '<script>var VOIDVersion='.$GLOBALS['VOIDVersion'].'</script>';
-    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-e2374266c6.js"></script>';
+    echo '<script>var VOIDVersion='.json_encode($GLOBALS['VOIDVersion']).'</script>';
+    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-52b614862d.js"></script>';
 
     $defaultBanner = new Typecho_Widget_Helper_Form_Element_Text('defaultBanner', null, '', '首页顶部大图', '可以填写随机图 API。');
     $form->addInput($defaultBanner);
@@ -142,11 +142,11 @@ function themeConfig($form)
     $form->addInput($indexBannerSubtitle);
 
     $colorScheme = new Typecho_Widget_Helper_Form_Element_Radio('colorScheme', array(
-        '0' => '按时间自动切换',
         '3' => '跟随设备',
+        '0' => '定时切换',
         '1' => '日间模式',
         '2' => '夜间模式'
-    ), '0', '主题颜色模式', '选择主题颜色模式。自动模式下每天 22:00 到次日 06:59 会显示为夜间模式。');
+    ), '3', '主题颜色模式', '跟随设备会响应访客设备的深浅色设置；定时切换默认在每天 22:00 到次日 06:59 使用夜间模式。');
     $form->addInput($colorScheme);
 
     $indexStyle = new Typecho_Widget_Helper_Form_Element_Radio('indexStyle', array(
