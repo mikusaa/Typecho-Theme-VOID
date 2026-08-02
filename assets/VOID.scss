@@ -384,12 +384,15 @@ p.notice {
             &.switching button {
                 animation: switch 1.2s $animationTimingFunc;
             }
+            &.switching-auto button {
+                animation: switch-theme-state 280ms ease-out;
+            }
             button {
                 display: block;
                 width: 62px;
                 height: 62px;
                 line-height: 62px;
-                color: #ffe150;
+                color: $fadeColor;
                 padding: 0;
                 border: 0;
                 border-radius: 50%;
@@ -403,28 +406,40 @@ p.notice {
                         background: $headerBgColor;
                     }
                 }
+                &:focus-visible {
+                    outline: 2px solid currentColor;
+                    outline-offset: 2px;
+                }
                 i {
                     display: block;
                 }
                 i::before {
-                    content: '\f185';
+                    content: '\e808';
+                    display: flex;
+                    width: 100%;
+                    height: 100%;
                     font-family: "void-icon";
                     font-style: normal;
                     font-weight: normal;
                     text-decoration: none;
-                    display: flex;
-                    width: 100%;
-                    height: 100%;
                     justify-content: center;
                     align-items: center;
                 }
                 .theme-dark & {
+                    color: $td-textColor-dark;
+                }
+                &[data-theme-state='light'] {
+                    color: #e5bd16;
+                    i::before {
+                        content: '\f185';
+                    }
+                }
+                &[data-theme-state='dark'] {
                     color: $td-textColor-light;
-                    i:before {
+                    i::before {
                         content: '\f186';
                     }
                 }
-                
             }
         }
 
@@ -650,7 +665,8 @@ p.notice {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #setting-panel #toggle-night.switching button {
+    #setting-panel #toggle-night.switching button,
+    #setting-panel #toggle-night.switching-auto button {
         animation: none;
     }
 }

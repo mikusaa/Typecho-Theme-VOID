@@ -63,6 +63,10 @@ VOID_Util = {
         }
     },
 
+    removeCookie: function (name) {
+        document.cookie = name + '=;max-age=0;path=/';
+    },
+
     getCookie: function (name) {
         var reg = new RegExp('(^| )' + name + '=([^;]*)(;|$)');
         var arr = document.cookie.match(reg);
@@ -563,15 +567,23 @@ VOID_Ui = {
 
         updateControl: function (isDark) {
             var control = document.querySelector('#toggle-night button');
+            var state = this.getOverride() || 'auto';
             var label;
 
             if (!control) {
                 return;
             }
 
-            label = isDark ? '切换至日间模式' : '切换至夜间模式';
+            if (state === 'light') {
+                label = '日间模式；切换至夜间模式';
+            } else if (state === 'dark') {
+                label = '夜间模式；恢复跟随主题设置';
+            } else {
+                label = '跟随主题设置，当前为' + (isDark ? '夜间' : '日间') + '模式；切换至日间模式';
+            }
+
+            control.setAttribute('data-theme-state', state);
             control.setAttribute('aria-label', label);
-            control.setAttribute('aria-pressed', isDark ? 'true' : 'false');
             control.setAttribute('title', label);
         },
 
@@ -661,19 +673,41 @@ VOID_Ui = {
 
         toggleByHand: function () {
             var self = this;
+            var override = self.getOverride();
             var reducedMotion = window.matchMedia
                 && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var rotate = override === 'light' && !reducedMotion;
+            var crossfade = !rotate && !reducedMotion;
 
-            $('#toggle-night').addClass('switching');
+            if (rotate) {
+                $('#toggle-night').addClass('switching');
+            } else if (crossfade) {
+                $('#toggle-night').addClass('switching-auto');
+            }
             window.setTimeout(function () {
-                var isDark = !document.documentElement.classList.contains('theme-dark');
-                VOID_Util.setCookie('void_theme_override', isDark ? 'dark' : 'light', 0);
-                self.stopAutomation();
-                self.apply(isDark);
-                window.setTimeout(function () {
-                    $('#toggle-night').removeClass('switching');
-                }, reducedMotion ? 0 : 1000);
-            }, reducedMotion ? 0 : 600);
+                if (!override) {
+                    VOID_Util.setCookie('void_theme_override', 'light', 0);
+                    self.stopAutomation();
+                    self.apply(false);
+                } else if (override === 'light') {
+                    VOID_Util.setCookie('void_theme_override', 'dark', 0);
+                    self.stopAutomation();
+                    self.apply(true);
+                } else {
+                    VOID_Util.removeCookie('void_theme_override');
+                    self.checkColorScheme();
+                }
+
+                if (rotate) {
+                    window.setTimeout(function () {
+                        $('#toggle-night').removeClass('switching');
+                    }, 1000);
+                } else if (crossfade) {
+                    window.setTimeout(function () {
+                        $('#toggle-night').removeClass('switching-auto');
+                    }, 160);
+                }
+            }, rotate ? 600 : (crossfade ? 120 : 0));
         }
     },
 

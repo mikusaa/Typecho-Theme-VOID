@@ -113,7 +113,7 @@ if (isset($_POST['void_action'])) {
         horizontalBg: <?php echo empty($setting['siteBg']) ? 'false' : 'true'; ?>,
         verticalBg: <?php echo empty($setting['siteBgVertical']) ? 'false' : 'true'; ?>,
         indexStyle: <?php echo $setting['indexStyle']; ?>,
-        version: <?php echo $GLOBALS['VOIDVersion'] ?>,
+        version: <?php echo json_encode($GLOBALS['VOIDVersion']); ?>,
         isDev: true
     }
     </script>
