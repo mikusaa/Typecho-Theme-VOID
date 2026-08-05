@@ -384,9 +384,6 @@ p.notice {
             &.switching button {
                 animation: switch 1.2s $animationTimingFunc;
             }
-            &.switching-auto button {
-                animation: switch-theme-state 280ms ease-out;
-            }
             button {
                 display: block;
                 width: 62px;
@@ -665,8 +662,7 @@ p.notice {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #setting-panel #toggle-night.switching button,
-    #setting-panel #toggle-night.switching-auto button {
+    #setting-panel #toggle-night.switching button {
         animation: none;
     }
 }

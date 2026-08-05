@@ -676,13 +676,10 @@ VOID_Ui = {
             var override = self.getOverride();
             var reducedMotion = window.matchMedia
                 && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            var rotate = override === 'light' && !reducedMotion;
-            var crossfade = !rotate && !reducedMotion;
+            var rotate = !reducedMotion;
 
             if (rotate) {
                 $('#toggle-night').addClass('switching');
-            } else if (crossfade) {
-                $('#toggle-night').addClass('switching-auto');
             }
             window.setTimeout(function () {
                 if (!override) {
@@ -702,12 +699,8 @@ VOID_Ui = {
                     window.setTimeout(function () {
                         $('#toggle-night').removeClass('switching');
                     }, 1000);
-                } else if (crossfade) {
-                    window.setTimeout(function () {
-                        $('#toggle-night').removeClass('switching-auto');
-                    }, 160);
                 }
-            }, rotate ? 600 : (crossfade ? 120 : 0));
+            }, rotate ? 600 : 0);
         }
     },
 
