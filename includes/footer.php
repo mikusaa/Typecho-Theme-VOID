@@ -82,8 +82,13 @@ $setting = $GLOBALS['VOIDSetting'];
                             <input type="text" name="name" autocomplete="username" placeholder="请输入用户名" required/>
                             <input type="password" name="password" autocomplete="current-password" placeholder="请输入密码" required/>
                             <input type="hidden" name="referer" value="<?php 
-                                if($this->is('index')) $this->options->siteUrl();
-                                else $this->permalink();
+                                if($this->have() && ($this->is('post') || $this->is('page'))) {
+                                    $this->permalink();
+                                } else {
+                                    $referer = rtrim($this->options->rootUrl, '/') . '/'
+                                        . ltrim($this->request->getRequestUri(), '/');
+                                    echo htmlspecialchars($referer, ENT_QUOTES, 'UTF-8');
+                                }
                             ?>">
                         </div>
                         <div class="buttons" id="loggin-buttons">
