@@ -56,7 +56,11 @@ if (isset($_POST['void_action'])) {
     <?php 
     $banner = '';
     $description = '';
-    if($this->is('post') || $this->is('page')){
+    $isContentPage = $this->have() && ($this->is('post') || $this->is('page'));
+    $pageUrl = $isContentPage
+        ? $this->permalink
+        : rtrim($this->options->rootUrl, '/') . '/' . ltrim($this->request->getRequestUri(), '/');
+    if($isContentPage){
         if($this->fields->banner != '')
             $banner=$this->fields->banner;
         if($this->fields->excerpt != '')
@@ -66,16 +70,20 @@ if (isset($_POST['void_action'])) {
     }
     ?>
     <title><?php Contents::title($this); ?></title>
+    <?php if($isContentPage): ?>
     <meta name="author" content="<?php $this->author(); ?>" />
+    <?php endif; ?>
     <meta name="description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
     <meta property="og:title" content="<?php Contents::title($this); ?>" />
     <meta property="og:description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
     <meta property="og:site_name" content="<?php Contents::title($this); ?>" />
-    <meta property="og:type" content="<?php if($this->is('post') || $this->is('page')) echo 'article'; else echo 'website'; ?>" />
-    <meta property="og:url" content="<?php $this->permalink(); ?>" />
+    <meta property="og:type" content="<?php echo $isContentPage ? 'article' : 'website'; ?>" />
+    <meta property="og:url" content="<?php echo htmlspecialchars($pageUrl, ENT_QUOTES, 'UTF-8'); ?>" />
     <meta property="og:image" content="<?php echo $banner; ?>" />
+    <?php if($isContentPage): ?>
     <meta property="article:published_time" content="<?php echo date('c', $this->created); ?>" />
     <meta property="article:modified_time" content="<?php echo date('c', $this->modified); ?>" />
+    <?php endif; ?>
     <meta name="twitter:title" content="<?php Contents::title($this); ?>" />
     <meta name="twitter:description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
     <meta name="twitter:card" content="summary" />
