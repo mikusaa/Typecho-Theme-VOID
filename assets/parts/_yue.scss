@@ -140,17 +140,25 @@
         border-color: $td-borderColor;
     }
 }
-.yue blockquote {
+.yue .articleBody blockquote {
     margin: 0.92em 0;
-    border-left: 3px solid #dadada;
-    padding-left: 12px;
+    padding: 0.8em 1em;
+    border-left: 4px solid rgba(#000, 0.28);
+    background: rgba(#000, 0.035);
     color: $fadeColor;
     .theme-dark & {
         color: $td-textColor-dark;
-        border-color: $td-borderColor;
+        border-color: rgba(#fff, 0.22);
+        background: $td-bgColor-light;
+    }
+    > :first-child {
+        margin-top: 0;
+    }
+    > :last-child {
+        margin-bottom: 0;
     }
 }
-.yue blockquote a {
+.yue .articleBody blockquote a {
     color: $fadeColor;
     .theme-dark & {
         color: $td-textColor-dark;
@@ -345,12 +353,6 @@
     border: none;
     background: none;
 }
-@media (min-width: 1100px) {
-    .yue blockquote {
-        border-width: 4px;
-    }
-}
-
 [lang^="zh"] .yue p,
 [lang^="ja"] .yue p {
     text-align: justify;
