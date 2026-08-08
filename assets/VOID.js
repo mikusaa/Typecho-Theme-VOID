@@ -131,6 +131,20 @@ var VOID_Content = {
         });
     },
 
+    // 为省略 summary 的旧文章补充可样式化、可访问的折叠标题
+    parseDetails: function () {
+        $.each($('article.yue details'), function (i, item) {
+            if ($(item).children('summary').length > 0) {
+                return;
+            }
+
+            var summary = document.createElement('summary');
+            summary.textContent = '展开详情';
+            summary.setAttribute('data-void-generated', '');
+            item.insertBefore(summary, item.firstChild);
+        });
+    },
+
     // 处理友链列表
     parseBoardThumbs: function () {
         $.each($('.board-thumb'), function (i, item) {
@@ -515,6 +529,7 @@ var VOID = {
         VOID_Ui.headroom();
 
         VOID_Content.countWords();
+        VOID_Content.parseDetails();
         VOID_Content.parseTOC();
         VOID_Content.parsePhotos();
         VOID_Content.highlight();
@@ -594,6 +609,7 @@ var VOID = {
 
         VOID_Ui.checkScrollTop();
         VOID_Content.countWords();
+        VOID_Content.parseDetails();
         VOID_Content.parseTOC();
         VOID_Content.parsePhotos();
         VOID_Content.parseUrl();
