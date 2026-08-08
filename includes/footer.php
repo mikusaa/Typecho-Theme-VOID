@@ -154,7 +154,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-63ecf18250.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-0ee7ae25dc.js'); ?>"></script>
         <script>
         if (window.VOID && typeof VOID.initOwO === 'function') {
             VOID.initOwO();
