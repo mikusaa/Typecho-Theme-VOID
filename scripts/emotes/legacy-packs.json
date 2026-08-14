@@ -1,0 +1,1026 @@
+{
+  "version": 1,
+  "packs": {
+    "kaomoji": {
+      "items": [
+        {
+          "label": "Author: DIYgod",
+          "value": "OωO"
+        },
+        {
+          "label": "Hi",
+          "value": "|´・ω・)ノ"
+        },
+        {
+          "label": "再问自杀",
+          "value": "(⌐■_■)"
+        },
+        {
+          "label": "(◍•ᴗ•◍)❤",
+          "value": "(◍•ᴗ•◍)❤"
+        },
+        {
+          "label": "(ᗜ ˰ ᗜ)",
+          "value": "(ᗜ ˰ ᗜ)"
+        },
+        {
+          "label": "ΦωΦ",
+          "value": "ΦωΦ"
+        },
+        {
+          "label": "开心",
+          "value": "ヾ(≧∇≦*)ゝ"
+        },
+        {
+          "label": "星星眼",
+          "value": "(☆ω☆)"
+        },
+        {
+          "label": "掀桌",
+          "value": "（╯‵□′）╯︵┴─┴"
+        },
+        {
+          "label": "流口水",
+          "value": "￣﹃￣"
+        },
+        {
+          "label": "捂脸",
+          "value": "(/ω＼)"
+        },
+        {
+          "label": "给跪",
+          "value": "∠( ᐛ 」∠)＿"
+        },
+        {
+          "label": "Hi",
+          "value": "(๑•̀ㅁ•́ฅ)"
+        },
+        {
+          "label": "斜眼",
+          "value": "→_→"
+        },
+        {
+          "label": "加油",
+          "value": "୧(๑•̀⌄•́๑)૭"
+        },
+        {
+          "label": "有木有WiFi",
+          "value": "٩(ˊᗜˋ*)و"
+        },
+        {
+          "label": "前方高能预警",
+          "value": "(ノ°ο°)ノ"
+        },
+        {
+          "label": "我从未见过如此厚颜无耻之人",
+          "value": "(´இ皿இ｀)"
+        },
+        {
+          "label": "吓死宝宝惹",
+          "value": "⌇●﹏●⌇"
+        },
+        {
+          "label": "已阅留爪",
+          "value": "(ฅ´ω`ฅ)"
+        },
+        {
+          "label": "去吧大师球",
+          "value": "(╯°A°)╯︵○○○"
+        },
+        {
+          "label": "太萌惹",
+          "value": "φ(￣∇￣o)"
+        },
+        {
+          "label": "咦咦咦",
+          "value": "ヾ(´･ ･｀｡)ノ\""
+        },
+        {
+          "label": "气呼呼",
+          "value": "( ง ᵒ̌皿ᵒ̌)ง⁼³₌₃"
+        },
+        {
+          "label": "我受到了惊吓",
+          "value": "(ó﹏ò｡)"
+        },
+        {
+          "label": "什么鬼",
+          "value": "Σ(っ °Д °;)っ"
+        },
+        {
+          "label": "摸摸头",
+          "value": "( ,,´･ω･)ﾉ\"(´っω･｀｡)"
+        },
+        {
+          "label": "无奈",
+          "value": "╮(╯▽╰)╭ "
+        },
+        {
+          "label": "脸红",
+          "value": "o(*////▽////*)q "
+        },
+        {
+          "label": "＞﹏＜",
+          "value": "＞﹏＜"
+        },
+        {
+          "label": "( ๑´•ω•) \"(ㆆᴗㆆ)",
+          "value": "( ๑´•ω•) \"(ㆆᴗㆆ)"
+        },
+        {
+          "label": "(｡•ˇ‸ˇ•｡)",
+          "value": "(｡•ˇ‸ˇ•｡)"
+        },
+        {
+          "label": "得意",
+          "value": "( •̀ ω •́ )✧"
+        },
+        {
+          "label": "偷看",
+          "value": "|ω・）"
+        },
+        {
+          "label": "害羞",
+          "value": "(*／ω＼)"
+        },
+        {
+          "label": "委屈",
+          "value": "(╥﹏╥)"
+        },
+        {
+          "label": "震惊",
+          "value": "(⊙x⊙;)"
+        },
+        {
+          "label": "围观",
+          "value": "(￢_￢)"
+        },
+        {
+          "label": "坏笑",
+          "value": "(¬‿¬)"
+        },
+        {
+          "label": "无语",
+          "value": "(；一_一)"
+        },
+        {
+          "label": "打call",
+          "value": "ヽ(￣ω￣(￣ω￣〃)ゝ"
+        },
+        {
+          "label": "膜拜",
+          "value": "＿|￣|○"
+        },
+        {
+          "label": "土下座",
+          "value": "(シ_ _)シ"
+        },
+        {
+          "label": "睡觉",
+          "value": "(¦3[▓▓]"
+        },
+        {
+          "label": "摸鱼",
+          "value": "ヾ(•ω•`)o"
+        },
+        {
+          "label": "暴怒",
+          "value": "(▼皿▼#)"
+        },
+        {
+          "label": "安慰",
+          "value": "(ノ_<。)ヾ(´ ▽ ` )"
+        },
+        {
+          "label": "比心",
+          "value": "(´▽`ʃ♡ƪ)"
+        },
+        {
+          "label": "猫猫",
+          "value": "(=①ω①=)"
+        },
+        {
+          "label": "猫哭",
+          "value": "(=ＴェＴ=)"
+        },
+        {
+          "label": "收到",
+          "value": "(￣^￣)ゞ"
+        },
+        {
+          "label": "撒花",
+          "value": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧"
+        },
+        {
+          "label": "冲鸭",
+          "value": "ᕕ( ᐛ )ᕗ"
+        },
+        {
+          "label": "抱抱",
+          "value": "(づ￣ 3￣)づ"
+        }
+      ]
+    },
+    "quyin": {
+      "items": [
+        {
+          "label": "蛆音娘_偷看",
+          "token": ":&(蛆音娘_偷看)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E581B7E79C8B.png"
+        },
+        {
+          "label": "蛆音娘_摊手",
+          "token": ":&(蛆音娘_摊手)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E6918AE6898B.png"
+        },
+        {
+          "label": "蛆音娘_无语",
+          "token": ":&(蛆音娘_无语)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E697A0E8AFAD.png"
+        },
+        {
+          "label": "蛆音娘_害怕",
+          "token": ":&(蛆音娘_害怕)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E5AEB3E68095.png"
+        },
+        {
+          "label": "蛆音娘_去世",
+          "token": ":&(蛆音娘_去世)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E58EBBE4B896.png"
+        },
+        {
+          "label": "蛆音娘_睡觉",
+          "token": ":&(蛆音娘_睡觉)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E79DA1E8A789.png"
+        },
+        {
+          "label": "蛆音娘_哭泣",
+          "token": ":&(蛆音娘_哭泣)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E593ADE6B3A3.png"
+        },
+        {
+          "label": "蛆音娘_滑稽",
+          "token": ":&(蛆音娘_滑稽)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E6BB91E7A8BD.png"
+        },
+        {
+          "label": "蛆音娘_肥皂",
+          "token": ":&(蛆音娘_肥皂)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E882A5E79A82.png"
+        },
+        {
+          "label": "蛆音娘_生气",
+          "token": ":&(蛆音娘_生气)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E7949FE6B094.png"
+        },
+        {
+          "label": "蛆音娘_不愧是我",
+          "token": ":&(蛆音娘_不愧是我)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E4B88DE684A7E698AFE68891.png"
+        },
+        {
+          "label": "蛆音娘_吃惊",
+          "token": ":&(蛆音娘_吃惊)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59083E6838A.png"
+        },
+        {
+          "label": "蛆音娘_扶额",
+          "token": ":&(蛆音娘_扶额)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E689B6E9A29D.png"
+        },
+        {
+          "label": "蛆音娘_大笑",
+          "token": ":&(蛆音娘_大笑)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E5A4A7E7AC91.png"
+        },
+        {
+          "label": "蛆音娘_卖萌",
+          "token": ":&(蛆音娘_卖萌)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E58D96E8908C.png"
+        },
+        {
+          "label": "蛆音娘_吃瓜",
+          "token": ":&(蛆音娘_吃瓜)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59083E7939C.png"
+        },
+        {
+          "label": "蛆音娘_吐血",
+          "token": ":&(蛆音娘_吐血)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59090E8A180.png"
+        },
+        {
+          "label": "蛆音娘_OK",
+          "token": ":&(蛆音娘_OK)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_OK.png"
+        },
+        {
+          "label": "蛆音娘_哼",
+          "token": ":&(蛆音娘_哼)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E593BC.png"
+        },
+        {
+          "label": "蛆音娘_疑问",
+          "token": ":&(蛆音娘_疑问)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E79691E997AE.png"
+        }
+      ]
+    },
+    "bilibili": {
+      "items": [
+        {
+          "label": "2233娘_第一",
+          "token": ":$(2233娘_第一)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7ACACE4B880.png"
+        },
+        {
+          "label": "2233娘_无语",
+          "token": ":$(2233娘_无语)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E697A0E8AFAD.png"
+        },
+        {
+          "label": "2233娘_吐魂",
+          "token": ":$(2233娘_吐魂)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59090E9AD82.png"
+        },
+        {
+          "label": "2233娘_委屈",
+          "token": ":$(2233娘_委屈)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5A794E5B188.png"
+        },
+        {
+          "label": "2233娘_哭泣",
+          "token": ":$(2233娘_哭泣)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E593ADE6B3A3.png"
+        },
+        {
+          "label": "2233娘_郁闷",
+          "token": ":$(2233娘_郁闷)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E98381E997B7.png"
+        },
+        {
+          "label": "2233娘_困惑",
+          "token": ":$(2233娘_困惑)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59BB0E68391.png"
+        },
+        {
+          "label": "2233娘_生气",
+          "token": ":$(2233娘_生气)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7949FE6B094.png"
+        },
+        {
+          "label": "2233娘_吃惊",
+          "token": ":$(2233娘_吃惊)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59083E6838A.png"
+        },
+        {
+          "label": "2233娘_汗",
+          "token": ":$(2233娘_汗)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E6B197.png"
+        },
+        {
+          "label": "2233娘_大笑",
+          "token": ":$(2233娘_大笑)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5A4A7E7AC91.png"
+        },
+        {
+          "label": "2233娘_喝水",
+          "token": ":$(2233娘_喝水)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5969DE6B0B4.png"
+        },
+        {
+          "label": "2233娘_耶",
+          "token": ":$(2233娘_耶)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E880B6.png"
+        },
+        {
+          "label": "2233娘_卖萌",
+          "token": ":$(2233娘_卖萌)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E58D96E8908C.png"
+        },
+        {
+          "label": "2233娘_疑问",
+          "token": ":$(2233娘_疑问)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E79691E997AE.png"
+        }
+      ]
+    },
+    "mihoyo": {
+      "items": [
+        {
+          "label": "遐蝶_蝴蝶",
+          "token": ":!(遐蝶_蝴蝶)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E98190E89DB6_E89DB4E89DB6.png"
+        },
+        {
+          "label": "帕姆_比心",
+          "token": ":!(帕姆_比心)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E6AF94E5BF83.png"
+        },
+        {
+          "label": "帕姆_不可以",
+          "token": ":!(帕姆_不可以)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E4B88DE58FAFE4BBA5.png"
+        },
+        {
+          "label": "帕姆_出金",
+          "token": ":!(帕姆_出金)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E587BAE98791.png"
+        },
+        {
+          "label": "帕姆_点赞",
+          "token": ":!(帕姆_点赞)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E782B9E8B59E.png"
+        },
+        {
+          "label": "帕姆_干饭",
+          "token": ":!(帕姆_干饭)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5B9B2E9A5AD.png"
+        },
+        {
+          "label": "帕姆_嗨",
+          "token": ":!(帕姆_嗨)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E597A8.png"
+        },
+        {
+          "label": "帕姆_害羞",
+          "token": ":!(帕姆_害羞)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5AEB3E7BE9E.png"
+        },
+        {
+          "label": "帕姆_好奇",
+          "token": ":!(帕姆_好奇)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5A5BDE5A587.png"
+        },
+        {
+          "label": "帕姆_好耶",
+          "token": ":!(帕姆_好耶)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E5A5BDE880B6.png"
+        },
+        {
+          "label": "帕姆_加班",
+          "token": ":!(帕姆_加班)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E58AA0E78FAD.png"
+        },
+        {
+          "label": "帕姆_哭哭",
+          "token": ":!(帕姆_哭哭)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E593ADE593AD.png"
+        },
+        {
+          "label": "帕姆_礼物",
+          "token": ":!(帕姆_礼物)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E7A4BCE789A9.png"
+        },
+        {
+          "label": "帕姆_收到",
+          "token": ":!(帕姆_收到)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E694B6E588B0.png"
+        },
+        {
+          "label": "帕姆_疑惑",
+          "token": ":!(帕姆_疑惑)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E79691E68391.png"
+        },
+        {
+          "label": "帕姆_震惊",
+          "token": ":!(帕姆_震惊)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E99C87E6838A.png"
+        },
+        {
+          "label": "帕姆_注意",
+          "token": ":!(帕姆_注意)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B895E5A786_E6B3A8E6848F.png"
+        },
+        {
+          "label": "米游姬_我的心好痛",
+          "token": ":!(米游姬_我的心好痛)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E7B1B3E6B8B8E5A7AC_E68891E79A84E5BF83E5A5BDE7979B.png"
+        },
+        {
+          "label": "神里绫华_庆贺",
+          "token": ":!(神里绫华_庆贺)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E7A59EE9878CE7BBABE58D8E_E5BA86E8B4BA.png"
+        },
+        {
+          "label": "派蒙_心情简单",
+          "token": ":!(派蒙_心情简单)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E6B4BEE89299_E5BF83E68385E7AE80E58D95.png"
+        },
+        {
+          "label": "派蒙_心情复杂",
+          "token": ":!(派蒙_心情复杂)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E6B4BEE89299_E5BF83E68385E5A48DE69D82.png"
+        },
+        {
+          "label": "崩坏3_脱非",
+          "token": ":!(崩坏3_脱非)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E884B1E99D9E.png"
+        },
+        {
+          "label": "崩坏3_入欧",
+          "token": ":!(崩坏3_入欧)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E585A5E6ACA7.png"
+        },
+        {
+          "label": "崩坏3_二胡",
+          "token": ":!(崩坏3_二胡)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E4BA8CE883A1.png"
+        },
+        {
+          "label": "崩坏3_唢呐",
+          "token": ":!(崩坏3_唢呐)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E594A2E59190.png"
+        },
+        {
+          "label": "崩坏3_琵琶",
+          "token": ":!(崩坏3_琵琶)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E790B5E790B6.png"
+        },
+        {
+          "label": "崩坏3_笛子",
+          "token": ":!(崩坏3_笛子)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E7AC9BE5AD90.png"
+        },
+        {
+          "label": "崩坏3_镲",
+          "token": ":!(崩坏3_镲)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E995B2.png"
+        },
+        {
+          "label": "崩坏3_抓获",
+          "token": ":!(崩坏3_抓获)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68A93E88EB7.png"
+        },
+        {
+          "label": "崩坏3_打架",
+          "token": ":!(崩坏3_打架)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68993E69EB6.png"
+        },
+        {
+          "label": "崩坏3_灵光一现",
+          "token": ":!(崩坏3_灵光一现)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E781B5E58589E4B880E78EB0.png"
+        },
+        {
+          "label": "崩坏3_天呐",
+          "token": ":!(崩坏3_天呐)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E5A4A9E59190.png"
+        },
+        {
+          "label": "崩坏3_吃粽子",
+          "token": ":!(崩坏3_吃粽子)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E59083E7B2BDE5AD90.png"
+        },
+        {
+          "label": "崩坏3_生日吃蛋糕",
+          "token": ":!(崩坏3_生日吃蛋糕)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E7949FE697A5E59083E89B8BE7B395.png"
+        },
+        {
+          "label": "崩坏3_惊呆了",
+          "token": ":!(崩坏3_惊呆了)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E6838AE59186E4BA86.png"
+        },
+        {
+          "label": "崩坏3_拖走",
+          "token": ":!(崩坏3_拖走)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E68B96E8B5B0.png"
+        },
+        {
+          "label": "崩坏3_吓",
+          "token": ":!(崩坏3_吓)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E59093.png"
+        },
+        {
+          "label": "崩坏3_比心",
+          "token": ":!(崩坏3_比心)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E5B4A9E59D8F3_E6AF94E5BF83.png"
+        },
+        {
+          "label": "原神_小事一桩",
+          "token": ":!(原神_小事一桩)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5B08FE4BA8BE4B880E6A1A9.png"
+        },
+        {
+          "label": "原神_唔",
+          "token": ":!(原神_唔)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E59494.png"
+        },
+        {
+          "label": "原神_躺平",
+          "token": ":!(原神_躺平)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E8BABAE5B9B3.png"
+        },
+        {
+          "label": "原神_哦",
+          "token": ":!(原神_哦)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E593A6.png"
+        },
+        {
+          "label": "原神_大哭",
+          "token": ":!(原神_大哭)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5A4A7E593AD.png"
+        },
+        {
+          "label": "原神_救救我",
+          "token": ":!(原神_救救我)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E69591E69591E68891.png"
+        },
+        {
+          "label": "原神_警觉",
+          "token": ":!(原神_警觉)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E8ADA6E8A789.png"
+        },
+        {
+          "label": "原神_交给我吧",
+          "token": ":!(原神_交给我吧)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E4BAA4E7BB99E68891E590A7.png"
+        },
+        {
+          "label": "原神_哼哼",
+          "token": ":!(原神_哼哼)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E593BCE593BC.png"
+        },
+        {
+          "label": "原神_给我走开",
+          "token": ":!(原神_给我走开)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E7BB99E68891E8B5B0E5BC80.png"
+        },
+        {
+          "label": "原神_鸽子",
+          "token": ":!(原神_鸽子)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E9B8BDE5AD90.png"
+        },
+        {
+          "label": "原神_干杯",
+          "token": ":!(原神_干杯)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5B9B2E69DAF.png"
+        },
+        {
+          "label": "原神_出货吧",
+          "token": ":!(原神_出货吧)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E587BAE8B4A7E590A7.png"
+        },
+        {
+          "label": "原神_吃惊",
+          "token": ":!(原神_吃惊)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E59083E6838A.png"
+        },
+        {
+          "label": "原神_不要啊",
+          "token": ":!(原神_不要啊)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E4B88DE8A681E5958A.png"
+        },
+        {
+          "label": "原神_拜托",
+          "token": ":!(原神_拜托)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E68B9CE68998.png"
+        },
+        {
+          "label": "原神_zzZZ",
+          "token": ":!(原神_zzZZ)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_zzZZ.png"
+        },
+        {
+          "label": "原神_干得好",
+          "token": ":!(原神_干得好)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5B9B2E5BE97E5A5BD.png"
+        },
+        {
+          "label": "原神_1摩拉",
+          "token": ":!(原神_1摩拉)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_1E691A9E68B89.png"
+        },
+        {
+          "label": "原神_得意",
+          "token": ":!(原神_得意)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E5BE97E6848F.png"
+        },
+        {
+          "label": "原神_兔躯一震",
+          "token": ":!(原神_兔躯一震)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E58594E8BAAFE4B880E99C87.png"
+        },
+        {
+          "label": "原神_晚安",
+          "token": ":!(原神_晚安)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E58E9FE7A59E_E6999AE5AE89.png"
+        }
+      ]
+    },
+    "aru": {
+      "items": [
+        {
+          "label": "高兴",
+          "token": ":@(高兴)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9AB98E585B4_2x.png"
+        },
+        {
+          "label": "小怒",
+          "token": ":@(小怒)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B08FE68092_2x.png"
+        },
+        {
+          "label": "脸红",
+          "token": ":@(脸红)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E884B8E7BAA2_2x.png"
+        },
+        {
+          "label": "内伤",
+          "token": ":@(内伤)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E58685E4BCA4_2x.png"
+        },
+        {
+          "label": "装大款",
+          "token": ":@(装大款)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8A385E5A4A7E6ACBE_2x.png"
+        },
+        {
+          "label": "赞一个",
+          "token": ":@(赞一个)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8B59EE4B880E4B8AA_2x.png"
+        },
+        {
+          "label": "害羞",
+          "token": ":@(害羞)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5AEB3E7BE9E_2x.png"
+        },
+        {
+          "label": "汗",
+          "token": ":@(汗)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6B197_2x.png"
+        },
+        {
+          "label": "吐血倒地",
+          "token": ":@(吐血倒地)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090E8A180E58092E59CB0_2x.png"
+        },
+        {
+          "label": "深思",
+          "token": ":@(深思)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6B7B1E6809D_2x.png"
+        },
+        {
+          "label": "不高兴",
+          "token": ":@(不高兴)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE9AB98E585B4_2x.png"
+        },
+        {
+          "label": "无语",
+          "token": ":@(无语)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E8AFAD_2x.png"
+        },
+        {
+          "label": "亲亲",
+          "token": ":@(亲亲)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4BAB2E4BAB2_2x.png"
+        },
+        {
+          "label": "口水",
+          "token": ":@(口水)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E58FA3E6B0B4_2x.png"
+        },
+        {
+          "label": "尴尬",
+          "token": ":@(尴尬)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B0B4E5B0AC_2x.png"
+        },
+        {
+          "label": "中指",
+          "token": ":@(中指)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE68C87_2x.png"
+        },
+        {
+          "label": "想一想",
+          "token": ":@(想一想)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E683B3E4B880E683B3_2x.png"
+        },
+        {
+          "label": "哭泣",
+          "token": ":@(哭泣)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E593ADE6B3A3_2x.png"
+        },
+        {
+          "label": "便便",
+          "token": ":@(便便)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4BEBFE4BEBF_2x.png"
+        },
+        {
+          "label": "献花",
+          "token": ":@(献花)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78CAEE88AB1_2x.png"
+        },
+        {
+          "label": "皱眉",
+          "token": ":@(皱眉)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79AB1E79C89_2x.png"
+        },
+        {
+          "label": "傻笑",
+          "token": ":@(傻笑)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E582BBE7AC91_2x.png"
+        },
+        {
+          "label": "狂汗",
+          "token": ":@(狂汗)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78B82E6B197_2x.png"
+        },
+        {
+          "label": "吐",
+          "token": ":@(吐)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090_2x.png"
+        },
+        {
+          "label": "喷水",
+          "token": ":@(喷水)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E596B7E6B0B4_2x.png"
+        },
+        {
+          "label": "看不见",
+          "token": ":@(看不见)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79C8BE4B88DE8A781_2x.png"
+        },
+        {
+          "label": "鼓掌",
+          "token": ":@(鼓掌)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9BC93E68E8C_2x.png"
+        },
+        {
+          "label": "阴暗",
+          "token": ":@(阴暗)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E998B4E69A97_2x.png"
+        },
+        {
+          "label": "长草",
+          "token": ":@(长草)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E995BFE88D89_2x.png"
+        },
+        {
+          "label": "献黄瓜",
+          "token": ":@(献黄瓜)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78CAEE9BB84E7939C_2x.png"
+        },
+        {
+          "label": "邪恶",
+          "token": ":@(邪恶)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E982AAE681B6_2x.png"
+        },
+        {
+          "label": "期待",
+          "token": ":@(期待)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E69C9FE5BE85_2x.png"
+        },
+        {
+          "label": "得意",
+          "token": ":@(得意)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5BE97E6848F_2x.png"
+        },
+        {
+          "label": "吐舌",
+          "token": ":@(吐舌)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090E8888C_2x.png"
+        },
+        {
+          "label": "喷血",
+          "token": ":@(喷血)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E596B7E8A180_2x.png"
+        },
+        {
+          "label": "无所谓",
+          "token": ":@(无所谓)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E68980E8B093_2x.png"
+        },
+        {
+          "label": "观察",
+          "token": ":@(观察)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8A782E5AF9F_2x.png"
+        },
+        {
+          "label": "暗地观察",
+          "token": ":@(暗地观察)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E69A97E59CB0E8A782E5AF9F_2x.png"
+        },
+        {
+          "label": "肿包",
+          "token": ":@(肿包)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E882BFE58C85_2x.png"
+        },
+        {
+          "label": "中枪",
+          "token": ":@(中枪)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE69EAA_2x.png"
+        },
+        {
+          "label": "大囧",
+          "token": ":@(大囧)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5A4A7E59BA7_2x.png"
+        },
+        {
+          "label": "呲牙",
+          "token": ":@(呲牙)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E591B2E78999_2x.png"
+        },
+        {
+          "label": "抠鼻",
+          "token": ":@(抠鼻)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68AA0E9BCBB_2x.png"
+        },
+        {
+          "label": "不说话",
+          "token": ":@(不说话)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE8AFB4E8AF9D_2x.png"
+        },
+        {
+          "label": "咽气",
+          "token": ":@(咽气)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E592BDE6B094_2x.png"
+        },
+        {
+          "label": "欢呼",
+          "token": ":@(欢呼)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6ACA2E591BC_2x.png"
+        },
+        {
+          "label": "锁眉",
+          "token": ":@(锁眉)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E99481E79C89_2x.png"
+        },
+        {
+          "label": "蜡烛",
+          "token": ":@(蜡烛)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E89CA1E7839B_2x.png"
+        },
+        {
+          "label": "坐等",
+          "token": ":@(坐等)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59D90E7AD89_2x.png"
+        },
+        {
+          "label": "击掌",
+          "token": ":@(击掌)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E587BBE68E8C_2x.png"
+        },
+        {
+          "label": "惊喜",
+          "token": ":@(惊喜)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6838AE5969C_2x.png"
+        },
+        {
+          "label": "喜极而泣",
+          "token": ":@(喜极而泣)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5969CE69E81E8808CE6B3A3_2x.png"
+        },
+        {
+          "label": "抽烟",
+          "token": ":@(抽烟)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68ABDE7839F_2x.png"
+        },
+        {
+          "label": "不出所料",
+          "token": ":@(不出所料)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE587BAE68980E69699_2x.png"
+        },
+        {
+          "label": "愤怒",
+          "token": ":@(愤怒)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E684A4E68092_2x.png"
+        },
+        {
+          "label": "无奈",
+          "token": ":@(无奈)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E5A588_2x.png"
+        },
+        {
+          "label": "黑线",
+          "token": ":@(黑线)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9BB91E7BABF_2x.png"
+        },
+        {
+          "label": "投降",
+          "token": ":@(投降)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68A95E9998D_2x.png"
+        },
+        {
+          "label": "看热闹",
+          "token": ":@(看热闹)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79C8BE783ADE997B9_2x.png"
+        },
+        {
+          "label": "扇耳光",
+          "token": ":@(扇耳光)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68987E880B3E58589_2x.png"
+        },
+        {
+          "label": "小眼睛",
+          "token": ":@(小眼睛)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B08FE79CBCE79D9B_2x.png"
+        },
+        {
+          "label": "中刀",
+          "token": ":@(中刀)",
+          "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE58880_2x.png"
+        }
+      ]
+    }
+  }
+}

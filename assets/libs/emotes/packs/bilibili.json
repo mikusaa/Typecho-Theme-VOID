@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "id": "bilibili",
+  "label": "哔哩哔哩",
+  "type": "image",
+  "items": [
+    {
+      "id": "001",
+      "label": "2233娘_第一",
+      "token": ":$(2233娘_第一)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7ACACE4B880.png"
+    },
+    {
+      "id": "002",
+      "label": "2233娘_无语",
+      "token": ":$(2233娘_无语)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E697A0E8AFAD.png"
+    },
+    {
+      "id": "003",
+      "label": "2233娘_吐魂",
+      "token": ":$(2233娘_吐魂)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59090E9AD82.png"
+    },
+    {
+      "id": "004",
+      "label": "2233娘_委屈",
+      "token": ":$(2233娘_委屈)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5A794E5B188.png"
+    },
+    {
+      "id": "005",
+      "label": "2233娘_哭泣",
+      "token": ":$(2233娘_哭泣)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E593ADE6B3A3.png"
+    },
+    {
+      "id": "006",
+      "label": "2233娘_郁闷",
+      "token": ":$(2233娘_郁闷)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E98381E997B7.png"
+    },
+    {
+      "id": "007",
+      "label": "2233娘_困惑",
+      "token": ":$(2233娘_困惑)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59BB0E68391.png"
+    },
+    {
+      "id": "008",
+      "label": "2233娘_生气",
+      "token": ":$(2233娘_生气)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7949FE6B094.png"
+    },
+    {
+      "id": "009",
+      "label": "2233娘_吃惊",
+      "token": ":$(2233娘_吃惊)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E59083E6838A.png"
+    },
+    {
+      "id": "010",
+      "label": "2233娘_汗",
+      "token": ":$(2233娘_汗)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E6B197.png"
+    },
+    {
+      "id": "011",
+      "label": "2233娘_大笑",
+      "token": ":$(2233娘_大笑)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5A4A7E7AC91.png"
+    },
+    {
+      "id": "012",
+      "label": "2233娘_喝水",
+      "token": ":$(2233娘_喝水)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E5969DE6B0B4.png"
+    },
+    {
+      "id": "013",
+      "label": "2233娘_耶",
+      "token": ":$(2233娘_耶)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E880B6.png"
+    },
+    {
+      "id": "014",
+      "label": "2233娘_卖萌",
+      "token": ":$(2233娘_卖萌)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E58D96E8908C.png"
+    },
+    {
+      "id": "015",
+      "label": "2233娘_疑问",
+      "token": ":$(2233娘_疑问)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E79691E997AE.png"
+    }
+  ]
+}

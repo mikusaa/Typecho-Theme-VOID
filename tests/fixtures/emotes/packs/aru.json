@@ -1,0 +1,30 @@
+{
+  "id": "aru",
+  "label": "阿鲁",
+  "items": [
+    {
+      "id": "happy",
+      "label": "高兴",
+      "token": ":@(高兴)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/happy.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "id": "unsafe-path",
+      "label": "不安全路径",
+      "token": ":@(路径逃逸)",
+      "src": "../private.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "id": "outside-legacy-prefix",
+      "label": "旁支路径",
+      "token": ":@(旁支路径)",
+      "src": "/usr/themes/VOID/assets/libs/owo/private.png",
+      "width": 64,
+      "height": 64
+    }
+  ]
+}

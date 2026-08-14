@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "id": "quyin",
+  "label": "蛆音娘",
+  "type": "image",
+  "items": [
+    {
+      "id": "001",
+      "label": "蛆音娘_偷看",
+      "token": ":&(蛆音娘_偷看)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E581B7E79C8B.png"
+    },
+    {
+      "id": "002",
+      "label": "蛆音娘_摊手",
+      "token": ":&(蛆音娘_摊手)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E6918AE6898B.png"
+    },
+    {
+      "id": "003",
+      "label": "蛆音娘_无语",
+      "token": ":&(蛆音娘_无语)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E697A0E8AFAD.png"
+    },
+    {
+      "id": "004",
+      "label": "蛆音娘_害怕",
+      "token": ":&(蛆音娘_害怕)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E5AEB3E68095.png"
+    },
+    {
+      "id": "005",
+      "label": "蛆音娘_去世",
+      "token": ":&(蛆音娘_去世)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E58EBBE4B896.png"
+    },
+    {
+      "id": "006",
+      "label": "蛆音娘_睡觉",
+      "token": ":&(蛆音娘_睡觉)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E79DA1E8A789.png"
+    },
+    {
+      "id": "007",
+      "label": "蛆音娘_哭泣",
+      "token": ":&(蛆音娘_哭泣)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E593ADE6B3A3.png"
+    },
+    {
+      "id": "008",
+      "label": "蛆音娘_滑稽",
+      "token": ":&(蛆音娘_滑稽)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E6BB91E7A8BD.png"
+    },
+    {
+      "id": "009",
+      "label": "蛆音娘_肥皂",
+      "token": ":&(蛆音娘_肥皂)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E882A5E79A82.png"
+    },
+    {
+      "id": "010",
+      "label": "蛆音娘_生气",
+      "token": ":&(蛆音娘_生气)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E7949FE6B094.png"
+    },
+    {
+      "id": "011",
+      "label": "蛆音娘_不愧是我",
+      "token": ":&(蛆音娘_不愧是我)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E4B88DE684A7E698AFE68891.png"
+    },
+    {
+      "id": "012",
+      "label": "蛆音娘_吃惊",
+      "token": ":&(蛆音娘_吃惊)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59083E6838A.png"
+    },
+    {
+      "id": "013",
+      "label": "蛆音娘_扶额",
+      "token": ":&(蛆音娘_扶额)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E689B6E9A29D.png"
+    },
+    {
+      "id": "014",
+      "label": "蛆音娘_大笑",
+      "token": ":&(蛆音娘_大笑)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E5A4A7E7AC91.png"
+    },
+    {
+      "id": "015",
+      "label": "蛆音娘_卖萌",
+      "token": ":&(蛆音娘_卖萌)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E58D96E8908C.png"
+    },
+    {
+      "id": "016",
+      "label": "蛆音娘_吃瓜",
+      "token": ":&(蛆音娘_吃瓜)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59083E7939C.png"
+    },
+    {
+      "id": "017",
+      "label": "蛆音娘_吐血",
+      "token": ":&(蛆音娘_吐血)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E59090E8A180.png"
+    },
+    {
+      "id": "018",
+      "label": "蛆音娘_OK",
+      "token": ":&(蛆音娘_OK)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_OK.png"
+    },
+    {
+      "id": "019",
+      "label": "蛆音娘_哼",
+      "token": ":&(蛆音娘_哼)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E593BC.png"
+    },
+    {
+      "id": "020",
+      "label": "蛆音娘_疑问",
+      "token": ":&(蛆音娘_疑问)",
+      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E79691E997AE.png"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "id": "bangumi",
+  "label": "Bangumi 娘",
+  "items": [
+    {
+      "id": "053",
+      "label": "爱心 3 \"<测试>\"",
+      "token": ":bgm(053)",
+      "poster": "poster/053.webp",
+      "animated": "animated/053.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "054",
+      "label": "路径逃逸",
+      "token": ":bgm(054)",
+      "poster": "../outside.webp",
+      "animated": "animated/054.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "055",
+      "label": "缺少尺寸",
+      "token": ":bgm(055)",
+      "poster": "poster/055.webp",
+      "animated": "animated/055.gif",
+      "height": 240
+    },
+    {
+      "id": "duplicate-a",
+      "label": "重复 A",
+      "token": ":bgm(056)",
+      "poster": "poster/056.webp",
+      "animated": "animated/056.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "duplicate-b",
+      "label": "重复 B",
+      "token": ":bgm(056)",
+      "poster": "poster/duplicate.webp",
+      "animated": "animated/duplicate.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "legacy-schema",
+      "label": "兼容字段",
+      "shortcode": ":bgm(057)",
+      "preview": "preview/057.webp",
+      "src": "animated/057.gif",
+      "animated": true,
+      "width": 240,
+      "height": 240
+    }
+  ]
+}

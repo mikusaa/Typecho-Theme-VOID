@@ -83,6 +83,9 @@
             margin-top:10px;
             line-height: 1.5;
         }
+        .comment-textarea-wrap{
+            margin: 0;
+        }
         .comment-info-input input,#textarea{
             padding: 0.3em;
             border: 3px solid rgba(0,0,0,.1);
@@ -96,14 +99,15 @@
         }
         .comment-buttons{
             position: relative;
-            margin: 2rem 0;
-            height: 1px;
+            min-height: 44px;
+            margin: 0.65rem 0 2rem;
             display: flex;
             flex-direction: row;
-            justify-content: flex-end;
             align-items: center;
+            gap: 0.8rem;
             #comment-submit-button{
                 position: relative;
+                margin-left: auto;
                 background: none;
                 &:hover{
                     background: $darkColor;
@@ -112,76 +116,54 @@
                     color: $td-textColor-dark;
                 }
             }
-            .OwO{
-                display: block;
-                width: 100%;
-                position: absolute;
-                .theme-dark & .OwO-logo{
+            .void-emotes-trigger{
+                display: inline-flex;
+                width: 44px;
+                height: 44px;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 44px;
+                padding: 0;
+                border: 1px solid transparent;
+                border-radius: 3px;
+                background: none;
+                color: rgba($textColor, 0.62);
+                font-size: 21px;
+                line-height: 1;
+                &:hover,
+                &[aria-expanded="true"]{
+                    border-color: rgba(0,0,0,.12);
+                    background: rgba(0,0,0,.05);
+                    color: $textColor;
+                }
+                &:focus-visible{
+                    outline: 3px solid #1976a3;
+                    outline-offset: -3px;
+                }
+                .theme-dark &{
                     color: $td-textColor;
-                    background: transparent !important;
-                    border: none;
+                    &:hover,
+                    &[aria-expanded="true"]{
+                        border-color: rgba(#fff,.16);
+                        background: rgba(#fff,.08);
+                        color: $td-textColor-dark;
+                    }
                 }
-                .OwO-logo {
-                    z-index: 1;
-                    border: none;
-                    background-color: transparent !important;
-                    font-size: 14px;
-                    font-weight: 700;
-                    border-radius: 0;
-                }
-                .OwO-body{
-                    .OwO-bar{
-                        min-height: 30px;
-                    }
-                    .theme-dark &, .theme-dark & .OwO-bar{
-                        background: $td-bgColor-dark;
-                        border-color: rgba(#fff, 0.1);
-                        color: $td-textColor;
-                    }
-                    .theme-dark & li.OwO-item{
-                        background: $td-bgColor!important;
-                        color: $td-textColor;
-                    }
-                    .theme-dark & .OwO-packages{
-                        li:hover, li.OwO-package-active{
-                            color: $td-textColor-dark;
-                            background: $td-bgColor;
-                        }
-                    }
-                    max-width:100%;
-                    min-width: 245px;
-                    .OwO-body{
-                        max-width:100%;
-                    }
-                    .OwO-items{
-                        -webkit-overflow-scrolling: touch;
-                        overflow-x: hidden;
-                    }
-                    .OwO-packages{
-                        display: flex;
-                        flex-wrap: nowrap;
-                        min-width: 100%;
-                        overflow-x: auto;
-                        overflow-y: hidden;
-                        scrollbar-width: thin;
-                        white-space: nowrap;
-                        -webkit-overflow-scrolling: touch;
-                    }
-                    .OwO-packages li{
-                        flex: 0 0 auto;
-                        white-space: nowrap;
-                    }
-                    .OwO-items-image .OwO-item{
-                        max-width:calc(20% - 10px);
-                    }
-                } 
             }
             .comment-mail-me{
-                display:inline;
-                text-align:right;
-                margin-right: 1.3em;
-                z-index: 1;
-            }  
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                margin: 0;
+                text-align: left;
+            }
+            @media screen and (max-width: 420px){
+                gap: 0.45rem;
+                .comment-mail-me{
+                    min-width: 0;
+                    font-size: 0.86rem;
+                }
+            }
         }
     }
     >.comment-list>.comment-body{
@@ -289,6 +271,9 @@
                     vertical-align: bottom;
                     margin: 0;
                     box-shadow: none;
+                }
+                img.biaoqing--bangumi{
+                    height: 3em;
                 }
                 p{
                     margin-block-end: 0.5rem;

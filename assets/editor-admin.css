@@ -1,42 +1,29 @@
-.OwO span {
-    background: none !important;
-    width: unset !important;
-    height: unset !important;
-}
-
-.OwO .OwO-body .OwO-items {
-    -webkit-overflow-scrolling: touch;
-    overflow-x: hidden;
-}
-
-.OwO .OwO-body .OwO-bar {
-    min-height: 30px;
-}
-
-.OwO .OwO-body .OwO-packages {
-    display: flex;
-    flex-wrap: nowrap;
-    min-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-}
-
-.OwO .OwO-body .OwO-packages li {
-    flex: 0 0 auto;
-    white-space: nowrap;
-}
-
-.OwO .OwO-body .OwO-items-image .OwO-item {
-    max-width: -moz-calc(20% - 10px);
-    max-width: -webkit-calc(20% - 10px);
-    max-width: calc(20% - 10px);
-}
-
 .wmd-button-row {
     height: unset;
+}
+
+#wmd-emotes-button {
+    overflow: visible;
+}
+
+.void-editor-emotes-trigger {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.void-editor-emotes-trigger:focus-visible {
+    outline: 2px solid #1976a3;
+    outline-offset: 1px;
 }
 
 .typecho-post-area .void-editor-fields {
@@ -798,14 +785,6 @@
 
 .typecho-post-area .void-home-preview-card.is-full-content .void-home-preview-card__content {
     padding-bottom: 20px;
-}
-
-@media screen and (max-width: 760px) {
-    .OwO .OwO-body .OwO-items-image .OwO-item {
-        max-width: -moz-calc(25% - 10px);
-        max-width: -webkit-calc(25% - 10px);
-        max-width: calc(25% - 10px);
-    }
 }
 
 @media (max-width: 900px) {

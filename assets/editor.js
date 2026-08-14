@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable no-undef */
 
 function insertAtCursor(myField, myValue) {
     var textTop = myField.scrollTop;
@@ -33,17 +32,19 @@ function insertAtCursor(myField, myValue) {
 function initEditorToolbar() {
     if ($('#wmd-button-row').length > 0) {
         $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-photoset-button" style="" title="插入图集">图集</li>');
-        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-owo-button" style="" title="插入表情"><span style="width:unset" class="OwO"></span></li>');
-        new OwO({
-            logo: 'OωO',
-            container: document.getElementsByClassName('OwO')[0],
-            target: document.getElementById('text'),
-            api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
-            preferredPosition: 'down',
-            position: 'down',
-            width: '400px',
-            maxHeight: '250px'
-        });
+        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-emotes-button"><button type="button" id="void-editor-emotes-trigger" class="void-editor-emotes-trigger" title="插入表情" aria-label="打开表情选择器">☺</button></li>');
+
+        if (window.VoidEmotes && document.getElementById('text')) {
+            var host = document.createElement('div');
+            host.id = 'void-editor-emotes';
+            host.setAttribute('data-trigger', 'void-editor-emotes-trigger');
+            document.body.appendChild(host);
+            window.VoidEmotes.mount({
+                container: host,
+                target: document.getElementById('text'),
+                mode: 'popover'
+            });
+        }
     }
 
     $(document).on('click', '#wmd-photoset-button', function () {

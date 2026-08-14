@@ -25,6 +25,12 @@ jobs:
     - name: Lint
       run: npm run lint
 
+    - name: Test JavaScript and emote assets
+      run: npm test
+
+    - name: Test PHP emote contracts
+      run: npm run test:php
+
     - name: Build
       run: make build
 

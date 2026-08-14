@@ -155,11 +155,6 @@ $setting = $GLOBALS['VOIDSetting'];
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
         <script src="<?php Utils::indexTheme('/assets/VOID.js'); ?>"></script>
-        <script>
-        if (window.VOID && typeof VOID.initOwO === 'function') {
-            VOID.initOwO();
-        }
-        </script>
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){

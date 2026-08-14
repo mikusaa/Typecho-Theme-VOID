@@ -1,6 +1,11 @@
 {
   "scripts": {
-    "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js"
+    "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js assets/libs/emotes/emote-picker.js",
+    "test": "npm run emotes:check && node --test tests/js/*.test.cjs",
+    "test:php": "php tests/php/ContentsEmoteContractTest.php && php tests/php/ContentsEmoteProductionContractTest.php",
+    "emotes:build": "node scripts/build-emotes.mjs",
+    "emotes:check": "node scripts/build-emotes.mjs --check",
+    "emotes:import": "node scripts/build-emotes.mjs --import"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -16,6 +21,7 @@
     "gulp-sass": "^6.0.1",
     "gulp-uglify": "^3.0.2",
     "jsonfile": "^6.1.0",
-    "sass": "^1.98.0"
+    "sass": "^1.98.0",
+    "sharp": "0.35.3"
   }
 }

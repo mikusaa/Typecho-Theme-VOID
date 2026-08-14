@@ -67,7 +67,9 @@
 
     function emit(name, args, options) {
         var target = getEventTarget(options);
-        if (typeof window.CustomEvent === 'function') {
+        if (window.jQuery) {
+            window.jQuery(target).trigger(name, args || []);
+        } else if (typeof window.CustomEvent === 'function') {
             target.dispatchEvent(new CustomEvent(name, {
                 bubbles: true,
                 cancelable: true,
@@ -76,10 +78,6 @@
                     options: options || {}
                 }
             }));
-        }
-
-        if (window.jQuery) {
-            window.jQuery(target).trigger(name, args || []);
         }
     }
 

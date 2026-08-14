@@ -109,6 +109,7 @@ if (isset($_POST['void_action'])) {
         colorScheme:  <?php echo $setting['colorScheme']; ?>,
         headerMode: <?php echo $setting['headerMode']; ?>,
         browserLevelLoadingLazy: <?php echo $setting['browserLevelLoadingLazy'] ? 'true' : 'false'; ?>,
+        emotesBase: <?php ob_start(); Utils::indexTheme('/assets/libs/emotes/'); echo json_encode(ob_get_clean()); ?>,
         VOIDPlugin: <?php echo $setting['VOIDPlugin'] ? 'true' : 'false'; ?>,
         votePath: "<?php Utils::index('/action/void?'); ?>",
         lightBg: "",

@@ -440,6 +440,8 @@ var VOID_Content = {
 
 var VOID = {
     pjaxLifecycleBound: false,
+    emotePicker: null,
+    emoteContentObserver: null,
 
     configureFancybox: function () {
         // fancybox 的 hash/history 会和 VoidPjax 的 popstate 处理冲突
@@ -479,6 +481,7 @@ var VOID = {
             var options = VOID.resolvePjaxOptions(arguments);
 
             if (AjaxComment.isCommentPjaxRequest(options)) {
+                VOID.destroyEmotes();
                 AjaxComment.setCommentPageLoading(true);
                 return;
             }
@@ -540,7 +543,7 @@ var VOID = {
         VOID_Content.hyphenate();
 
         VOID_Vote.reload();
-        VOID.initOwO();
+        VOID.initEmotes();
         AjaxComment.init();
 
         $('body').on('click', function (e) {
@@ -562,24 +565,39 @@ var VOID = {
         });
     },
 
-    initOwO: function () {
-        var container = document.getElementsByClassName('OwO')[0];
-        var target = document.getElementsByClassName('input-area')[0];
+    initEmotes: function () {
+        var container = document.getElementById('void-comment-emotes');
+        var target = document.getElementById('textarea');
 
-        if (!container || !target || container.querySelector('.OwO-logo')) {
-            return;
+        if (window.VoidEmotes && container && target) {
+            this.emotePicker = window.VoidEmotes.mount({
+                container: container,
+                target: target,
+                mode: 'inline'
+            });
         }
 
-        new OwO({
-            logo: 'OωO',
-            container: container,
-            target: target,
-            api: '/usr/themes/VOID/assets/libs/owo/OwO_01.json',
-            preferredPosition: 'up',
-            position: 'up',
-            width: '400px',
-            maxHeight: '250px'
-        });
+        this.initEmoteContent();
+    },
+
+    initEmoteContent: function () {
+        if (this.emoteContentObserver && typeof this.emoteContentObserver.destroy === 'function') {
+            this.emoteContentObserver.destroy();
+        }
+        this.emoteContentObserver = window.VoidEmotes
+            ? window.VoidEmotes.observeContent(document.getElementById('pjax-container') || document)
+            : null;
+    },
+
+    destroyEmotes: function () {
+        if (this.emotePicker && typeof this.emotePicker.destroy === 'function') {
+            this.emotePicker.destroy();
+        }
+        if (this.emoteContentObserver && typeof this.emoteContentObserver.destroy === 'function') {
+            this.emoteContentObserver.destroy();
+        }
+        this.emotePicker = null;
+        this.emoteContentObserver = null;
     },
 
     isMainPjaxRequest: function (options) {
@@ -589,6 +607,7 @@ var VOID = {
     // PJAX 开始前
     beforePjax: function () {
         NProgress.start();
+        VOID.destroyEmotes();
         VOID_Ui.reset();
     },
 
@@ -621,7 +640,7 @@ var VOID = {
         loadClipboard();
 
         VOID_Vote.reload();
-        VOID.initOwO();
+        VOID.initEmotes();
         AjaxComment.init();
     },
 
@@ -877,7 +896,7 @@ var AjaxComment = {
         VOID_Content.parseUrl();
         VOID_Content.highlight();
         VOID_Vote.reload();
-        VOID.initOwO();
+        VOID.initEmotes();
         AjaxComment.init();
     },
 
@@ -1429,6 +1448,7 @@ var AjaxComment = {
         AjaxComment.bindClick();
         AjaxComment.applyThreadPanels();
         VOID_Content.highlight();
+        VOID.initEmoteContent();
     },
 
     init: function () {

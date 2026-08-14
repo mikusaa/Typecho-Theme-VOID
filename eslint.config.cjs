@@ -6,7 +6,8 @@ const firstPartyBrowserFiles = [
     'assets/VOIDCacheRule.js',
     'assets/check_update.js',
     'assets/editor.js',
-    'assets/header.js'
+    'assets/header.js',
+    'assets/libs/emotes/emote-picker.js'
 ];
 
 const sharedRules = {
@@ -23,7 +24,17 @@ module.exports = [
             'temp/**',
             'node_modules/**',
             'assets/bundle*.js',
-            'assets/libs/**',
+            'assets/libs/fancybox/**',
+            'assets/libs/header/**',
+            'assets/libs/headroom/**',
+            'assets/libs/hyphen/**',
+            'assets/libs/littlefoot/**',
+            'assets/libs/mathjax/**',
+            'assets/libs/owo/**',
+            'assets/libs/pangu/**',
+            'assets/libs/pjax/**',
+            'assets/libs/prism/**',
+            'assets/libs/tocbot/**',
             'assets/sw-toolbox.js'
         ]
     },
@@ -40,6 +51,17 @@ module.exports = [
         rules: sharedRules
     },
     {
+        files: ['scripts/**/*.mjs'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            globals: {
+                ...globals.node
+            }
+        },
+        rules: sharedRules
+    },
+    {
         files: firstPartyBrowserFiles,
         languageOptions: {
             ecmaVersion: 5,
@@ -48,6 +70,17 @@ module.exports = [
                 ...globals.browser,
                 ...globals.jquery,
                 ...globals.serviceworker
+            }
+        },
+        rules: sharedRules
+    },
+    {
+        files: ['assets/libs/emotes/emote-picker.js'],
+        languageOptions: {
+            ecmaVersion: 5,
+            sourceType: 'script',
+            globals: {
+                ...globals.browser
             }
         },
         rules: sharedRules
