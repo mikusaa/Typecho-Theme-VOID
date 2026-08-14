@@ -491,8 +491,23 @@ function localPathForOldAsset(src) {
 
 async function validateOldAssets(legacy) {
     for (const definition of OLD_PACKS) {
+        const assetDirectory = resolve(ROOT, `assets/libs/owo/biaoqing/${definition.assetDirectory}`);
+        const assetEntries = await readdir(assetDirectory, { withFileTypes: true });
+        const exactNames = new Set(assetEntries.filter((entry) => entry.isFile()).map((entry) => entry.name));
+        const caseInsensitiveNames = new Map(
+            [...exactNames].map((name) => [name.toLowerCase(), name])
+        );
+
         for (const item of legacy[definition.id].items) {
             const file = localPathForOldAsset(item.src);
+            const expectedName = basename(file);
+            if (!exactNames.has(expectedName)) {
+                const actualName = caseInsensitiveNames.get(expectedName.toLowerCase());
+                if (actualName) {
+                    fail(`Old emote asset path has incorrect filename casing: ${item.src} (found ${actualName})`);
+                }
+                fail(`Missing old emote asset: ${item.src}`);
+            }
             const metadata = await stat(file).catch((error) => {
                 if (error && error.code === 'ENOENT') {
                     fail(`Missing old emote asset: ${item.src}`);
