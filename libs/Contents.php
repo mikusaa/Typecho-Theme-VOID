@@ -16,6 +16,11 @@ Class Contents
     static private $photoSetClass = 'photos';
 
     /**
+     * 当前请求内缓存已校验的表情清单。
+     */
+    static private $emoteManifestCache = array();
+
+    /**
      * 根据 cid 返回文章对象
      * 
      * @return Widget_Abstract_Contents
@@ -244,69 +249,363 @@ Class Contents
      */
     static public function parseBiaoQing($content)
     {
-        $content = preg_replace_callback('/\:\:\(\s*(呵呵|哈哈|吐舌|太开心|笑眼|花心|小乖|乖|捂嘴笑|滑稽|你懂的|不高兴|怒|汗|黑线|泪|真棒|喷|惊哭|阴险|鄙视|酷|啊|狂汗|what|疑问|酸爽|呀咩爹|委屈|惊讶|睡觉|笑尿|挖鼻|吐|犀利|小红脸|懒得理|勉强|爱心|心碎|玫瑰|礼物|彩虹|太阳|星星月亮|钱币|茶杯|蛋糕|大拇指|胜利|haha|OK|沙发|手纸|香蕉|便便|药丸|红领巾|蜡烛|音乐|灯泡|开心|钱|咦|呼|冷|生气|弱|吐血)\s*\)/is',
-            array('Contents', 'parsePaopaoBiaoqingCallback'), $content);
-        $content = preg_replace_callback('/\:\@\(\s*(高兴|小怒|脸红|内伤|装大款|赞一个|害羞|汗|吐血倒地|深思|不高兴|无语|亲亲|口水|尴尬|中指|想一想|哭泣|便便|献花|皱眉|傻笑|狂汗|吐|喷水|看不见|鼓掌|阴暗|长草|献黄瓜|邪恶|期待|得意|吐舌|喷血|无所谓|观察|暗地观察|肿包|中枪|大囧|呲牙|抠鼻|不说话|咽气|欢呼|锁眉|蜡烛|坐等|击掌|惊喜|喜极而泣|抽烟|不出所料|愤怒|无奈|黑线|投降|看热闹|扇耳光|小眼睛|中刀)\s*\)/is',
-            array('Contents', 'parseAruBiaoqingCallback'), $content);
-        $content = preg_replace_callback('/\:\&\(\s*(.*?)\s*\)/is',
-            array('Contents', 'parseQuyinBiaoqingCallback'), $content);
-            $content = preg_replace_callback('/\:\$\(\s*(.*?)\s*\)/is',
-            array('Contents', 'parseBilibiliBiaoqingCallback'), $content);
-        $content = preg_replace_callback('/\:\!\(\s*(.*?)\s*\)/is',
-            array('Contents', 'parseMihoyoBiaoqingCallback'), $content); 
+        if (!is_string($content) || $content === '') {
+            return $content;
+        }
+
+        if (strpos($content, '<') === false) {
+            return self::replaceEmotesInText($content);
+        }
+
+        $result = '';
+        $offset = 0;
+        $length = strlen($content);
+        $protectedTags = array();
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                $tail = substr($content, $offset);
+                $result .= empty($protectedTags) ? self::replaceEmotesInText($tail) : $tail;
+                break;
+            }
+
+            $text = substr($content, $offset, $tagStart - $offset);
+            $result .= empty($protectedTags) ? self::replaceEmotesInText($text) : $text;
+
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $result .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            $result .= $tag;
+            self::updateProtectedEmoteTags($tag, $protectedTags);
+            $offset = $tagEnd + 1;
+        }
+
+        return $result;
+    }
+
+    /**
+     * 找到一个 HTML 标签、注释或处理指令的末尾，同时保留属性引号中的 >。
+     */
+    static private function findHtmlTokenEnd($content, $offset)
+    {
+        $length = strlen($content);
+        $prefix = substr($content, $offset, 9);
+
+        if (substr($prefix, 0, 4) === '<!--') {
+            $end = strpos($content, '-->', $offset + 4);
+            return false === $end ? $length - 1 : $end + 2;
+        }
+        if (substr($prefix, 0, 9) === '<![CDATA[') {
+            $end = strpos($content, ']]>', $offset + 9);
+            return false === $end ? $length - 1 : $end + 2;
+        }
+
+        $next = $offset + 1 < $length ? $content[$offset + 1] : '';
+        if ($next === '/') {
+            $nameOffset = $offset + 2;
+            while ($nameOffset < $length && ctype_space($content[$nameOffset])) {
+                $nameOffset++;
+            }
+            if ($nameOffset >= $length || !ctype_alpha($content[$nameOffset])) {
+                return null;
+            }
+        } elseif ($next !== '!' && $next !== '?' && !ctype_alpha($next)) {
+            return null;
+        }
+
+        if ($next === '?') {
+            $end = strpos($content, '?>', $offset + 2);
+            return false === $end ? $length - 1 : $end + 1;
+        }
+
+        $quote = null;
+        for ($index = $offset + 1; $index < $length; $index++) {
+            $character = $content[$index];
+            if (null !== $quote) {
+                if ($character === $quote) {
+                    $quote = null;
+                }
+                continue;
+            }
+            if ($character === '"' || $character === "'") {
+                $quote = $character;
+            } elseif ($character === '>') {
+                return $index;
+            }
+        }
+
+        return $length - 1;
+    }
+
+    /**
+     * code/pre 等原样内容区域不解析短码。
+     */
+    static private function updateProtectedEmoteTags($tag, &$protectedTags)
+    {
+        if (!preg_match('/\A<\s*(\/?)\s*(code|pre|script|style|textarea)\b/i', $tag, $matches)) {
+            return;
+        }
+
+        $name = strtolower($matches[2]);
+        if ($matches[1] === '') {
+            if (!preg_match('/\/\s*>\z/', $tag)) {
+                $protectedTags[] = $name;
+            }
+            return;
+        }
+
+        for ($index = count($protectedTags) - 1; $index >= 0; $index--) {
+            if ($protectedTags[$index] === $name) {
+                array_splice($protectedTags, $index, 1);
+                return;
+            }
+        }
+    }
+
+    /**
+     * 仅在 HTML 文本节点中替换白名单短码。
+     */
+    static private function replaceEmotesInText($content)
+    {
+        if ($content === '') {
+            return $content;
+        }
+
+        $packages = array(
+            array('id' => 'aru', 'marker' => ':@(', 'pattern' => '/:\@\(\s*([^()\r\n]{1,240}?)\s*\)/'),
+            array('id' => 'quyin', 'marker' => ':&(', 'pattern' => '/:\&\(\s*([^()\r\n]{1,240}?)\s*\)/'),
+            array('id' => 'bilibili', 'marker' => ':$(', 'pattern' => '/:\$\(\s*([^()\r\n]{1,240}?)\s*\)/'),
+            array('id' => 'mihoyo', 'marker' => ':!(', 'pattern' => '/:\!\(\s*([^()\r\n]{1,240}?)\s*\)/'),
+            array('id' => 'bangumi', 'marker' => ':bgm(', 'pattern' => '/:bgm\(([0-9]{3})\)/')
+        );
+
+        foreach ($packages as $package) {
+            if (strpos($content, $package['marker']) !== false) {
+                $content = self::replaceManifestEmotes($content, $package['id'], $package['pattern']);
+            }
+        }
 
         return $content;
     }
 
     /**
-     * 泡泡表情回调函数
-     * 
-     * @return string
+     * 只替换清单中存在的短码；清单不可用或短码未知时保留原文。
      */
-    private static function parsePaopaoBiaoqingCallback($match)
+    static private function replaceManifestEmotes($content, $packageId, $pattern)
     {
-        return '<img class="biaoqing" src="/usr/themes/VOID/assets/libs/owo/biaoqing/paopao/'. str_replace('%', '', urlencode($match[1])) . '_2x.png">';
+        $items = self::getEmoteManifestItems($packageId);
+        if (empty($items)) {
+            return $content;
+        }
+
+        return preg_replace_callback($pattern, function ($matches) use ($items, $packageId) {
+            $tokenKey = trim($matches[1]);
+            if (!array_key_exists($tokenKey, $items)) {
+                return $matches[0];
+            }
+
+            $html = self::renderManifestEmote($packageId, $items[$tokenKey]);
+            return null === $html ? $matches[0] : $html;
+        }, $content);
     }
 
     /**
-     * 阿鲁表情回调函数
-     * 
-     * @return string
+     * 从包清单建立“短码捕获值 -> 条目”映射。
      */
-    private static function parseAruBiaoqingCallback($match)
+    static private function getEmoteManifestItems($packageId)
     {
-        return '<img class="biaoqing" src="/usr/themes/VOID/assets/libs/owo/biaoqing/aru/'. str_replace('%', '', urlencode($match[1])) . '_2x.png">';
+        if (array_key_exists($packageId, self::$emoteManifestCache)) {
+            return self::$emoteManifestCache[$packageId];
+        }
+
+        self::$emoteManifestCache[$packageId] = array();
+        $manifestDir = defined('VOID_EMOTE_MANIFEST_DIR')
+            ? VOID_EMOTE_MANIFEST_DIR
+            : dirname(__DIR__) . '/assets/libs/emotes/packs';
+        $manifestPath = rtrim($manifestDir, '/\\') . DIRECTORY_SEPARATOR . $packageId . '.json';
+
+        if (!is_file($manifestPath) || !is_readable($manifestPath)) {
+            return self::$emoteManifestCache[$packageId];
+        }
+
+        $json = file_get_contents($manifestPath);
+        if (false === $json || strlen($json) > 2 * 1024 * 1024) {
+            return self::$emoteManifestCache[$packageId];
+        }
+
+        $manifest = json_decode($json, true);
+        if (!is_array($manifest)
+            || !isset($manifest['id'])
+            || $manifest['id'] !== $packageId
+            || !isset($manifest['items'])
+            || !is_array($manifest['items'])) {
+            return self::$emoteManifestCache[$packageId];
+        }
+
+        $items = array();
+        $duplicates = array();
+        foreach ($manifest['items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $token = isset($item['token']) ? $item['token'] : (isset($item['shortcode']) ? $item['shortcode'] : null);
+            $tokenKey = self::getManifestTokenKey($packageId, $token);
+            if (null === $tokenKey) {
+                continue;
+            }
+
+            if (array_key_exists($tokenKey, $items) || isset($duplicates[$tokenKey])) {
+                unset($items[$tokenKey]);
+                $duplicates[$tokenKey] = true;
+                continue;
+            }
+
+            $items[$tokenKey] = $item;
+        }
+
+        self::$emoteManifestCache[$packageId] = $items;
+        return $items;
     }
 
     /**
-     * 蛆音娘表情回调函数
-     * 
-     * @return string
+     * 验证清单声明的短码，并返回解析时使用的捕获值。
      */
-    private static function parseQuyinBiaoqingCallback($match)
+    static private function getManifestTokenKey($packageId, $token)
     {
-        return '<img class="biaoqing" src="/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/'. str_replace('%', '', urlencode($match[1])) . '.png">';
+        if (!is_string($token)) {
+            return null;
+        }
+
+        $patterns = array(
+            'aru' => '/\A:\@\(([^()\r\n]{1,240})\)\z/',
+            'quyin' => '/\A:\&\(([^()\r\n]{1,240})\)\z/',
+            'bilibili' => '/\A:\$\(([^()\r\n]{1,240})\)\z/',
+            'mihoyo' => '/\A:\!\(([^()\r\n]{1,240})\)\z/',
+            'bangumi' => '/\A:bgm\(([0-9]{3})\)\z/'
+        );
+
+        if (!isset($patterns[$packageId]) || !preg_match($patterns[$packageId], $token, $matches)) {
+            return null;
+        }
+
+        $tokenKey = trim($matches[1]);
+        return $tokenKey === '' ? null : $tokenKey;
     }
 
     /**
-     * 哔哩哔哩表情回调函数
-     *
-     * @return string
+     * 将经过校验的清单相对路径转换为当前 Typecho 主题 URL。
      */
-    private static function parseBilibiliBiaoqingCallback($match)
+    static private function getEmoteAssetUrl($relativePath)
     {
-        return '<img class="biaoqing" src="/usr/themes/VOID/assets/libs/owo/biaoqing/2233/'. str_replace('%', '', urlencode($match[1])) . '.png">';
+        if (!is_string($relativePath) || $relativePath === '' || strpos($relativePath, '\\') !== false) {
+            return null;
+        }
+
+        $legacyPrefix = '/usr/themes/VOID/assets/libs/owo/biaoqing/';
+        if (strpos($relativePath, $legacyPrefix) === 0) {
+            $assetPath = '/assets/libs/owo/biaoqing/' . substr($relativePath, strlen($legacyPrefix));
+        } elseif ($relativePath[0] !== '/') {
+            $assetPath = '/assets/libs/emotes/' . $relativePath;
+        } else {
+            return null;
+        }
+
+        if (!preg_match('/\A\/[A-Za-z0-9][A-Za-z0-9._\/-]*\z/', $assetPath)) {
+            return null;
+        }
+
+        foreach (explode('/', ltrim($assetPath, '/')) as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                return null;
+            }
+        }
+
+        ob_start();
+        Utils::indexTheme($assetPath);
+        $url = ob_get_clean();
+        return is_string($url) && $url !== '' ? $url : null;
     }
 
     /**
-     * 米哈游表情回调函数
-     *
-     * @return string
+     * 返回可安全输出为 HTML 尺寸属性的原图尺寸。
      */
-     private static function parseMihoyoBiaoqingCallback($match)
-     {
-         return '<img class="biaoqing" src="/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/'. str_replace('%', '', urlencode($match[1])) . '.png">';
-     }
+    static private function getEmoteDimension($value)
+    {
+        if (is_int($value)) {
+            $dimension = $value;
+        } elseif (is_string($value) && preg_match('/\A[0-9]+\z/', $value)) {
+            $dimension = (int) $value;
+        } else {
+            return null;
+        }
+
+        return $dimension > 0 && $dimension <= 10000 ? $dimension : null;
+    }
+
+    /**
+     * 由清单条目输出表情 HTML，绝不使用用户输入构造资源路径。
+     */
+    static private function renderManifestEmote($packageId, $item)
+    {
+        if (!isset($item['label']) || !is_string($item['label']) || trim($item['label']) === '') {
+            return null;
+        }
+
+        $label = trim($item['label']);
+        $width = isset($item['width']) ? self::getEmoteDimension($item['width']) : null;
+        $height = isset($item['height']) ? self::getEmoteDimension($item['height']) : null;
+
+        if ($packageId === 'bangumi') {
+            $posterPath = isset($item['poster']) ? $item['poster'] : (isset($item['preview']) ? $item['preview'] : null);
+            if (isset($item['animated']) && is_string($item['animated'])) {
+                $animatedPath = $item['animated'];
+            } elseif ((!isset($item['animated']) || $item['animated'] === true) && isset($item['src'])) {
+                $animatedPath = $item['src'];
+            } else {
+                $animatedPath = null;
+            }
+
+            $posterUrl = self::getEmoteAssetUrl(is_string($posterPath) ? 'bangumi/' . $posterPath : null);
+            $animatedUrl = self::getEmoteAssetUrl(is_string($animatedPath) ? 'bangumi/' . $animatedPath : null);
+            if (null === $posterUrl || null === $animatedUrl || null === $width || null === $height) {
+                return null;
+            }
+
+            return '<img class="biaoqing biaoqing--bangumi"'
+                . ' src="' . self::escapeHtml($posterUrl) . '"'
+                . ' data-animated-src="' . self::escapeHtml($animatedUrl) . '"'
+                . ' width="' . $width . '" height="' . $height . '"'
+                . ' loading="lazy" decoding="async"'
+                . ' alt="' . self::escapeHtml('Bangumi 娘：' . $label) . '">';
+        }
+
+        $srcPath = isset($item['src']) ? $item['src'] : (isset($item['poster']) ? $item['poster'] : null);
+        $srcUrl = self::getEmoteAssetUrl($srcPath);
+        if (null === $srcUrl) {
+            return null;
+        }
+
+        $sizeAttributes = '';
+        if (null !== $width && null !== $height) {
+            $sizeAttributes = ' width="' . $width . '" height="' . $height . '"';
+        }
+
+        return '<img class="biaoqing" src="' . self::escapeHtml($srcUrl) . '"'
+            . $sizeAttributes . ' loading="lazy" decoding="async"'
+            . ' alt="' . self::escapeHtml($label) . '">';
+    }
+
+    static private function escapeHtml($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
 
     /**
      * 解析 fancybox

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "defaultPack": "bangumi",
+  "tabs": [
+    {
+      "id": "recent",
+      "label": "最近使用",
+      "type": "virtual",
+      "count": 0,
+      "manifest": null,
+      "icon": {
+        "symbol": "history"
+      }
+    },
+    {
+      "id": "kaomoji",
+      "label": "颜文字",
+      "type": "emoticon",
+      "count": 54,
+      "manifest": "packs/kaomoji.json",
+      "icon": {
+        "text": "OωO"
+      }
+    },
+    {
+      "id": "bangumi",
+      "label": "Bangumi 娘",
+      "type": "image",
+      "count": 97,
+      "manifest": "packs/bangumi.json",
+      "icon": {
+        "poster": "bangumi/poster/053.webp",
+        "animated": "bangumi/animated/053.gif"
+      }
+    },
+    {
+      "id": "quyin",
+      "label": "蛆音娘",
+      "type": "image",
+      "count": 20,
+      "manifest": "packs/quyin.json",
+      "icon": {
+        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E581B7E79C8B.png"
+      }
+    },
+    {
+      "id": "bilibili",
+      "label": "哔哩哔哩",
+      "type": "image",
+      "count": 15,
+      "manifest": "packs/bilibili.json",
+      "icon": {
+        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7ACACE4B880.png"
+      }
+    },
+    {
+      "id": "mihoyo",
+      "label": "米哈游",
+      "type": "image",
+      "count": 60,
+      "manifest": "packs/mihoyo.json",
+      "icon": {
+        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E98190E89DB6_E89DB4E89DB6.png"
+      }
+    },
+    {
+      "id": "aru",
+      "label": "阿鲁",
+      "type": "image",
+      "count": 62,
+      "manifest": "packs/aru.json",
+      "icon": {
+        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9AB98E585B4_2x.png"
+      }
+    }
+  ]
+}

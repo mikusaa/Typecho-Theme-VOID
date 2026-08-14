@@ -1,0 +1,881 @@
+{
+  "version": 1,
+  "id": "bangumi",
+  "label": "Bangumi 娘",
+  "type": "image",
+  "items": [
+    {
+      "id": "001",
+      "label": "通知 提示 Bits",
+      "token": ":bgm(001)",
+      "poster": "poster/001.webp",
+      "animated": "animated/001.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "002",
+      "label": "通知 提示 硬币",
+      "token": ":bgm(002)",
+      "poster": "poster/002.webp",
+      "animated": "animated/002.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "003",
+      "label": "通知 提示 爱心 喜欢",
+      "token": ":bgm(003)",
+      "poster": "poster/003.webp",
+      "animated": "animated/003.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "004",
+      "label": "通知 提示 点赞",
+      "token": ":bgm(004)",
+      "poster": "poster/004.webp",
+      "animated": "animated/004.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "005",
+      "label": "通知 提示 星星 收藏",
+      "token": ":bgm(005)",
+      "poster": "poster/005.webp",
+      "animated": "animated/005.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "006",
+      "label": "生气",
+      "token": ":bgm(006)",
+      "poster": "poster/006.webp",
+      "animated": "animated/006.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "007",
+      "label": "到达",
+      "token": ":bgm(007)",
+      "poster": "poster/007.webp",
+      "animated": "animated/007.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "008",
+      "label": "到达(拿筷子)",
+      "token": ":bgm(008)",
+      "poster": "poster/008.webp",
+      "animated": "animated/008.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "009",
+      "label": "到达(拿勺子)",
+      "token": ":bgm(009)",
+      "poster": "poster/009.webp",
+      "animated": "animated/009.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "010",
+      "label": "摇铃",
+      "token": ":bgm(010)",
+      "poster": "poster/010.webp",
+      "animated": "animated/010.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "011",
+      "label": "敲头",
+      "token": ":bgm(011)",
+      "poster": "poster/011.webp",
+      "animated": "animated/011.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "012",
+      "label": "蛋糕",
+      "token": ":bgm(012)",
+      "poster": "poster/012.webp",
+      "animated": "animated/012.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "013",
+      "label": "抓拍(手机)",
+      "token": ":bgm(013)",
+      "poster": "poster/013.webp",
+      "animated": "animated/013.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "014",
+      "label": "抓拍(摄像机)",
+      "token": ":bgm(014)",
+      "poster": "poster/014.webp",
+      "animated": "animated/014.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "015",
+      "label": "庆祝",
+      "token": ":bgm(015)",
+      "poster": "poster/015.webp",
+      "animated": "animated/015.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "016",
+      "label": "自我安慰",
+      "token": ":bgm(016)",
+      "poster": "poster/016.webp",
+      "animated": "animated/016.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "017",
+      "label": "撬棍 1",
+      "token": ":bgm(017)",
+      "poster": "poster/017.webp",
+      "animated": "animated/017.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "018",
+      "label": "撬棍 2",
+      "token": ":bgm(018)",
+      "poster": "poster/018.webp",
+      "animated": "animated/018.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "019",
+      "label": "撬棍 3",
+      "token": ":bgm(019)",
+      "poster": "poster/019.webp",
+      "animated": "animated/019.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "020",
+      "label": "哭 1",
+      "token": ":bgm(020)",
+      "poster": "poster/020.webp",
+      "animated": "animated/020.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "021",
+      "label": "哭 2",
+      "token": ":bgm(021)",
+      "poster": "poster/021.webp",
+      "animated": "animated/021.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "022",
+      "label": "哭 3",
+      "token": ":bgm(022)",
+      "poster": "poster/022.webp",
+      "animated": "animated/022.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "023",
+      "label": "死亡",
+      "token": ":bgm(023)",
+      "poster": "poster/023.webp",
+      "animated": "animated/023.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "024",
+      "label": "头晕",
+      "token": ":bgm(024)",
+      "poster": "poster/024.webp",
+      "animated": "animated/024.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "025",
+      "label": "喝(饮料杯)",
+      "token": ":bgm(025)",
+      "poster": "poster/025.webp",
+      "animated": "animated/025.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "026",
+      "label": "驾驶",
+      "token": ":bgm(026)",
+      "poster": "poster/026.webp",
+      "animated": "animated/026.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "027",
+      "label": "馋(筷子)",
+      "token": ":bgm(027)",
+      "poster": "poster/027.webp",
+      "animated": "animated/027.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "028",
+      "label": "馋(刀叉)",
+      "token": ":bgm(028)",
+      "poster": "poster/028.webp",
+      "animated": "animated/028.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "029",
+      "label": "呆 1",
+      "token": ":bgm(029)",
+      "poster": "poster/029.webp",
+      "animated": "animated/029.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "030",
+      "label": "呆 2",
+      "token": ":bgm(030)",
+      "poster": "poster/030.webp",
+      "animated": "animated/030.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "031",
+      "label": "呆 3",
+      "token": ":bgm(031)",
+      "poster": "poster/031.webp",
+      "animated": "animated/031.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "032",
+      "label": "呆(贴纸) 1",
+      "token": ":bgm(032)",
+      "poster": "poster/032.webp",
+      "animated": "animated/032.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "033",
+      "label": "呆(贴纸) 2",
+      "token": ":bgm(033)",
+      "poster": "poster/033.webp",
+      "animated": "animated/033.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "034",
+      "label": "呆(贴纸) 3",
+      "token": ":bgm(034)",
+      "poster": "poster/034.webp",
+      "animated": "animated/034.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "035",
+      "label": "点头",
+      "token": ":bgm(035)",
+      "poster": "poster/035.webp",
+      "animated": "animated/035.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "036",
+      "label": "叹号",
+      "token": ":bgm(036)",
+      "poster": "poster/036.webp",
+      "animated": "animated/036.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "037",
+      "label": "摇头",
+      "token": ":bgm(037)",
+      "poster": "poster/037.webp",
+      "animated": "animated/037.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "038",
+      "label": "催眠",
+      "token": ":bgm(038)",
+      "poster": "poster/038.webp",
+      "animated": "animated/038.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "039",
+      "label": "坐牢 1",
+      "token": ":bgm(039)",
+      "poster": "poster/039.webp",
+      "animated": "animated/039.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "040",
+      "label": "坐牢 2",
+      "token": ":bgm(040)",
+      "poster": "poster/040.webp",
+      "animated": "animated/040.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "041",
+      "label": "刀 1",
+      "token": ":bgm(041)",
+      "poster": "poster/041.webp",
+      "animated": "animated/041.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "042",
+      "label": "刀 2",
+      "token": ":bgm(042)",
+      "poster": "poster/042.webp",
+      "animated": "animated/042.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "043",
+      "label": "笑",
+      "token": ":bgm(043)",
+      "poster": "poster/043.webp",
+      "animated": "animated/043.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "044",
+      "label": "笑(指)",
+      "token": ":bgm(044)",
+      "poster": "poster/044.webp",
+      "animated": "animated/044.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "045",
+      "label": "舔舔",
+      "token": ":bgm(045)",
+      "poster": "poster/045.webp",
+      "animated": "animated/045.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "046",
+      "label": "荧光棒 1",
+      "token": ":bgm(046)",
+      "poster": "poster/046.webp",
+      "animated": "animated/046.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "047",
+      "label": "荧光棒 2",
+      "token": ":bgm(047)",
+      "poster": "poster/047.webp",
+      "animated": "animated/047.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "048",
+      "label": "情书",
+      "token": ":bgm(048)",
+      "poster": "poster/048.webp",
+      "animated": "animated/048.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "049",
+      "label": "冒泡 1",
+      "token": ":bgm(049)",
+      "poster": "poster/049.webp",
+      "animated": "animated/049.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "050",
+      "label": "冒泡 2",
+      "token": ":bgm(050)",
+      "poster": "poster/050.webp",
+      "animated": "animated/050.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "051",
+      "label": "爱心 1",
+      "token": ":bgm(051)",
+      "poster": "poster/051.webp",
+      "animated": "animated/051.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "052",
+      "label": "爱心 2",
+      "token": ":bgm(052)",
+      "poster": "poster/052.webp",
+      "animated": "animated/052.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "053",
+      "label": "爱心 3",
+      "token": ":bgm(053)",
+      "poster": "poster/053.webp",
+      "animated": "animated/053.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "054",
+      "label": "钱",
+      "token": ":bgm(054)",
+      "poster": "poster/054.webp",
+      "animated": "animated/054.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "055",
+      "label": "静音 1",
+      "token": ":bgm(055)",
+      "poster": "poster/055.webp",
+      "animated": "animated/055.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "056",
+      "label": "静音 2",
+      "token": ":bgm(056)",
+      "poster": "poster/056.webp",
+      "animated": "animated/056.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "057",
+      "label": "要米",
+      "token": ":bgm(057)",
+      "poster": "poster/057.webp",
+      "animated": "animated/057.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "058",
+      "label": "紧张 1",
+      "token": ":bgm(058)",
+      "poster": "poster/058.webp",
+      "animated": "animated/058.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "059",
+      "label": "紧张 2",
+      "token": ":bgm(059)",
+      "poster": "poster/059.webp",
+      "animated": "animated/059.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "060",
+      "label": "记录 1",
+      "token": ":bgm(060)",
+      "poster": "poster/060.webp",
+      "animated": "animated/060.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "061",
+      "label": "记录 2",
+      "token": ":bgm(061)",
+      "poster": "poster/061.webp",
+      "animated": "animated/061.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "062",
+      "label": "摸头",
+      "token": ":bgm(062)",
+      "poster": "poster/062.webp",
+      "animated": "animated/062.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "063",
+      "label": "PNGTuber 闲置",
+      "token": ":bgm(063)",
+      "poster": "poster/063.webp",
+      "animated": "animated/063.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "064",
+      "label": "PNGTuber 闲置 2",
+      "token": ":bgm(064)",
+      "poster": "poster/064.webp",
+      "animated": "animated/064.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "065",
+      "label": "PNGTuber 说话",
+      "token": ":bgm(065)",
+      "poster": "poster/065.webp",
+      "animated": "animated/065.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "066",
+      "label": "PNGTuber 说话 2",
+      "token": ":bgm(066)",
+      "poster": "poster/066.webp",
+      "animated": "animated/066.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "067",
+      "label": "PNGTuber 说教",
+      "token": ":bgm(067)",
+      "poster": "poster/067.webp",
+      "animated": "animated/067.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "068",
+      "label": "指",
+      "token": ":bgm(068)",
+      "poster": "poster/068.webp",
+      "animated": "animated/068.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "069",
+      "label": "Popcat 帧",
+      "token": ":bgm(069)",
+      "poster": "poster/069.webp",
+      "animated": "animated/069.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "070",
+      "label": "Popcat 平滑",
+      "token": ":bgm(070)",
+      "poster": "poster/070.webp",
+      "animated": "animated/070.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "071",
+      "label": "问号",
+      "token": ":bgm(071)",
+      "poster": "poster/071.webp",
+      "animated": "animated/071.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "072",
+      "label": "红包 1",
+      "token": ":bgm(072)",
+      "poster": "poster/072.webp",
+      "animated": "animated/072.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "073",
+      "label": "红包 2",
+      "token": ":bgm(073)",
+      "poster": "poster/073.webp",
+      "animated": "animated/073.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "074",
+      "label": "玫瑰",
+      "token": ":bgm(074)",
+      "poster": "poster/074.webp",
+      "animated": "animated/074.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "075",
+      "label": "得分(10分)",
+      "token": ":bgm(075)",
+      "poster": "poster/075.webp",
+      "animated": "animated/075.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "076",
+      "label": "害羞 1",
+      "token": ":bgm(076)",
+      "poster": "poster/076.webp",
+      "animated": "animated/076.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "077",
+      "label": "害羞 2",
+      "token": ":bgm(077)",
+      "poster": "poster/077.webp",
+      "animated": "animated/077.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "078",
+      "label": "唱歌",
+      "token": ":bgm(078)",
+      "poster": "poster/078.webp",
+      "animated": "animated/078.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "079",
+      "label": "睡觉(普通)",
+      "token": ":bgm(079)",
+      "poster": "poster/079.webp",
+      "animated": "animated/079.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "080",
+      "label": "睡觉(准备阶段1)",
+      "token": ":bgm(080)",
+      "poster": "poster/080.webp",
+      "animated": "animated/080.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "081",
+      "label": "睡觉(准备阶段2)",
+      "token": ":bgm(081)",
+      "poster": "poster/081.webp",
+      "animated": "animated/081.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "082",
+      "label": "睡觉 (UU)",
+      "token": ":bgm(082)",
+      "poster": "poster/082.webp",
+      "animated": "animated/082.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "083",
+      "label": "期待",
+      "token": ":bgm(083)",
+      "poster": "poster/083.webp",
+      "animated": "animated/083.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "084",
+      "label": "惊吓",
+      "token": ":bgm(084)",
+      "poster": "poster/084.webp",
+      "animated": "animated/084.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "085",
+      "label": "汗",
+      "token": ":bgm(085)",
+      "poster": "poster/085.webp",
+      "animated": "animated/085.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "086",
+      "label": "画板",
+      "token": ":bgm(086)",
+      "poster": "poster/086.webp",
+      "animated": "animated/086.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "087",
+      "label": "反向点赞",
+      "token": ":bgm(087)",
+      "poster": "poster/087.webp",
+      "animated": "animated/087.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "088",
+      "label": "点赞",
+      "token": ":bgm(088)",
+      "poster": "poster/088.webp",
+      "animated": "animated/088.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "089",
+      "label": "打字(生气)",
+      "token": ":bgm(089)",
+      "poster": "poster/089.webp",
+      "animated": "animated/089.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "090",
+      "label": "打字(恼怒)",
+      "token": ":bgm(090)",
+      "poster": "poster/090.webp",
+      "animated": "animated/090.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "091",
+      "label": "打字(普通)",
+      "token": ":bgm(091)",
+      "poster": "poster/091.webp",
+      "animated": "animated/091.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "092",
+      "label": "工作(生气)",
+      "token": ":bgm(092)",
+      "poster": "poster/092.webp",
+      "animated": "animated/092.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "093",
+      "label": "工作(小睡)",
+      "token": ":bgm(093)",
+      "poster": "poster/093.webp",
+      "animated": "animated/093.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "094",
+      "label": "工作(普通)",
+      "token": ":bgm(094)",
+      "poster": "poster/094.webp",
+      "animated": "animated/094.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "095",
+      "label": "工作(疲倦)",
+      "token": ":bgm(095)",
+      "poster": "poster/095.webp",
+      "animated": "animated/095.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "096",
+      "label": "Raid 1",
+      "token": ":bgm(096)",
+      "poster": "poster/096.webp",
+      "animated": "animated/096.gif",
+      "width": 240,
+      "height": 240
+    },
+    {
+      "id": "097",
+      "label": "Raid 2",
+      "token": ":bgm(097)",
+      "poster": "poster/097.webp",
+      "animated": "animated/097.gif",
+      "width": 240,
+      "height": 240
+    }
+  ]
+}

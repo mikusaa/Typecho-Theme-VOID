@@ -93,8 +93,8 @@ if (isset($_POST['void_action'])) {
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-fed2945964.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-2e13b9340f.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-2924fad31f.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-45f52f3c1f.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
@@ -109,6 +109,7 @@ if (isset($_POST['void_action'])) {
         colorScheme:  <?php echo $setting['colorScheme']; ?>,
         headerMode: <?php echo $setting['headerMode']; ?>,
         browserLevelLoadingLazy: <?php echo $setting['browserLevelLoadingLazy'] ? 'true' : 'false'; ?>,
+        emotesBase: <?php ob_start(); Utils::indexTheme('/assets/libs/emotes/'); echo json_encode(ob_get_clean()); ?>,
         VOIDPlugin: <?php echo $setting['VOIDPlugin'] ? 'true' : 'false'; ?>,
         votePath: "<?php Utils::index('/action/void?'); ?>",
         lightBg: "",

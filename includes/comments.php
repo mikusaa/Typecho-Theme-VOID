@@ -63,13 +63,16 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
                             value="<?php $this->remember('url'); ?>" />
                         </div>
                     <?php endif; ?>
-                    <p style="margin-top:0">
+                    <p class="comment-textarea-wrap">
                         <textarea aria-label="评论输入框" class="input-area" rows="5" name="text" id="textarea" 
                             placeholder="在这里输入你的评论..." 
                             style="resize:none;"><?php $this->remember('text'); ?></textarea>
                     </p>
+                    <div id="void-comment-emotes" class="comment-emotes" data-trigger="void-comment-emotes-trigger"></div>
                     <p class="comment-buttons">
-                        <span class="OwO" aria-label="表情按钮" role="button"></span>
+                        <button id="void-comment-emotes-trigger" class="void-emotes-trigger" type="button" aria-label="打开表情选择器" title="表情">
+                            <span aria-hidden="true">☺</span>
+                        </button>
                         <?php if(Utils::isPluginAvailable('CommentToMail') || Utils::isPluginAvailable('Mailer')): ?>
                         <span class="comment-mail-me">
                             <input aria-label="有回复时通知我" name="receiveMail" type="checkbox" value="yes" id="receiveMail" checked />

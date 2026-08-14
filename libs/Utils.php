@@ -139,19 +139,24 @@ class Utils
     public static function addButton()
     {
         echo '<script src="';
-        self::indexTheme('/assets/libs/owo/owo_01.js');
+        self::indexTheme('/assets/libs/emotes/emote-picker-b0060398c1.js');
         echo '"></script>';
 
+        ob_start();
+        self::indexTheme('/assets/libs/emotes/');
+        $emotesBaseUrl = ob_get_clean();
+        echo '<script>window.VOIDEmotesConfig={baseUrl:' . json_encode($emotesBaseUrl) . '};</script>';
+
         echo '<script src="';
-        self::indexTheme('/assets/editor-472a52ac75.js');
+        self::indexTheme('/assets/editor-2366119a0f.js');
         echo '"></script>';
 
         echo '<link rel="stylesheet" href="';
-        self::indexTheme('/assets/libs/owo/owo.min.css');
+        self::indexTheme('/assets/libs/emotes/emote-picker-e34a032900.css');
         echo '" />';
 
         echo '<link rel="stylesheet" href="';
-        self::indexTheme('/assets/editor-admin-e095a3042b.css');
+        self::indexTheme('/assets/editor-admin-c1556b5c9d.css');
         echo '" />';
     }
 
