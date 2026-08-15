@@ -135,7 +135,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-093dffbf5e.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-13c60e2ef2.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
@@ -154,7 +154,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-c84cd1e9b8.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-08da307ccc.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){
