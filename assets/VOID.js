@@ -460,8 +460,15 @@ var VOID = {
 
     resolvePjaxOptions: function (args) {
         var index;
+        var event = args && args[0];
+        var originalEvent = event && event.originalEvent ? event.originalEvent : event;
+        var detail = originalEvent && originalEvent.detail;
 
-        for (index = args.length - 1; index >= 0; index--) {
+        if (detail && detail.options && typeof detail.options === 'object') {
+            return detail.options;
+        }
+
+        for (index = args ? args.length - 1 : -1; index >= 0; index--) {
             if (args[index] && typeof args[index] === 'object' && args[index].container) {
                 return args[index];
             }

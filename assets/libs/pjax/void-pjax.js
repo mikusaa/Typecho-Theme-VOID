@@ -1,4 +1,3 @@
-/* eslint-disable linebreak-style */
 /* eslint-disable no-undef */
 (function (window, document) {
     'use strict';
@@ -67,10 +66,9 @@
 
     function emit(name, args, options) {
         var target = getEventTarget(options);
-        if (window.jQuery) {
-            window.jQuery(target).trigger(name, args || []);
-        } else if (typeof window.CustomEvent === 'function') {
-            target.dispatchEvent(new CustomEvent(name, {
+
+        if (typeof window.CustomEvent === 'function') {
+            target.dispatchEvent(new window.CustomEvent(name, {
                 bubbles: true,
                 cancelable: true,
                 detail: {

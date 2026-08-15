@@ -7,7 +7,8 @@ const firstPartyBrowserFiles = [
     'assets/check_update.js',
     'assets/editor.js',
     'assets/header.js',
-    'assets/libs/emotes/emote-picker.js'
+    'assets/libs/emotes/emote-picker.js',
+    'assets/libs/pjax/void-pjax.js'
 ];
 
 const sharedRules = {
@@ -32,7 +33,7 @@ module.exports = [
             'assets/libs/mathjax/**',
             'assets/libs/owo/**',
             'assets/libs/pangu/**',
-            'assets/libs/pjax/**',
+            'assets/libs/pjax/np.js',
             'assets/libs/prism/**',
             'assets/libs/tocbot/**',
             'assets/sw-toolbox.js'
@@ -84,5 +85,11 @@ module.exports = [
             }
         },
         rules: sharedRules
+    },
+    {
+        files: ['assets/libs/pjax/void-pjax.js'],
+        rules: {
+            'no-unused-vars': ['error', { caughtErrors: 'none' }]
+        }
     }
 ];

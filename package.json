@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js assets/libs/emotes/emote-picker.js",
+    "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js assets/libs/emotes/emote-picker.js assets/libs/pjax/void-pjax.js",
     "test": "npm run emotes:check && node --test tests/js/*.test.cjs",
     "test:php": "php tests/php/ContentsEmoteContractTest.php && php tests/php/ContentsEmoteProductionContractTest.php",
     "emotes:build": "node scripts/build-emotes.mjs",
