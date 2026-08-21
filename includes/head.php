@@ -94,7 +94,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-2924fad31f.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-45f52f3c1f.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-a8dce2975a.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
