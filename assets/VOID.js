@@ -76,12 +76,9 @@ var VOID_Content = {
     },
 
     getFigureImage: function (item) {
-        var $images = $(item).find('img').not('.blured-placeholder');
-        if (!$images.length) {
-            return null;
-        }
-
-        return $images.get($images.length - 1);
+        return item && item.querySelector
+            ? item.querySelector('img[data-void-image-content]')
+            : null;
     },
 
     getFigureImageSrc: function (item) {
@@ -95,21 +92,35 @@ var VOID_Content = {
     },
 
     applyFigureSize: function (item, width, height) {
+        var image;
+
         if (!(width > 0 && height > 0)) {
             return;
         }
 
-        $(item).addClass('size-parsed');
-        $(item).css('width', width + 'px');
-        $(item).css('flex-grow', width * 50 / height);
-        $(item).find('a[data-fancybox="gallery"]').css('padding-top', height / width * 100 + '%');
+        width = Math.round(width);
+        height = Math.round(height);
+        item.setAttribute('data-void-image-width', String(width));
+        item.setAttribute('data-void-image-height', String(height));
+        item.style.setProperty('--void-image-ratio', String(width / height));
+
+        image = VOID_Content.getFigureImage(item);
+        if (image) {
+            image.setAttribute('width', String(width));
+            image.setAttribute('height', String(height));
+        }
     },
 
     // 解析照片集
     parsePhotos: function () {
-        $.each($('div.articleBody figure:not(.size-parsed)'), function (i, item) {
+        $.each($('div.articleBody figure[data-void-image-item]'), function (i, item) {
             var sourceImage = VOID_Content.getFigureImage(item);
             if (!sourceImage) {
+                return;
+            }
+
+            if (parseFloat(item.getAttribute('data-void-image-width')) > 0
+                && parseFloat(item.getAttribute('data-void-image-height')) > 0) {
                 return;
             }
 
@@ -118,16 +129,16 @@ var VOID_Content = {
                 return;
             }
 
-            var src = VOID_Content.getFigureImageSrc(item);
-            if (!src) {
+            if (sourceImage._voidImageSizeHandler) {
                 return;
             }
 
-            var img = new Image();
-            img.onload = function () {
-                VOID_Content.applyFigureSize(item, parseFloat(img.width), parseFloat(img.height));
+            sourceImage._voidImageSizeHandler = function () {
+                VOID_Content.applyFigureSize(item, parseFloat(sourceImage.naturalWidth), parseFloat(sourceImage.naturalHeight));
+                sourceImage.removeEventListener('load', sourceImage._voidImageSizeHandler);
+                sourceImage._voidImageSizeHandler = null;
             };
-            img.src = src;
+            sourceImage.addEventListener('load', sourceImage._voidImageSizeHandler);
         });
     },
 
