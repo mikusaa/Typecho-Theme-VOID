@@ -119,6 +119,7 @@ VOID_Lazyload = {
                 };
                 img.onerror = function () {
                     $(item).addClass('error');
+                    $(item).parent().addClass('error');
                     VOID_Lazyload.removeEventListener();
                 };
                 img.src = $(item).attr('data-src');
@@ -155,6 +156,7 @@ VOID_BrowserLoadingLazy = {
                 };
                 item.onerror = function () {
                     $(item).addClass('error');
+                    $(item).parent().addClass('error');
                 };
             }
         });

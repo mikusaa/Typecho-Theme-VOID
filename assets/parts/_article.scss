@@ -536,83 +536,146 @@ article {
     }
 }
 .board-list {
-    display: flex;
-    flex-flow: row wrap;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
     padding-top: 1em;
-    margin-left: -15px;
-    width: calc(100% + 15px);
+    margin: 0;
+    width: 100%;
     .board-item {
+        min-width: 0;
         position: relative;
-        background: white;
+        background: $bgColor;
         box-shadow: none;
-        transition: all 0.3s;
+        transition: $animationTime $animationTimingFunc border-color,
+                    $animationTime $animationTimingFunc background-color;
         overflow: hidden;
         display: flex;
         flex-flow: column nowrap;
         justify-content: flex-start;
-        border: solid 2px rgba(0, 0, 0, 0.86) !important;
-        &.hover {
-            transform: scale(1);
+        color: $textColor;
+        border: solid 1px rgba(#000, 0.16) !important;
+        border-radius: 2px;
+        .theme-dark & {
+            background: $td-bgColor-light;
+            color: $td-textColor-light;
+            border-color: rgba(#fff, 0.13) !important;
         }
-        @media screen and (min-width: 768px) {
-            &:hover {
-                transform: scale(1);
-                border: solid 2px rgba(0, 0, 0, 0.86) !important;
-                border-color: #bd6262 !important;
+        &:hover,
+        &:focus-visible {
+            background: rgba($highlightColor, 0.035);
+            border-color: $highlightColor !important;
+            .theme-dark & {
+                background: #252121;
             }
+            .board-title,
+            .board-title a {
+                color: $highlightColor !important;
+            }
+        }
+        &:focus-visible {
+            outline: 2px solid $highlightColor;
+            outline-offset: 2px;
         }
         .board-thumb {
             position: relative;
             width: 100%;
-            padding-top: 100%;
-            img {
+            aspect-ratio: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eeeeec;
+            border-bottom: 1px solid rgba(#000, 0.16);
+            .theme-dark & {
+                background: $td-bgColor-dark;
+                border-color: rgba(#fff, 0.13);
+            }
+            &::before {
+                content: attr(data-fallback);
                 position: absolute;
-                top: 0;
-                left: 0;
+                width: 58px;
+                height: 58px;
+                box-sizing: border-box;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(#000, 0.16);
+                border-radius: 50%;
+                color: $fadeColor;
+                font-family: $void-font-serif;
+                font-size: 24px;
+                font-weight: 700;
+                line-height: 1;
+                .theme-dark & {
+                    color: $td-textColor-dark;
+                    border-color: rgba(#fff, 0.13);
+                }
+            }
+            &.error::before {
+                display: flex;
+            }
+            img {
+                position: relative;
+                z-index: 1;
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
                 margin: 0;
                 padding: 0;
                 transition: $animationTime-very-slow ease-in-out opacity;
+                &.error {
+                    display: none;
+                }
             }
         }
-        .board-title,
-        .board-title a {
-            padding: 8px 0 !important;
-            font-size: 1.2em !important;
-            overflow: hidden !important;
-            white-space: nowrap !important;
-            text-align: center !important;
-            color: $textColor !important;
+        .board-title {
+            min-height: 52px;
+            padding: 7px 10px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: $darkColor !important;
+            font-size: 1rem !important;
+            line-height: 1.25;
             font-weight: 700 !important;
-            border: none;
-            transition: 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94) color;
-            &:hover {
-                border: none;
+            text-align: center !important;
+            overflow: hidden !important;
+            transition: $animationTime $animationTimingFunc color;
+            .theme-dark & {
+                color: $td-textColor-light !important;
+            }
+            .board-title-text {
+                display: -webkit-box;
+                overflow: hidden;
+                word-break: break-word;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+            }
+            a {
+                padding: 0 !important;
+                color: inherit !important;
+                border: none !important;
             }
         }
-        &:hover {
-            .board-title,
-            .board-title a {
-                color: #bd6262 !important;
+        @media (prefers-reduced-motion: reduce) {
+            &, .board-thumb img, .board-title {
+                transition: none;
             }
         }
-        margin-left: 15px;
-        margin-bottom: 15px;
-        @media screen and (max-width: 767px) {
-            /* 3个 */
-            width: calc(33.33333333% - 15px)
+    }
+    @media screen and (max-width: 767px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        .board-item .board-title {
+            min-height: 50px;
+            padding-right: 7px !important;
+            padding-left: 7px !important;
+            font-size: 0.9375rem !important;
         }
-        @media screen and (min-width: 768px) {
-            /* 4个 */
-            width: calc(25% - 15px)
-        }
-        @media screen and (max-width: 450px) {
-            /* 2个 */
-            width: calc(50% - 15px)
-        }
+    }
+    @media screen and (max-width: 450px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

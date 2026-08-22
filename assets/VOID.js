@@ -147,17 +147,61 @@ var VOID_Content = {
 
     // 处理友链列表
     parseBoardThumbs: function () {
-        $.each($('.board-thumb'), function (i, item) {
+        var items = document.querySelectorAll('.board-thumb');
+        var i;
+
+        for (i = 0; i < items.length; i++) {
+            var item = items[i];
+            var title = item.parentNode ? item.parentNode.querySelector('.board-title') : null;
+            var titleText = title && title.textContent
+                ? title.textContent.replace(/^\s+|\s+$/g, '')
+                : '';
+            var titleContent;
+            var image;
+            var thumb = item.getAttribute('data-thumb') || '';
+
+            item.setAttribute('data-fallback', titleText ? titleText.charAt(0).toUpperCase() : '#');
+
+            if (title && !title.querySelector('.board-title-text')) {
+                titleContent = document.createElement('span');
+                titleContent.className = 'board-title-text';
+                while (title.firstChild) {
+                    titleContent.appendChild(title.firstChild);
+                }
+                title.appendChild(titleContent);
+            }
+
+            image = item.querySelector('img');
+            if (image) {
+                image.setAttribute('alt', '');
+                continue;
+            }
+
+            image = document.createElement('img');
+            image.setAttribute('alt', '');
+            image.setAttribute('decoding', 'async');
+            image.addEventListener('error', function () {
+                this.classList.add('error');
+                if (this.parentNode) {
+                    this.parentNode.classList.add('error');
+                }
+            });
+
             if (VOIDConfig.lazyload) {
                 if (VOIDConfig.browserLevelLoadingLazy) {
-                    $(item).html('<img class="lazyload browserlevel-lazy" src="' + $(item).attr('data-thumb') + '" loading="lazy">');
+                    image.className = 'lazyload browserlevel-lazy';
+                    image.setAttribute('src', thumb);
+                    image.setAttribute('loading', 'lazy');
                 } else {
-                    $(item).html('<img class="lazyload" data-src="' + $(item).attr('data-thumb') + '">');
+                    image.className = 'lazyload';
+                    image.setAttribute('data-src', thumb);
                 }
             } else {
-                $(item).html('<img src="' + $(item).attr('data-thumb') + '">');
+                image.setAttribute('src', thumb);
             }
-        });
+
+            item.appendChild(image);
+        }
     },
 
     // 解析URL
