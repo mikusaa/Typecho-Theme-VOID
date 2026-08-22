@@ -372,7 +372,7 @@ article {
 
             figure {
                 flex: var(--void-image-ratio, 1.3333) 1 0;
-                min-width: min(96px, calc((100% - 8px) / 2));
+                min-width: 0;
             }
 
             figure >a.void-image-link {
@@ -415,7 +415,7 @@ article {
 
             figure {
                 flex: 0 0 auto;
-                width: max-content;
+                width: fit-content;
                 max-width: none!important;
                 scroll-snap-align: start;
 
@@ -452,7 +452,9 @@ article {
             }
 
             figcaption {
-                max-width: 100%;
+                width: 0;
+                min-width: 100%;
+                max-width: none;
             }
         }
 
