@@ -133,7 +133,7 @@ gulp.task('md5', function () {
 gulp.task('move:libs', function () {
     return gulp.src([
         './assets/libs/mathjax/**/*',
-        './assets/libs/owo/biaoqing/{quyin,2233,mihoyo,aru}/**/*',
+        './assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/**/*',
         './assets/libs/emotes/packs.json',
         './assets/libs/emotes/packs/*.json',
         './assets/libs/emotes/bangumi/{poster,animated}/**/*'

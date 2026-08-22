@@ -22,7 +22,7 @@ $expectedCounts = array(
     'aru' => 62,
     'quyin' => 20,
     'bilibili' => 15,
-    'mihoyo' => 60,
+    'mihoyo' => 61,
     'bangumi' => 97
 );
 $failures = array();
@@ -69,10 +69,22 @@ foreach ($packages as $packageId => $tokenPrefix) {
                 $token . ': wrong accessible label'
             );
         } else {
-            productionAssert(strpos($html, '/assets/libs/owo/biaoqing/') !== false, $token . ': legacy path not normalized');
+            productionAssert(
+                strpos($html, '/assets/libs/emotes/' . $packageId . '/') !== false,
+                $token . ': static package path not normalized'
+            );
         }
     }
 }
+
+$mihoyoManifest = json_decode(file_get_contents($manifestDir . '/mihoyo.json'), true);
+$restoredMihoyo = $mihoyoManifest['items'][60];
+productionAssert($restoredMihoyo['id'] === '061', 'restored Mihoyo emote must use stable ID 061');
+productionAssert($restoredMihoyo['token'] === ':!(崩坏3_点赞)', 'restored Mihoyo emote token mismatch');
+productionAssert(
+    Contents::parseBiaoQing(':!(崩坏3_点赞)') !== ':!(崩坏3_点赞)',
+    'restored Mihoyo emote must be parsed'
+);
 
 productionAssert(Contents::parseBiaoQing(':bgm(000)') === ':bgm(000)', 'unknown Bangumi token must remain unchanged');
 productionAssert(Contents::parseBiaoQing(':bgm(98)') === ':bgm(98)', 'malformed Bangumi token must remain unchanged');
@@ -95,4 +107,4 @@ if (!empty($failures)) {
     exit(1);
 }
 
-echo "Parsed all 254 production image emotes from manifest allowlists.\n";
+echo "Parsed all 255 production image emotes from manifest allowlists.\n";

@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const ANIMATED_CACHE = 'emote-animated-toolbox-v4';
+const ANIMATED_CACHE = 'emote-animated-toolbox-v5';
 const ANIMATED_ROUTE = '/usr/themes/VOID/assets/libs/emotes/bangumi/animated/(.*)';
 
 class FakeRequest {
@@ -116,8 +116,8 @@ test('Bangumi animated route remains first and uses its own cache handler', () =
     assert.equal(routes[1].handler, networkFirst);
     assert.equal(routes[2].handler, networkFirst);
     assert.equal(routes[3].handler, cacheFirst);
-    assert.equal(routes[1].options.cache.name, 'emote-static-toolbox-v4');
-    assert.equal(routes[4].options.cache.name, 'static-assets-toolbox-v4');
+    assert.equal(routes[1].options.cache.name, 'emote-static-toolbox-v5');
+    assert.equal(routes[4].options.cache.name, 'static-assets-toolbox-v5');
 });
 
 test('animated cache hits refresh recency before strict 48-entry eviction', async () => {

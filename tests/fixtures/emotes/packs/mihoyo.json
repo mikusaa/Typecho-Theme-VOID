@@ -6,7 +6,7 @@
       "id": "butterfly",
       "label": "遐蝶_蝴蝶",
       "token": ":!(遐蝶_蝴蝶)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/butterfly.png",
+      "src": "butterfly.png",
       "width": "128",
       "height": "128"
     }

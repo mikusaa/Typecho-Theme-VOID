@@ -214,12 +214,17 @@ test('insertIntoText replaces the selected text', () => {
     assert.equal(result.end, result.start);
 });
 
-test('Bangumi manifest paths resolve inside the package directory', () => {
+test('manifest paths resolve inside their package directory', () => {
     const { packAssetPath } = loadHelpers(null);
     assert.equal(packAssetPath('bangumi', 'poster/053.webp'), 'bangumi/poster/053.webp');
     assert.equal(packAssetPath('bangumi', 'animated/053.gif'), 'bangumi/animated/053.gif');
+    assert.equal(packAssetPath('quyin', 'peek.png'), 'quyin/peek.png');
+    assert.equal(packAssetPath('bilibili', 'first.png'), 'bilibili/first.png');
+    assert.equal(packAssetPath('mihoyo', 'butterfly.png'), 'mihoyo/butterfly.png');
+    assert.equal(packAssetPath('aru', 'happy.png'), 'aru/happy.png');
     assert.equal(packAssetPath('bangumi', '../outside.gif'), '');
-    assert.equal(packAssetPath('aru', '/usr/themes/VOID/assets/aru.png'), '/usr/themes/VOID/assets/aru.png');
+    assert.equal(packAssetPath('aru', '/usr/themes/VOID/assets/aru.png'), '');
+    assert.equal(packAssetPath('../aru', 'happy.png'), '');
 });
 
 test('Bangumi tiles render package-relative poster and animated URLs', () => {
@@ -254,6 +259,51 @@ test('Bangumi tiles render package-relative poster and animated URLs', () => {
     const recentImage = picker.grid.children[0].children[0];
     assert.equal(recentImage.getAttribute('data-poster-src'), '/assets/libs/emotes/bangumi/poster/001.webp');
     assert.equal(recentImage.getAttribute('data-animated-src'), '/assets/libs/emotes/bangumi/animated/001.gif');
+});
+
+test('static image tiles render package-relative URLs directly and from recent items', () => {
+    const { window, Element } = loadPickerEnvironment({
+        VOIDEmotesConfig: { baseUrl: '/assets/libs/emotes/' }
+    });
+    const item = {
+        id: '001',
+        label: '高兴',
+        token: ':@(高兴)',
+        src: 'happy.png'
+    };
+    const picker = window.VoidEmotes.mount({
+        container: new Element('div'),
+        target: new Element('textarea'),
+        mode: 'inline'
+    });
+
+    picker.currentPack = 'aru';
+    picker.renderItems([item]);
+    assert.equal(
+        picker.grid.children[0].children[0].getAttribute('data-poster-src'),
+        '/assets/libs/emotes/aru/happy.png'
+    );
+
+    picker.currentPack = 'recent';
+    picker.renderItems([{ ...item, pack: 'aru' }]);
+    assert.equal(
+        picker.grid.children[0].children[0].getAttribute('data-poster-src'),
+        '/assets/libs/emotes/aru/happy.png'
+    );
+});
+
+test('restored Mihoyo emote is appended without shifting published IDs', () => {
+    const manifest = JSON.parse(fs.readFileSync(
+        path.resolve(__dirname, '../../assets/libs/emotes/packs/mihoyo.json'),
+        'utf8'
+    ));
+    const tokensById = Object.fromEntries(manifest.items.map((item) => [item.id, item.token]));
+
+    assert.equal(tokensById['001'], ':!(遐蝶_蝴蝶)');
+    assert.equal(tokensById['030'], ':!(崩坏3_打架)');
+    assert.equal(tokensById['031'], ':!(崩坏3_灵光一现)');
+    assert.equal(tokensById['060'], ':!(原神_晚安)');
+    assert.equal(tokensById['061'], ':!(崩坏3_点赞)');
 });
 
 test('navigation renders full-width text icons and a real history symbol', () => {

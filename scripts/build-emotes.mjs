@@ -2,7 +2,7 @@
 
 import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { dirname, basename, resolve, sep } from 'node:path';
+import { dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
@@ -17,15 +17,13 @@ const PACK_INDEX_FILE = resolve(EMOTES_DIR, 'packs.json');
 const BANGUMI_COUNT = 97;
 const POSTER_SIZE = 96;
 const SHARP_VERSION = '0.35.3';
-const THEME_PUBLIC_PREFIX = '/usr/themes/VOID/';
-const OLD_ASSET_PREFIX = '/usr/themes/VOID/assets/libs/owo/biaoqing/';
 const SOURCE_PATTERN = /^Bangumi娘_(.+)_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})\.gif$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
-const OLD_PACKS = [
-    { id: 'quyin', label: '蛆音娘', count: 20, tokenPrefix: ':&(', assetDirectory: 'quyin' },
-    { id: 'bilibili', label: '哔哩哔哩', count: 15, tokenPrefix: ':$(', assetDirectory: '2233' },
-    { id: 'mihoyo', label: '米哈游', count: 60, tokenPrefix: ':!(', assetDirectory: 'mihoyo' },
-    { id: 'aru', label: '阿鲁', count: 62, tokenPrefix: ':@(', assetDirectory: 'aru' }
+const STATIC_PACKS = [
+    { id: 'quyin', label: '蛆音娘', count: 20, tokenPrefix: ':&(' },
+    { id: 'bilibili', label: '哔哩哔哩', count: 15, tokenPrefix: ':$(' },
+    { id: 'mihoyo', label: '米哈游', count: 61, tokenPrefix: ':!(' },
+    { id: 'aru', label: '阿鲁', count: 62, tokenPrefix: ':@(' }
 ];
 
 sharp.cache(false);
@@ -185,7 +183,7 @@ async function writeCanonicalJson(file, value) {
     await writeAtomic(file, canonicalJson(value));
 }
 
-function validateOldToken(token, definition, index) {
+function validateStaticToken(token, definition, index) {
     assert(typeof token === 'string' && token !== '', `${definition.id} item ${index} has no token`);
     assert(
         token.startsWith(definition.tokenPrefix) && token.endsWith(')'),
@@ -199,13 +197,15 @@ function validateOldToken(token, definition, index) {
     return token;
 }
 
-function validateOldAssetPath(src, definition, index) {
-    assert(typeof src === 'string', `${definition.id} item ${index} has no asset path`);
-    const expectedPrefix = `${OLD_ASSET_PREFIX}${definition.assetDirectory}/`;
-    assert(src.startsWith(expectedPrefix), `${definition.id} item ${index} uses an unexpected asset path: ${src}`);
-    assert(src.endsWith('.png'), `${definition.id} item ${index} must use a PNG asset: ${src}`);
-    assert(!src.includes('..') && !src.includes('\\'), `${definition.id} item ${index} uses an unsafe asset path: ${src}`);
-    return src;
+function validateStaticAssetName(filename, definition, index) {
+    assert(typeof filename === 'string', `${definition.id} item ${index} has no asset filename`);
+    assert(filename === basename(filename), `${definition.id} item ${index} must use a package-relative filename: ${filename}`);
+    assert(filename === filename.normalize('NFC'), `${definition.id} item ${index} filename must use NFC: ${filename}`);
+    assert(
+        /^[A-Za-z0-9][A-Za-z0-9._-]*\.png$/u.test(filename),
+        `${definition.id} item ${index} uses an invalid PNG filename: ${filename}`
+    );
+    return filename;
 }
 
 function makeKaomojiManifest(source) {
@@ -229,7 +229,7 @@ function makeKaomojiManifest(source) {
     };
 }
 
-function makeOldImageManifest(source, definition) {
+function makeStaticImageManifest(source, definition) {
     assert(source && Array.isArray(source.items), `Legacy ${definition.id} source is invalid`);
     assert(
         source.items.length === definition.count,
@@ -252,8 +252,8 @@ function makeOldImageManifest(source, definition) {
             return {
                 id: padId(itemNumber),
                 label,
-                token: validateOldToken(entry.token.normalize('NFC'), definition, itemNumber),
-                src: validateOldAssetPath(entry.src, definition, itemNumber)
+                token: validateStaticToken(entry.token.normalize('NFC'), definition, itemNumber),
+                src: validateStaticAssetName(entry.src, definition, itemNumber)
             };
         })
     };
@@ -283,8 +283,8 @@ async function makeLegacyManifests() {
     assert(!raw.includes('"Emoji"'), 'Legacy pack source must not contain Emoji');
     assert(!raw.includes('泡泡') && !raw.includes('paopao'), 'Legacy pack source must not contain 泡泡');
     const manifests = { kaomoji: makeKaomojiManifest(source.packs.kaomoji) };
-    for (const definition of OLD_PACKS) {
-        manifests[definition.id] = makeOldImageManifest(source.packs[definition.id], definition);
+    for (const definition of STATIC_PACKS) {
+        manifests[definition.id] = makeStaticImageManifest(source.packs[definition.id], definition);
     }
     return manifests;
 }
@@ -321,7 +321,7 @@ function makePackIndex(bangumi, legacy) {
                     animated: 'bangumi/animated/053.gif'
                 }
             },
-            ...OLD_PACKS.map((definition) => {
+            ...STATIC_PACKS.map((definition) => {
                 const manifest = legacy[definition.id];
                 return {
                     id: definition.id,
@@ -329,7 +329,7 @@ function makePackIndex(bangumi, legacy) {
                     type: manifest.type,
                     count: manifest.items.length,
                     manifest: `packs/${definition.id}.json`,
-                    icon: { poster: manifest.items[0].src }
+                    icon: { poster: `${definition.id}/${manifest.items[0].src}` }
                 };
             })
         ]
@@ -446,7 +446,7 @@ async function importAnimated(sources) {
 async function writeManifests(bangumi, legacy) {
     await writeCanonicalJson(resolve(PACKS_DIR, 'bangumi.json'), bangumi);
     await writeCanonicalJson(resolve(PACKS_DIR, 'kaomoji.json'), legacy.kaomoji);
-    for (const definition of OLD_PACKS) {
+    for (const definition of STATIC_PACKS) {
         await writeCanonicalJson(resolve(PACKS_DIR, `${definition.id}.json`), legacy[definition.id]);
     }
     await writeCanonicalJson(PACK_INDEX_FILE, makePackIndex(bangumi, legacy));
@@ -481,40 +481,19 @@ async function assertExactFiles(directory, expectedNames) {
     assert(JSON.stringify(actual) === JSON.stringify(expected), `Unexpected asset set in ${directory}`);
 }
 
-function localPathForOldAsset(src) {
-    assert(src.startsWith(THEME_PUBLIC_PREFIX), `Not a theme asset path: ${src}`);
-    const relative = src.slice(THEME_PUBLIC_PREFIX.length);
-    const local = resolve(ROOT, relative);
-    assert(local.startsWith(ROOT + sep), `Old emote path escapes the theme: ${src}`);
-    return local;
-}
-
-async function validateOldAssets(legacy) {
-    for (const definition of OLD_PACKS) {
-        const assetDirectory = resolve(ROOT, `assets/libs/owo/biaoqing/${definition.assetDirectory}`);
-        const assetEntries = await readdir(assetDirectory, { withFileTypes: true });
-        const exactNames = new Set(assetEntries.filter((entry) => entry.isFile()).map((entry) => entry.name));
-        const caseInsensitiveNames = new Map(
-            [...exactNames].map((name) => [name.toLowerCase(), name])
-        );
+async function validateStaticAssets(legacy) {
+    for (const definition of STATIC_PACKS) {
+        const assetDirectory = resolve(EMOTES_DIR, definition.id);
+        const expectedNames = legacy[definition.id].items.map((item) => item.src);
+        await assertExactFiles(assetDirectory, expectedNames);
 
         for (const item of legacy[definition.id].items) {
-            const file = localPathForOldAsset(item.src);
-            const expectedName = basename(file);
-            if (!exactNames.has(expectedName)) {
-                const actualName = caseInsensitiveNames.get(expectedName.toLowerCase());
-                if (actualName) {
-                    fail(`Old emote asset path has incorrect filename casing: ${item.src} (found ${actualName})`);
-                }
-                fail(`Missing old emote asset: ${item.src}`);
-            }
-            const metadata = await stat(file).catch((error) => {
-                if (error && error.code === 'ENOENT') {
-                    fail(`Missing old emote asset: ${item.src}`);
-                }
-                throw error;
-            });
-            assert(metadata.isFile(), `Old emote asset is not a file: ${item.src}`);
+            const metadata = await sharp(resolve(assetDirectory, item.src)).metadata();
+            assert(metadata.format === 'png', `${definition.id} asset is not PNG: ${item.src}`);
+            assert(
+                Number(metadata.width) > 0 && Number(metadata.height) > 0,
+                `${definition.id} asset has invalid dimensions: ${item.src}`
+            );
         }
     }
 }
@@ -537,7 +516,7 @@ function validateManifestContracts(packIndex, bangumi, legacy) {
         assert(item.animated === `animated/${item.id}.gif`, `Invalid Bangumi animated path: ${item.id}`);
         assert(!item.poster.includes('..') && !item.animated.includes('..'), `Unsafe Bangumi path: ${item.id}`);
     }
-    for (const definition of OLD_PACKS) {
+    for (const definition of STATIC_PACKS) {
         const manifest = legacy[definition.id];
         ensureUnique(manifest.items, (item) => item.id, `${definition.id} ID`);
         ensureUnique(manifest.items, (item) => item.src, `${definition.id} asset path`);
@@ -551,6 +530,7 @@ function validateManifestContracts(packIndex, bangumi, legacy) {
     assert(!generatedText.includes('"Emoji"'), 'Emoji must not be included in generated manifests');
     assert(!generatedText.includes('泡泡') && !generatedText.includes('paopao'), '泡泡 must not be included in generated manifests');
     assert(!generatedText.includes('/Users/'), 'Generated manifests must not contain an external absolute source path');
+    assert(!generatedText.includes('/usr/themes/'), 'Generated manifests must not contain an absolute theme asset path');
 }
 
 async function checkGeneratedImages(bangumi, sources) {
@@ -598,10 +578,10 @@ async function checkAll() {
     await assertCanonicalFile(PACK_INDEX_FILE, packIndex);
     await assertCanonicalFile(resolve(PACKS_DIR, 'bangumi.json'), bangumi);
     await assertCanonicalFile(resolve(PACKS_DIR, 'kaomoji.json'), legacy.kaomoji);
-    for (const definition of OLD_PACKS) {
+    for (const definition of STATIC_PACKS) {
         await assertCanonicalFile(resolve(PACKS_DIR, `${definition.id}.json`), legacy[definition.id]);
     }
-    await validateOldAssets(legacy);
+    await validateStaticAssets(legacy);
     await checkGeneratedImages(bangumi, sources);
     return bangumi.items.length;
 }

@@ -8,373 +8,373 @@
       "id": "001",
       "label": "高兴",
       "token": ":@(高兴)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9AB98E585B4_2x.png"
+      "src": "E9AB98E585B4_2x.png"
     },
     {
       "id": "002",
       "label": "小怒",
       "token": ":@(小怒)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B08FE68092_2x.png"
+      "src": "E5B08FE68092_2x.png"
     },
     {
       "id": "003",
       "label": "脸红",
       "token": ":@(脸红)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E884B8E7BAA2_2x.png"
+      "src": "E884B8E7BAA2_2x.png"
     },
     {
       "id": "004",
       "label": "内伤",
       "token": ":@(内伤)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E58685E4BCA4_2x.png"
+      "src": "E58685E4BCA4_2x.png"
     },
     {
       "id": "005",
       "label": "装大款",
       "token": ":@(装大款)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8A385E5A4A7E6ACBE_2x.png"
+      "src": "E8A385E5A4A7E6ACBE_2x.png"
     },
     {
       "id": "006",
       "label": "赞一个",
       "token": ":@(赞一个)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8B59EE4B880E4B8AA_2x.png"
+      "src": "E8B59EE4B880E4B8AA_2x.png"
     },
     {
       "id": "007",
       "label": "害羞",
       "token": ":@(害羞)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5AEB3E7BE9E_2x.png"
+      "src": "E5AEB3E7BE9E_2x.png"
     },
     {
       "id": "008",
       "label": "汗",
       "token": ":@(汗)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6B197_2x.png"
+      "src": "E6B197_2x.png"
     },
     {
       "id": "009",
       "label": "吐血倒地",
       "token": ":@(吐血倒地)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090E8A180E58092E59CB0_2x.png"
+      "src": "E59090E8A180E58092E59CB0_2x.png"
     },
     {
       "id": "010",
       "label": "深思",
       "token": ":@(深思)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6B7B1E6809D_2x.png"
+      "src": "E6B7B1E6809D_2x.png"
     },
     {
       "id": "011",
       "label": "不高兴",
       "token": ":@(不高兴)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE9AB98E585B4_2x.png"
+      "src": "E4B88DE9AB98E585B4_2x.png"
     },
     {
       "id": "012",
       "label": "无语",
       "token": ":@(无语)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E8AFAD_2x.png"
+      "src": "E697A0E8AFAD_2x.png"
     },
     {
       "id": "013",
       "label": "亲亲",
       "token": ":@(亲亲)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4BAB2E4BAB2_2x.png"
+      "src": "E4BAB2E4BAB2_2x.png"
     },
     {
       "id": "014",
       "label": "口水",
       "token": ":@(口水)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E58FA3E6B0B4_2x.png"
+      "src": "E58FA3E6B0B4_2x.png"
     },
     {
       "id": "015",
       "label": "尴尬",
       "token": ":@(尴尬)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B0B4E5B0AC_2x.png"
+      "src": "E5B0B4E5B0AC_2x.png"
     },
     {
       "id": "016",
       "label": "中指",
       "token": ":@(中指)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE68C87_2x.png"
+      "src": "E4B8ADE68C87_2x.png"
     },
     {
       "id": "017",
       "label": "想一想",
       "token": ":@(想一想)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E683B3E4B880E683B3_2x.png"
+      "src": "E683B3E4B880E683B3_2x.png"
     },
     {
       "id": "018",
       "label": "哭泣",
       "token": ":@(哭泣)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E593ADE6B3A3_2x.png"
+      "src": "E593ADE6B3A3_2x.png"
     },
     {
       "id": "019",
       "label": "便便",
       "token": ":@(便便)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4BEBFE4BEBF_2x.png"
+      "src": "E4BEBFE4BEBF_2x.png"
     },
     {
       "id": "020",
       "label": "献花",
       "token": ":@(献花)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78CAEE88AB1_2x.png"
+      "src": "E78CAEE88AB1_2x.png"
     },
     {
       "id": "021",
       "label": "皱眉",
       "token": ":@(皱眉)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79AB1E79C89_2x.png"
+      "src": "E79AB1E79C89_2x.png"
     },
     {
       "id": "022",
       "label": "傻笑",
       "token": ":@(傻笑)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E582BBE7AC91_2x.png"
+      "src": "E582BBE7AC91_2x.png"
     },
     {
       "id": "023",
       "label": "狂汗",
       "token": ":@(狂汗)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78B82E6B197_2x.png"
+      "src": "E78B82E6B197_2x.png"
     },
     {
       "id": "024",
       "label": "吐",
       "token": ":@(吐)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090_2x.png"
+      "src": "E59090_2x.png"
     },
     {
       "id": "025",
       "label": "喷水",
       "token": ":@(喷水)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E596B7E6B0B4_2x.png"
+      "src": "E596B7E6B0B4_2x.png"
     },
     {
       "id": "026",
       "label": "看不见",
       "token": ":@(看不见)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79C8BE4B88DE8A781_2x.png"
+      "src": "E79C8BE4B88DE8A781_2x.png"
     },
     {
       "id": "027",
       "label": "鼓掌",
       "token": ":@(鼓掌)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9BC93E68E8C_2x.png"
+      "src": "E9BC93E68E8C_2x.png"
     },
     {
       "id": "028",
       "label": "阴暗",
       "token": ":@(阴暗)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E998B4E69A97_2x.png"
+      "src": "E998B4E69A97_2x.png"
     },
     {
       "id": "029",
       "label": "长草",
       "token": ":@(长草)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E995BFE88D89_2x.png"
+      "src": "E995BFE88D89_2x.png"
     },
     {
       "id": "030",
       "label": "献黄瓜",
       "token": ":@(献黄瓜)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E78CAEE9BB84E7939C_2x.png"
+      "src": "E78CAEE9BB84E7939C_2x.png"
     },
     {
       "id": "031",
       "label": "邪恶",
       "token": ":@(邪恶)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E982AAE681B6_2x.png"
+      "src": "E982AAE681B6_2x.png"
     },
     {
       "id": "032",
       "label": "期待",
       "token": ":@(期待)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E69C9FE5BE85_2x.png"
+      "src": "E69C9FE5BE85_2x.png"
     },
     {
       "id": "033",
       "label": "得意",
       "token": ":@(得意)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5BE97E6848F_2x.png"
+      "src": "E5BE97E6848F_2x.png"
     },
     {
       "id": "034",
       "label": "吐舌",
       "token": ":@(吐舌)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59090E8888C_2x.png"
+      "src": "E59090E8888C_2x.png"
     },
     {
       "id": "035",
       "label": "喷血",
       "token": ":@(喷血)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E596B7E8A180_2x.png"
+      "src": "E596B7E8A180_2x.png"
     },
     {
       "id": "036",
       "label": "无所谓",
       "token": ":@(无所谓)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E68980E8B093_2x.png"
+      "src": "E697A0E68980E8B093_2x.png"
     },
     {
       "id": "037",
       "label": "观察",
       "token": ":@(观察)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E8A782E5AF9F_2x.png"
+      "src": "E8A782E5AF9F_2x.png"
     },
     {
       "id": "038",
       "label": "暗地观察",
       "token": ":@(暗地观察)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E69A97E59CB0E8A782E5AF9F_2x.png"
+      "src": "E69A97E59CB0E8A782E5AF9F_2x.png"
     },
     {
       "id": "039",
       "label": "肿包",
       "token": ":@(肿包)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E882BFE58C85_2x.png"
+      "src": "E882BFE58C85_2x.png"
     },
     {
       "id": "040",
       "label": "中枪",
       "token": ":@(中枪)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE69EAA_2x.png"
+      "src": "E4B8ADE69EAA_2x.png"
     },
     {
       "id": "041",
       "label": "大囧",
       "token": ":@(大囧)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5A4A7E59BA7_2x.png"
+      "src": "E5A4A7E59BA7_2x.png"
     },
     {
       "id": "042",
       "label": "呲牙",
       "token": ":@(呲牙)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E591B2E78999_2x.png"
+      "src": "E591B2E78999_2x.png"
     },
     {
       "id": "043",
       "label": "抠鼻",
       "token": ":@(抠鼻)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68AA0E9BCBB_2x.png"
+      "src": "E68AA0E9BCBB_2x.png"
     },
     {
       "id": "044",
       "label": "不说话",
       "token": ":@(不说话)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE8AFB4E8AF9D_2x.png"
+      "src": "E4B88DE8AFB4E8AF9D_2x.png"
     },
     {
       "id": "045",
       "label": "咽气",
       "token": ":@(咽气)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E592BDE6B094_2x.png"
+      "src": "E592BDE6B094_2x.png"
     },
     {
       "id": "046",
       "label": "欢呼",
       "token": ":@(欢呼)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6ACA2E591BC_2x.png"
+      "src": "E6ACA2E591BC_2x.png"
     },
     {
       "id": "047",
       "label": "锁眉",
       "token": ":@(锁眉)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E99481E79C89_2x.png"
+      "src": "E99481E79C89_2x.png"
     },
     {
       "id": "048",
       "label": "蜡烛",
       "token": ":@(蜡烛)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E89CA1E7839B_2x.png"
+      "src": "E89CA1E7839B_2x.png"
     },
     {
       "id": "049",
       "label": "坐等",
       "token": ":@(坐等)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E59D90E7AD89_2x.png"
+      "src": "E59D90E7AD89_2x.png"
     },
     {
       "id": "050",
       "label": "击掌",
       "token": ":@(击掌)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E587BBE68E8C_2x.png"
+      "src": "E587BBE68E8C_2x.png"
     },
     {
       "id": "051",
       "label": "惊喜",
       "token": ":@(惊喜)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E6838AE5969C_2x.png"
+      "src": "E6838AE5969C_2x.png"
     },
     {
       "id": "052",
       "label": "喜极而泣",
       "token": ":@(喜极而泣)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5969CE69E81E8808CE6B3A3_2x.png"
+      "src": "E5969CE69E81E8808CE6B3A3_2x.png"
     },
     {
       "id": "053",
       "label": "抽烟",
       "token": ":@(抽烟)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68ABDE7839F_2x.png"
+      "src": "E68ABDE7839F_2x.png"
     },
     {
       "id": "054",
       "label": "不出所料",
       "token": ":@(不出所料)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B88DE587BAE68980E69699_2x.png"
+      "src": "E4B88DE587BAE68980E69699_2x.png"
     },
     {
       "id": "055",
       "label": "愤怒",
       "token": ":@(愤怒)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E684A4E68092_2x.png"
+      "src": "E684A4E68092_2x.png"
     },
     {
       "id": "056",
       "label": "无奈",
       "token": ":@(无奈)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E697A0E5A588_2x.png"
+      "src": "E697A0E5A588_2x.png"
     },
     {
       "id": "057",
       "label": "黑线",
       "token": ":@(黑线)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9BB91E7BABF_2x.png"
+      "src": "E9BB91E7BABF_2x.png"
     },
     {
       "id": "058",
       "label": "投降",
       "token": ":@(投降)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68A95E9998D_2x.png"
+      "src": "E68A95E9998D_2x.png"
     },
     {
       "id": "059",
       "label": "看热闹",
       "token": ":@(看热闹)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E79C8BE783ADE997B9_2x.png"
+      "src": "E79C8BE783ADE997B9_2x.png"
     },
     {
       "id": "060",
       "label": "扇耳光",
       "token": ":@(扇耳光)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E68987E880B3E58589_2x.png"
+      "src": "E68987E880B3E58589_2x.png"
     },
     {
       "id": "061",
       "label": "小眼睛",
       "token": ":@(小眼睛)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E5B08FE79CBCE79D9B_2x.png"
+      "src": "E5B08FE79CBCE79D9B_2x.png"
     },
     {
       "id": "062",
       "label": "中刀",
       "token": ":@(中刀)",
-      "src": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E4B8ADE58880_2x.png"
+      "src": "E4B8ADE58880_2x.png"
     }
   ]
 }

@@ -60,20 +60,20 @@ assertSameValue(':bgm(056)', Contents::parseBiaoQing(':bgm(056)'), '重复 manif
 assertContainsValue('/bangumi/preview/057.webp"', Contents::parseBiaoQing(':bgm(057)'), '兼容 preview/src/shortcode manifest 字段');
 
 assertSameValue(
-    '<img class="biaoqing" src="https://example.test/usr/themes/VOID/assets/libs/owo/biaoqing/aru/happy.png" width="64" height="64" loading="lazy" decoding="async" alt="高兴">',
+    '<img class="biaoqing" src="https://example.test/usr/themes/VOID/assets/libs/emotes/aru/happy.png" width="64" height="64" loading="lazy" decoding="async" alt="高兴">',
     Contents::parseBiaoQing(':@(高兴)'),
     '阿鲁短码只从 manifest 解析'
 );
-assertContainsValue('/quyin/peek.png"', Contents::parseBiaoQing(':&(蛆音娘_偷看)'), '蛆音娘短码只从 manifest 解析');
-assertContainsValue('/2233/first.png"', Contents::parseBiaoQing(':$(2233娘_第一)'), '哔哩哔哩短码只从 manifest 解析');
-assertContainsValue('/mihoyo/butterfly.png"', Contents::parseBiaoQing(':!(遐蝶_蝴蝶)'), '米哈游短码只从 manifest 解析');
+assertContainsValue('/emotes/quyin/peek.png"', Contents::parseBiaoQing(':&(蛆音娘_偷看)'), '蛆音娘短码只从 manifest 解析');
+assertContainsValue('/emotes/bilibili/first.png"', Contents::parseBiaoQing(':$(2233娘_第一)'), '哔哩哔哩短码只从 manifest 解析');
+assertContainsValue('/emotes/mihoyo/butterfly.png"', Contents::parseBiaoQing(':!(遐蝶_蝴蝶)'), '米哈游短码只从 manifest 解析');
 assertContainsValue('width="128" height="128"', Contents::parseBiaoQing(':!(遐蝶_蝴蝶)'), '数字字符串尺寸被规范化');
-assertContainsValue('/assets/libs/owo/', Contents::parseBiaoQing(':@(高兴)'), '旧资源绝对路径经当前主题 URL 重新生成');
+assertContainsValue('/assets/libs/emotes/aru/', Contents::parseBiaoQing(':@(高兴)'), '静态表情使用统一 emotes 包目录');
 
 assertSameValue(':@(不存在)', Contents::parseBiaoQing(':@(不存在)'), '未知旧包短码保留原文');
 assertSameValue(':@(../../private)', Contents::parseBiaoQing(':@(../../private)'), '用户输入不会用于拼接路径');
 assertSameValue(':@(路径逃逸)', Contents::parseBiaoQing(':@(路径逃逸)'), 'manifest 越界路径不会输出');
-assertSameValue(':@(旁支路径)', Contents::parseBiaoQing(':@(旁支路径)'), '旧绝对路径仅允许 owo/biaoqing 前缀');
+assertSameValue(':@(旧绝对路径)', Contents::parseBiaoQing(':@(旧绝对路径)'), '旧 OwO 绝对资源路径不再解析');
 assertSameValue('::(滑稽)', Contents::parseBiaoQing('::(滑稽)'), '旧泡泡短码不再解析');
 assertSameValue(':@(高兴', Contents::parseBiaoQing(':@(高兴'), '畸形旧包短码保留原文');
 assertSameValue(

@@ -43,17 +43,16 @@
     }
 
     function packAssetPath(packId, path) {
-        if (packId !== 'bangumi') {
-            return path;
-        }
-        if (typeof path !== 'string'
+        if (typeof packId !== 'string'
+            || !/^[a-z0-9][a-z0-9-]*$/.test(packId)
+            || typeof path !== 'string'
             || !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(path)
             || path.split('/').some(function (segment) {
                 return segment === '' || segment === '.' || segment === '..';
             })) {
             return '';
         }
-        return 'bangumi/' + path;
+        return packId + '/' + path;
     }
 
     function motionAllowed() {

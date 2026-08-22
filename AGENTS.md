@@ -220,12 +220,15 @@ The following externally observable contracts must not change accidentally.
 ### Emotes and Shortcodes
 
 - Maintained inputs are `scripts/emotes/bangumi-sources.json`,
-  `scripts/emotes/legacy-packs.json`, numbered Bangumi GIFs, and
+  `scripts/emotes/legacy-packs.json`, numbered Bangumi GIFs, static PNGs under
+  `assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/`, and
   `scripts/build-emotes.mjs`.
 - `assets/libs/emotes/packs.json`, `packs/*.json`, and Bangumi posters are
   generated runtime assets that remain versioned. Do not edit them manually.
-- Published IDs, tokens, paths, and legacy pack payloads are compatibility
-  contracts. Preserve unknown or malformed shortcodes as source text.
+- Published IDs, tokens, and their emote mappings are compatibility contracts.
+  Preserve unknown or malformed shortcodes as source text.
+- Static manifest asset names are relative to their package directory. The
+  retired `assets/libs/owo/biaoqing/` URLs are not a compatibility surface.
 - A user shortcode payload may only be a manifest lookup key; never use it in
   path construction.
 - Do not restore `::(...)` parsing, Emoji/Bubble groups, or search without a new

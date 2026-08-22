@@ -508,14 +508,10 @@ Class Contents
             return null;
         }
 
-        $legacyPrefix = '/usr/themes/VOID/assets/libs/owo/biaoqing/';
-        if (strpos($relativePath, $legacyPrefix) === 0) {
-            $assetPath = '/assets/libs/owo/biaoqing/' . substr($relativePath, strlen($legacyPrefix));
-        } elseif ($relativePath[0] !== '/') {
-            $assetPath = '/assets/libs/emotes/' . $relativePath;
-        } else {
+        if ($relativePath[0] === '/') {
             return null;
         }
+        $assetPath = '/assets/libs/emotes/' . $relativePath;
 
         if (!preg_match('/\A\/[A-Za-z0-9][A-Za-z0-9._\/-]*\z/', $assetPath)) {
             return null;
@@ -572,8 +568,8 @@ Class Contents
                 $animatedPath = null;
             }
 
-            $posterUrl = self::getEmoteAssetUrl(is_string($posterPath) ? 'bangumi/' . $posterPath : null);
-            $animatedUrl = self::getEmoteAssetUrl(is_string($animatedPath) ? 'bangumi/' . $animatedPath : null);
+            $posterUrl = self::getEmoteAssetUrl(is_string($posterPath) ? $packageId . '/' . $posterPath : null);
+            $animatedUrl = self::getEmoteAssetUrl(is_string($animatedPath) ? $packageId . '/' . $animatedPath : null);
             if (null === $posterUrl || null === $animatedUrl || null === $width || null === $height) {
                 return null;
             }
@@ -587,7 +583,7 @@ Class Contents
         }
 
         $srcPath = isset($item['src']) ? $item['src'] : (isset($item['poster']) ? $item['poster'] : null);
-        $srcUrl = self::getEmoteAssetUrl($srcPath);
+        $srcUrl = self::getEmoteAssetUrl(is_string($srcPath) ? $packageId . '/' . $srcPath : null);
         if (null === $srcUrl) {
             return null;
         }
