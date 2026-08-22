@@ -9,6 +9,8 @@
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $setting = $GLOBALS['VOIDSetting'];
+$rewardUrl = Utils::getSafeRewardUrl(isset($setting['reward']) ? $setting['reward'] : '');
+$rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUOTES, 'UTF-8');
 ?>
 
 <main id="pjax-container">
@@ -49,9 +51,28 @@ $setting = $GLOBALS['VOIDSetting'];
                         data-twitter="<?php if($setting['twitterId']!='') echo $setting['twitterId']; else $this->author(); ?>"
                         data-weibo="<?php if($setting['weiboId']!='') echo $setting['weiboId']; else $this->author(); ?>"
                         <?php if($this->fields->banner != '') echo 'data-image="'.$this->fields->banner.'"';?>>
-                        <?php if(!empty($setting['reward'])):?>
-                            <a data-fancybox="gallery-reward" role=button aria-label="赞赏" data-src="#reward" href="javascript:;" class="btn btn-normal btn-highlight">赏杯咖啡</a>
-                            <div hidden id="reward"><img src="<?php echo $setting['reward']; ?>"></div>
+                        <?php if(null !== $rewardUrl):?>
+                            <a
+                                class="btn btn-normal btn-highlight"
+                                data-void-reward-link
+                                no-pjax
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="查看赞赏二维码"
+                                href="<?php echo $rewardUrlHtml; ?>"
+                            >赏杯咖啡</a>
+                            <dialog class="void-reward-dialog" data-void-reward-dialog aria-label="赞赏二维码">
+                                <div class="void-reward-dialog__content">
+                                    <button
+                                        class="void-dialog-close"
+                                        data-void-reward-close
+                                        type="button"
+                                        aria-label="关闭赞赏二维码"
+                                        title="关闭"
+                                    ></button>
+                                    <img src="<?php echo $rewardUrlHtml; ?>" alt="赞赏二维码" decoding="async">
+                                </div>
+                            </dialog>
                         <?php endif; ?>
                         <?php if($setting['VOIDPlugin']):?>
                             <a role=button 

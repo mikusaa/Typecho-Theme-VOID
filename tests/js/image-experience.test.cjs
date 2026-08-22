@@ -107,6 +107,15 @@ class FakeElement {
             if (selector === 'a[data-void-image-zoom]') {
                 return node.tagName === 'A' && node.hasAttribute('data-void-image-zoom');
             }
+            if (selector === '[data-void-reward-link]') {
+                return node.hasAttribute('data-void-reward-link');
+            }
+            if (selector === 'dialog[data-void-reward-dialog]') {
+                return node.tagName === 'DIALOG' && node.hasAttribute('data-void-reward-dialog');
+            }
+            if (selector === '[data-void-reward-close]') {
+                return node.hasAttribute('data-void-reward-close');
+            }
             return false;
         };
         const visit = (node) => {
@@ -281,6 +290,23 @@ function createSource(root) {
     link.appendChild(image);
     root.appendChild(link);
     return { image, link };
+}
+
+function createRewardSource(root, document) {
+    const trigger = new FakeElement('a');
+    const dialog = document.createElement('dialog');
+    const content = new FakeElement('div');
+    const closeButton = new FakeElement('button');
+    trigger.setAttribute('data-void-reward-link', '');
+    trigger.setAttribute('href', '/reward.png');
+    trigger.setAttribute('target', '_blank');
+    dialog.setAttribute('data-void-reward-dialog', '');
+    closeButton.setAttribute('data-void-reward-close', '');
+    content.appendChild(closeButton);
+    dialog.appendChild(content);
+    root.appendChild(trigger);
+    root.appendChild(dialog);
+    return { closeButton, dialog, trigger };
 }
 
 test('photo layout classification and dimension priority are deterministic', () => {
@@ -564,4 +590,77 @@ test('zoom geometry fits without upscaling and maps source to target centers', (
     assert.equal(transition.scaleY, 0.25);
     assert.equal(transition.translateX, -390);
     assert.equal(transition.translateY, -230);
+});
+
+test('reward dialog opens idempotently, closes by every control, and restores focus', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const { closeButton, dialog, trigger } = createRewardSource(root, document);
+    document.root = root;
+
+    context.VOID_RewardDialog.init(root);
+    context.VOID_RewardDialog.init(root);
+    assert.equal(trigger.listenerCount('click'), 1);
+
+    const modifiedClick = preventableEvent({ ctrlKey: true, target: trigger });
+    trigger.dispatch('click', modifiedClick);
+    assert.equal(modifiedClick.defaultPrevented, false);
+    assert.equal(dialog.open, false);
+
+    const openClick = preventableEvent({ target: trigger });
+    trigger.dispatch('click', openClick);
+    assert.equal(openClick.defaultPrevented, true);
+    assert.equal(dialog.open, true);
+    assert.equal(closeButton.focusCount, 1);
+    assert.equal(document.body.classList.contains('void-dialog-open'), true);
+
+    closeButton.dispatch('click', { target: closeButton });
+    assert.equal(dialog.open, false);
+    assert.equal(trigger.focusCount, 1);
+    assert.equal(document.body.classList.contains('void-dialog-open'), false);
+
+    trigger.dispatch('click', preventableEvent({ target: trigger }));
+    dialog.dispatch('click', { target: dialog });
+    assert.equal(trigger.focusCount, 2);
+
+    trigger.dispatch('click', preventableEvent({ target: trigger }));
+    const cancelEvent = preventableEvent({ target: dialog });
+    dialog.dispatch('cancel', cancelEvent);
+    assert.equal(cancelEvent.defaultPrevented, true);
+    assert.equal(trigger.focusCount, 3);
+});
+
+test('reward dialog fallback preserves the real target-blank link', () => {
+    for (const dialogMode of ['unsupported', 'throw']) {
+        const { context, document } = loadVoid({ dialogMode });
+        const root = new FakeElement('main');
+        const { trigger } = createRewardSource(root, document);
+        document.root = root;
+        context.VOID_RewardDialog.init(root);
+
+        const click = preventableEvent({ target: trigger });
+        trigger.dispatch('click', click);
+        assert.equal(click.defaultPrevented, false);
+        assert.equal(trigger.getAttribute('target'), '_blank');
+        assert.equal(document.body.classList.contains('void-dialog-open'), false);
+    }
+});
+
+test('reward dialog has independent scroll ownership and PJAX-safe teardown', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const { trigger } = createRewardSource(root, document);
+    document.root = root;
+    context.VOID_RewardDialog.init(root);
+
+    context.VOID_DialogScrollLock.lock('image-zoom');
+    trigger.dispatch('click', preventableEvent({ target: trigger }));
+    context.VOID_RewardDialog.destroy();
+    context.VOID_RewardDialog.destroy();
+    assert.equal(trigger.focusCount, 0);
+    assert.equal(trigger.listenerCount('click'), 0);
+    assert.equal(document.body.classList.contains('void-dialog-open'), true);
+
+    context.VOID_DialogScrollLock.unlock('image-zoom');
+    assert.equal(document.body.classList.contains('void-dialog-open'), false);
 });

@@ -1151,6 +1151,160 @@ var VOID_ImageZoom = {
     }
 };
 
+var VOID_RewardDialog = {
+    root: null,
+    trigger: null,
+    dialog: null,
+    closeButton: null,
+    isOpen: false,
+    restoreFocusOnClose: true,
+    handlers: null,
+
+    canActivate: function (event) {
+        if (!event || event.defaultPrevented) {
+            return false;
+        }
+        if (typeof event.button === 'number' && event.button !== 0) {
+            return false;
+        }
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return false;
+        }
+        return !!(this.trigger && !this.trigger.hasAttribute('download') && this.trigger.getAttribute('href'));
+    },
+
+    open: function () {
+        if (this.isOpen || !this.dialog || !this.trigger) {
+            return false;
+        }
+
+        try {
+            this.dialog.showModal();
+        } catch (error) {
+            return false;
+        }
+
+        this.isOpen = true;
+        this.restoreFocusOnClose = true;
+        VOID_DialogScrollLock.lock('reward');
+        if (this.closeButton && typeof this.closeButton.focus === 'function') {
+            this.closeButton.focus();
+        }
+        return true;
+    },
+
+    finishClose: function () {
+        if (!this.isOpen) {
+            return;
+        }
+
+        this.isOpen = false;
+        VOID_DialogScrollLock.unlock('reward');
+        if (this.restoreFocusOnClose && this.trigger && typeof this.trigger.focus === 'function') {
+            this.trigger.focus();
+        }
+    },
+
+    close: function (restoreFocus) {
+        if (!this.isOpen) {
+            return;
+        }
+
+        this.restoreFocusOnClose = restoreFocus !== false;
+        if (this.dialog && this.dialog.open) {
+            try {
+                this.dialog.close();
+            } catch (error) {
+                this.dialog.removeAttribute('open');
+            }
+        }
+        this.finishClose();
+    },
+
+    init: function (root) {
+        var self = this;
+
+        this.destroy();
+        this.root = root || document.getElementById('pjax-container') || document;
+        if (!this.root || typeof this.root.querySelector !== 'function') {
+            return;
+        }
+
+        this.trigger = this.root.querySelector('[data-void-reward-link]');
+        this.dialog = this.root.querySelector('dialog[data-void-reward-dialog]');
+        if (!this.trigger || !this.dialog || typeof this.dialog.showModal !== 'function') {
+            this.trigger = null;
+            this.dialog = null;
+            return;
+        }
+
+        this.closeButton = this.dialog.querySelector('[data-void-reward-close]');
+        if (!this.closeButton) {
+            this.trigger = null;
+            this.dialog = null;
+            return;
+        }
+
+        this.handlers = {
+            triggerClick: function (event) {
+                if (self.canActivate(event) && self.open()) {
+                    event.preventDefault();
+                }
+            },
+            closeClick: function () {
+                self.close(true);
+            },
+            dialogClick: function (event) {
+                if (event.target === self.dialog) {
+                    self.close(true);
+                }
+            },
+            cancel: function (event) {
+                event.preventDefault();
+                self.close(true);
+            },
+            close: function () {
+                self.finishClose();
+            }
+        };
+
+        this.trigger.addEventListener('click', this.handlers.triggerClick);
+        this.closeButton.addEventListener('click', this.handlers.closeClick);
+        this.dialog.addEventListener('click', this.handlers.dialogClick);
+        this.dialog.addEventListener('cancel', this.handlers.cancel);
+        this.dialog.addEventListener('close', this.handlers.close);
+    },
+
+    destroy: function () {
+        if (this.isOpen) {
+            this.close(false);
+        } else {
+            VOID_DialogScrollLock.unlock('reward');
+        }
+
+        if (this.handlers) {
+            if (this.trigger) {
+                this.trigger.removeEventListener('click', this.handlers.triggerClick);
+            }
+            if (this.closeButton) {
+                this.closeButton.removeEventListener('click', this.handlers.closeClick);
+            }
+            if (this.dialog) {
+                this.dialog.removeEventListener('click', this.handlers.dialogClick);
+                this.dialog.removeEventListener('cancel', this.handlers.cancel);
+                this.dialog.removeEventListener('close', this.handlers.close);
+            }
+        }
+
+        this.root = null;
+        this.trigger = null;
+        this.dialog = null;
+        this.closeButton = null;
+        this.handlers = null;
+        this.restoreFocusOnClose = true;
+    }
+};
+
 var VOID = {
     pjaxLifecycleBound: false,
     emotePicker: null,
@@ -1250,6 +1404,7 @@ var VOID = {
         VOID_Content.parseBoardThumbs();
         VOID_PhotoSets.init();
         VOID_ImageZoom.init();
+        VOID_RewardDialog.init();
         VOID_Ui.lazyload();
         VOID_Ui.headroom();
 
@@ -1328,6 +1483,7 @@ var VOID = {
     // PJAX 开始前
     beforePjax: function () {
         NProgress.start();
+        VOID_RewardDialog.destroy();
         VOID_ImageZoom.destroy();
         VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
@@ -1344,6 +1500,7 @@ var VOID = {
 
         VOID_PhotoSets.init();
         VOID_ImageZoom.init();
+        VOID_RewardDialog.init();
 
         if ($('#loggin-form').length) {
             $('#loggin-form').addClass('need-refresh');
