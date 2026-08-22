@@ -664,3 +664,15 @@ test('reward dialog has independent scroll ownership and PJAX-safe teardown', ()
     context.VOID_DialogScrollLock.unlock('image-zoom');
     assert.equal(document.body.classList.contains('void-dialog-open'), false);
 });
+
+test('legacy viewer assets and replacement viewer dependencies are absent', () => {
+    const repositoryRoot = path.resolve(__dirname, '../..');
+    const runtimeSource = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.js'), 'utf8');
+    const packageSource = fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8');
+    const gulpSource = fs.readFileSync(path.join(repositoryRoot, 'gulpfile.js'), 'utf8');
+
+    assert.equal(fs.existsSync(path.join(repositoryRoot, 'assets/libs/fancybox')), false);
+    assert.doesNotMatch(runtimeSource, /configureFancybox|data-fancybox|jQuery\.fancybox/);
+    assert.doesNotMatch(packageSource, /photoswipe|zoom\.js|fancybox/i);
+    assert.doesNotMatch(gulpSource, /photoswipe|zoom\.js|fancybox/i);
+});

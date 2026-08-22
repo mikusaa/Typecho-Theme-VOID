@@ -1310,13 +1310,6 @@ var VOID = {
     emotePicker: null,
     emoteContentObserver: null,
 
-    configureFancybox: function () {
-        // fancybox 的 hash/history 会和 VoidPjax 的 popstate 处理冲突
-        if (window.jQuery && window.jQuery.fancybox && window.jQuery.fancybox.defaults) {
-            window.jQuery.fancybox.defaults.hash = false;
-        }
-    },
-
     safeRunPangu: function () {
         try {
             VOID_Content.pangu();
@@ -1394,8 +1387,6 @@ var VOID = {
 
     // 初始化单页应用
     init: function () {
-        VOID.configureFancybox();
-
         /* 初始化 UI */
         VOID_Ui.checkHeader();
         VOID_Ui.MasonryCtrler.init();
@@ -1492,8 +1483,6 @@ var VOID = {
 
     // PJAX 结束后
     afterPjax: function () {
-        VOID.configureFancybox();
-
         NProgress.done();
 	
         VOID_Content.parseBoardThumbs();
