@@ -338,6 +338,32 @@ test('unknown image dimensions hydrate from the real load and stale callbacks ar
     assert.equal(figure.styleValues.get('--void-image-ratio'), '1.5');
 });
 
+test('an early lazyload error does not discard later dimension hydration', () => {
+    const { context } = loadVoid();
+    const root = new FakeElement('main');
+    const figure = new FakeElement('figure');
+    const image = new FakeElement('img');
+    image.setAttribute('data-void-image-content', '');
+    image.complete = false;
+    image.naturalWidth = 0;
+    image.naturalHeight = 0;
+    figure.appendChild(image);
+    root.appendChild(figure);
+    root.querySelectorAll = (selector) => selector === 'figure[data-void-image-item]' ? [figure] : [];
+
+    context.VOID_PhotoSets.init(root);
+    image.dispatch('error');
+    assert.equal(image.listenerCount('load'), 1);
+
+    image.complete = true;
+    image.naturalWidth = 900;
+    image.naturalHeight = 1200;
+    image.dispatch('load');
+    assert.equal(figure.getAttribute('data-void-image-width'), '900');
+    assert.equal(figure.getAttribute('data-void-image-height'), '1200');
+    assert.equal(image.listenerCount('load'), 0);
+});
+
 test('strip drag uses a threshold, suppresses only the resulting click, and never binds wheel', () => {
     const { context } = loadVoid();
     const root = new FakeElement('main');
@@ -429,6 +455,10 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
     assert.match(styles, /--void-photo-row-height: 480px;/);
     assert.match(styles, /--void-photo-row-height: 400px;/);
     assert.match(styles, /--void-photo-row-height: 260px;/);
+    assert.match(
+        fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_image-experience.scss'), 'utf8'),
+        /\.void-image-link\[data-void-image-zoom\][\s\S]*&:focus-visible[\s\S]*outline: 2px solid \$highlightColor;/
+    );
     assert.doesNotMatch(script, /addEventListener\(['"](?:wheel|mousewheel)/);
 });
 

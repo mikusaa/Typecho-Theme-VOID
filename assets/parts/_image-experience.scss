@@ -7,6 +7,11 @@ body.void-dialog-open {
 .void-image-link[data-void-image-zoom] {
     cursor: zoom-in;
 
+    &:focus-visible {
+        outline: 2px solid $highlightColor;
+        outline-offset: 3px;
+    }
+
     img[data-void-image-content] {
         -webkit-user-drag: none;
         user-select: none;

@@ -554,16 +554,12 @@ var VOID_PhotoSets = {
                 naturalDimensions = self.resolveDimensions(figure, image);
                 if (naturalDimensions) {
                     VOID_Content.applyFigureSize(figure, naturalDimensions.width, naturalDimensions.height);
+                    image.removeEventListener('load', binding.onLoad);
                 }
-            },
-            onError: function () {
-                image.removeEventListener('load', binding.onLoad);
-                image.removeEventListener('error', binding.onError);
             }
         };
 
         image.addEventListener('load', binding.onLoad);
-        image.addEventListener('error', binding.onError);
         this.imageBindings.push(binding);
     },
 
@@ -760,7 +756,6 @@ var VOID_PhotoSets = {
         for (index = 0; index < this.imageBindings.length; index++) {
             record = this.imageBindings[index];
             record.image.removeEventListener('load', record.onLoad);
-            record.image.removeEventListener('error', record.onError);
         }
 
         for (index = 0; index < this.setBindings.length; index++) {
