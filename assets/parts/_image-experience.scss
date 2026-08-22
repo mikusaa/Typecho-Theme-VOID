@@ -1,0 +1,130 @@
+@use "var" as *;
+
+body.void-dialog-open {
+    overflow: hidden;
+}
+
+.void-image-link[data-void-image-zoom] {
+    cursor: zoom-in;
+
+    img[data-void-image-content] {
+        -webkit-user-drag: none;
+        user-select: none;
+    }
+}
+
+.void-image-zoom-source {
+    visibility: hidden;
+}
+
+dialog.void-image-zoom {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    border: 0;
+    color: $textColor;
+    background: rgba(250, 250, 250, 0.96);
+    overflow: hidden;
+    cursor: zoom-out;
+
+    &[open] {
+        display: flex;
+    }
+
+    &::backdrop {
+        background: transparent;
+    }
+
+    .theme-dark & {
+        color: $td-textColor-light;
+        background: rgba(10, 10, 10, 0.96);
+    }
+}
+
+.void-image-zoom__image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    margin: auto;
+    object-fit: contain;
+    cursor: zoom-out;
+    transform-origin: center;
+    will-change: transform, opacity;
+}
+
+.void-dialog-close {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    z-index: 3;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 50%;
+    color: $textColor;
+    background: rgba(255, 255, 255, 0.88);
+    cursor: pointer;
+
+    &::before,
+    &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 2px;
+        border-radius: 1px;
+        background: currentColor;
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover {
+        background: #fff;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $highlightColor;
+        outline-offset: 2px;
+    }
+
+    .theme-dark & {
+        border-color: rgba(255, 255, 255, 0.16);
+        color: $td-textColor-light;
+        background: rgba(26, 26, 26, 0.88);
+
+        &:hover {
+            background: $td-bgColor-light;
+        }
+    }
+}
+
+@media screen and (max-width: 600px) {
+    dialog.void-image-zoom {
+        padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+            max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .void-image-zoom__image,
+    dialog.void-image-zoom,
+    .void-dialog-close {
+        animation: none!important;
+        transition: none!important;
+    }
+}

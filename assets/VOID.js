@@ -81,16 +81,6 @@ var VOID_Content = {
             : null;
     },
 
-    getFigureImageSrc: function (item) {
-        var image = this.getFigureImage(item);
-        if (!image) {
-            return '';
-        }
-
-        var $image = $(image);
-        return image.currentSrc || $image.attr('data-src') || $image.attr('src') || '';
-    },
-
     applyFigureSize: function (item, width, height) {
         var image;
 
@@ -109,37 +99,6 @@ var VOID_Content = {
             image.setAttribute('width', String(width));
             image.setAttribute('height', String(height));
         }
-    },
-
-    // 解析照片集
-    parsePhotos: function () {
-        $.each($('div.articleBody figure[data-void-image-item]'), function (i, item) {
-            var sourceImage = VOID_Content.getFigureImage(item);
-            if (!sourceImage) {
-                return;
-            }
-
-            if (parseFloat(item.getAttribute('data-void-image-width')) > 0
-                && parseFloat(item.getAttribute('data-void-image-height')) > 0) {
-                return;
-            }
-
-            if (sourceImage.complete && sourceImage.naturalWidth > 0 && sourceImage.naturalHeight > 0) {
-                VOID_Content.applyFigureSize(item, parseFloat(sourceImage.naturalWidth), parseFloat(sourceImage.naturalHeight));
-                return;
-            }
-
-            if (sourceImage._voidImageSizeHandler) {
-                return;
-            }
-
-            sourceImage._voidImageSizeHandler = function () {
-                VOID_Content.applyFigureSize(item, parseFloat(sourceImage.naturalWidth), parseFloat(sourceImage.naturalHeight));
-                sourceImage.removeEventListener('load', sourceImage._voidImageSizeHandler);
-                sourceImage._voidImageSizeHandler = null;
-            };
-            sourceImage.addEventListener('load', sourceImage._voidImageSizeHandler);
-        });
     },
 
     // 为省略 summary 的旧文章补充可样式化、可访问的折叠标题
@@ -218,7 +177,7 @@ var VOID_Content = {
     // 解析URL
     parseUrl: function () {
         var domain = document.domain;
-        $('a:not(a[href^="#"]):not(".post-like")').each(function (i, item) {
+        $('a:not([href^="#"]):not(.post-like):not(.void-image-link)').each(function (i, item) {
             if ((!$(item).attr('target') || (!$(item).attr('target') == '' && !$(item).attr('target') == '_self'))) {
                 if (item.hostname != domain) {
                     $(item).attr('target', '_blank');
@@ -493,6 +452,710 @@ var VOID_Content = {
     }
 };
 
+var VOID_DialogScrollLock = {
+    owners: {},
+
+    lock: function (owner) {
+        if (!owner || this.owners[owner]) {
+            return;
+        }
+
+        this.owners[owner] = true;
+        if (document.body && document.body.classList) {
+            document.body.classList.add('void-dialog-open');
+        }
+    },
+
+    unlock: function (owner) {
+        var key;
+
+        if (owner && this.owners[owner]) {
+            delete this.owners[owner];
+        }
+
+        for (key in this.owners) {
+            if (Object.prototype.hasOwnProperty.call(this.owners, key)) {
+                return;
+            }
+        }
+
+        if (document.body && document.body.classList) {
+            document.body.classList.remove('void-dialog-open');
+        }
+    }
+};
+
+var VOID_PhotoSets = {
+    root: null,
+    generation: 0,
+    imageBindings: [],
+    setBindings: [],
+    dragThreshold: 6,
+
+    classifyLayout: function (count) {
+        if (count === 2) {
+            return 'pair';
+        }
+        return count >= 3 ? 'strip' : 'single';
+    },
+
+    isReducedMotion: function () {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    },
+
+    resolveDimensions: function (figure, image) {
+        var width = parseFloat(figure.getAttribute('data-void-image-width'));
+        var height = parseFloat(figure.getAttribute('data-void-image-height'));
+
+        if (width > 0 && height > 0) {
+            return { width: width, height: height, source: 'semantic' };
+        }
+
+        if (image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+            return {
+                width: parseFloat(image.naturalWidth),
+                height: parseFloat(image.naturalHeight),
+                source: 'natural'
+            };
+        }
+
+        return null;
+    },
+
+    hydrateFigure: function (figure) {
+        var self = this;
+        var image = VOID_Content.getFigureImage(figure);
+        var dimensions;
+        var binding;
+        var generation = this.generation;
+
+        if (!image) {
+            return;
+        }
+
+        dimensions = this.resolveDimensions(figure, image);
+        if (dimensions) {
+            VOID_Content.applyFigureSize(figure, dimensions.width, dimensions.height);
+            return;
+        }
+
+        binding = {
+            image: image,
+            onLoad: function () {
+                var naturalDimensions;
+
+                if (generation !== self.generation || !self.root) {
+                    return;
+                }
+                if (self.root.contains && !self.root.contains(figure)) {
+                    return;
+                }
+
+                naturalDimensions = self.resolveDimensions(figure, image);
+                if (naturalDimensions) {
+                    VOID_Content.applyFigureSize(figure, naturalDimensions.width, naturalDimensions.height);
+                }
+            },
+            onError: function () {
+                image.removeEventListener('load', binding.onLoad);
+                image.removeEventListener('error', binding.onError);
+            }
+        };
+
+        image.addEventListener('load', binding.onLoad);
+        image.addEventListener('error', binding.onError);
+        this.imageBindings.push(binding);
+    },
+
+    closestImageItem: function (target, set) {
+        while (target && target !== set) {
+            if (target.getAttribute && target.hasAttribute('data-void-image-item')) {
+                return target;
+            }
+            target = target.parentNode;
+        }
+        return null;
+    },
+
+    closestImageLink: function (target, set) {
+        while (target && target !== set) {
+            if (target.getAttribute && target.hasAttribute('data-void-image-zoom')) {
+                return target;
+            }
+            target = target.parentNode;
+        }
+        return null;
+    },
+
+    ensureItemVisible: function (set, item) {
+        var setRect = set.getBoundingClientRect();
+        var itemRect = item.getBoundingClientRect();
+        var nextLeft = null;
+        var behavior = this.isReducedMotion() ? 'auto' : 'smooth';
+
+        if (itemRect.left < setRect.left) {
+            nextLeft = Math.max(0, set.scrollLeft - (setRect.left - itemRect.left) - 20);
+        } else if (itemRect.right > setRect.right) {
+            nextLeft = Math.max(0, set.scrollLeft + itemRect.right - setRect.right + 20);
+        }
+
+        if (null === nextLeft) {
+            return;
+        }
+
+        if (typeof set.scrollTo === 'function') {
+            try {
+                set.scrollTo({ left: nextLeft, behavior: behavior });
+                return;
+            } catch (error) {
+                // Older engines only accept numeric scroll coordinates.
+            }
+        }
+        set.scrollLeft = nextLeft;
+    },
+
+    enhanceSet: function (set) {
+        var self = this;
+        var record;
+
+        if (set.getAttribute('data-void-photo-layout') !== 'strip') {
+            return;
+        }
+
+        record = {
+            set: set,
+            active: false,
+            dragging: false,
+            pointerId: null,
+            startX: 0,
+            startScrollLeft: 0,
+            suppressClickUntil: 0
+        };
+
+        record.onPointerDown = function (event) {
+            if ((event.pointerType && event.pointerType !== 'mouse') || event.button !== 0) {
+                return;
+            }
+
+            record.active = true;
+            record.dragging = false;
+            record.pointerId = event.pointerId;
+            record.startX = event.clientX;
+            record.startScrollLeft = set.scrollLeft;
+
+            if (typeof set.setPointerCapture === 'function' && event.pointerId !== undefined) {
+                try {
+                    set.setPointerCapture(event.pointerId);
+                } catch (error) {
+                    record.pointerId = event.pointerId;
+                }
+            }
+        };
+
+        record.onPointerMove = function (event) {
+            var delta;
+
+            if (!record.active || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
+                return;
+            }
+
+            delta = event.clientX - record.startX;
+            if (!record.dragging && Math.abs(delta) <= self.dragThreshold) {
+                return;
+            }
+
+            record.dragging = true;
+            set.classList.add('is-dragging');
+            set.scrollLeft = record.startScrollLeft - delta;
+            event.preventDefault();
+        };
+
+        record.finishPointer = function (event) {
+            if (!record.active || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
+                return;
+            }
+
+            if (record.dragging) {
+                record.suppressClickUntil = Date.now() + 400;
+            }
+
+            if (typeof set.releasePointerCapture === 'function' && record.pointerId !== null) {
+                try {
+                    set.releasePointerCapture(record.pointerId);
+                } catch (error) {
+                    record.pointerId = null;
+                }
+            }
+
+            record.active = false;
+            record.dragging = false;
+            record.pointerId = null;
+            set.classList.remove('is-dragging');
+        };
+
+        record.onClick = function (event) {
+            if (Date.now() > record.suppressClickUntil || !self.closestImageLink(event.target, set)) {
+                return;
+            }
+
+            record.suppressClickUntil = 0;
+            event.preventDefault();
+            if (typeof event.stopImmediatePropagation === 'function') {
+                event.stopImmediatePropagation();
+            } else if (typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+        };
+
+        record.onFocusIn = function (event) {
+            var item = self.closestImageItem(event.target, set);
+            if (item) {
+                self.ensureItemVisible(set, item);
+            }
+        };
+
+        record.onDragStart = function (event) {
+            event.preventDefault();
+        };
+
+        set.addEventListener('pointerdown', record.onPointerDown);
+        set.addEventListener('pointermove', record.onPointerMove);
+        set.addEventListener('pointerup', record.finishPointer);
+        set.addEventListener('pointercancel', record.finishPointer);
+        set.addEventListener('click', record.onClick, true);
+        set.addEventListener('focusin', record.onFocusIn);
+        set.addEventListener('dragstart', record.onDragStart);
+        this.setBindings.push(record);
+    },
+
+    init: function (root) {
+        var figures;
+        var sets;
+        var index;
+
+        this.destroy();
+        this.generation++;
+        this.root = root || document.getElementById('pjax-container') || document;
+        if (!this.root || typeof this.root.querySelectorAll !== 'function') {
+            return;
+        }
+
+        figures = this.root.querySelectorAll('figure[data-void-image-item]');
+        for (index = 0; index < figures.length; index++) {
+            this.hydrateFigure(figures[index]);
+        }
+
+        sets = this.root.querySelectorAll('[data-void-photo-set]');
+        for (index = 0; index < sets.length; index++) {
+            this.enhanceSet(sets[index]);
+        }
+    },
+
+    destroy: function () {
+        var index;
+        var record;
+
+        this.generation++;
+
+        for (index = 0; index < this.imageBindings.length; index++) {
+            record = this.imageBindings[index];
+            record.image.removeEventListener('load', record.onLoad);
+            record.image.removeEventListener('error', record.onError);
+        }
+
+        for (index = 0; index < this.setBindings.length; index++) {
+            record = this.setBindings[index];
+            record.set.removeEventListener('pointerdown', record.onPointerDown);
+            record.set.removeEventListener('pointermove', record.onPointerMove);
+            record.set.removeEventListener('pointerup', record.finishPointer);
+            record.set.removeEventListener('pointercancel', record.finishPointer);
+            record.set.removeEventListener('click', record.onClick, true);
+            record.set.removeEventListener('focusin', record.onFocusIn);
+            record.set.removeEventListener('dragstart', record.onDragStart);
+            record.set.classList.remove('is-dragging');
+        }
+
+        this.imageBindings = [];
+        this.setBindings = [];
+        this.root = null;
+    },
+
+    __test: {
+        classifyLayout: function (count) {
+            return VOID_PhotoSets.classifyLayout(count);
+        },
+        shouldStartDrag: function (startX, currentX) {
+            return Math.abs(currentX - startX) > VOID_PhotoSets.dragThreshold;
+        }
+    }
+};
+
+var VOID_ImageZoom = {
+    root: null,
+    dialog: null,
+    previewImage: null,
+    closeButton: null,
+    sourceLink: null,
+    sourceImage: null,
+    isOpen: false,
+    generation: 0,
+    animation: null,
+    animationFrame: null,
+    closeTimer: null,
+    handlers: null,
+
+    isReducedMotion: function () {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    },
+
+    findLink: function (target) {
+        while (target && target !== this.root) {
+            if (target.getAttribute && target.hasAttribute('data-void-image-zoom')) {
+                return target;
+            }
+            target = target.parentNode;
+        }
+        return null;
+    },
+
+    getSourceImage: function (link) {
+        return link && link.querySelector ? link.querySelector('img[data-void-image-content]') : null;
+    },
+
+    canActivate: function (link, event) {
+        var target;
+        var image;
+
+        if (!link || !event || event.defaultPrevented) {
+            return false;
+        }
+        if (typeof event.button === 'number' && event.button !== 0) {
+            return false;
+        }
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return false;
+        }
+        if (link.hasAttribute('download')) {
+            return false;
+        }
+
+        target = (link.getAttribute('target') || '').toLowerCase();
+        if (target === '_blank' || !link.getAttribute('href')) {
+            return false;
+        }
+        if (this.root && this.root.contains && !this.root.contains(link)) {
+            return false;
+        }
+
+        image = this.getSourceImage(link);
+        return !!(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+    },
+
+    calculateTransition: function (sourceRect, targetRect) {
+        var sourceCenterX = sourceRect.left + sourceRect.width / 2;
+        var sourceCenterY = sourceRect.top + sourceRect.height / 2;
+        var targetCenterX = targetRect.left + targetRect.width / 2;
+        var targetCenterY = targetRect.top + targetRect.height / 2;
+        var scaleX = targetRect.width > 0 ? sourceRect.width / targetRect.width : 1;
+        var scaleY = targetRect.height > 0 ? sourceRect.height / targetRect.height : 1;
+        var translateX = sourceCenterX - targetCenterX;
+        var translateY = sourceCenterY - targetCenterY;
+
+        return {
+            scaleX: scaleX,
+            scaleY: scaleY,
+            translateX: translateX,
+            translateY: translateY,
+            transform: 'translate3d(' + translateX + 'px, ' + translateY + 'px, 0) scale('
+                + scaleX + ', ' + scaleY + ')'
+        };
+    },
+
+    calculateFit: function (width, height, viewportWidth, viewportHeight, gutter) {
+        var availableWidth = Math.max(0, viewportWidth - gutter * 2);
+        var availableHeight = Math.max(0, viewportHeight - gutter * 2);
+        var scale = Math.min(availableWidth / width, availableHeight / height, 1);
+
+        return {
+            width: width * scale,
+            height: height * scale,
+            left: (viewportWidth - width * scale) / 2,
+            top: (viewportHeight - height * scale) / 2
+        };
+    },
+
+    cancelAnimation: function () {
+        if (this.animationFrame !== null && window.cancelAnimationFrame) {
+            window.cancelAnimationFrame(this.animationFrame);
+        }
+        this.animationFrame = null;
+
+        if (this.animation && typeof this.animation.cancel === 'function') {
+            this.animation.cancel();
+        }
+        this.animation = null;
+
+        if (this.closeTimer !== null) {
+            window.clearTimeout(this.closeTimer);
+            this.closeTimer = null;
+        }
+    },
+
+    animateOpen: function () {
+        var self = this;
+        var generation = this.generation;
+        var sourceRect = this.sourceImage.getBoundingClientRect();
+
+        if (this.isReducedMotion() || typeof this.previewImage.animate !== 'function') {
+            return;
+        }
+
+        this.animationFrame = window.requestAnimationFrame(function () {
+            var targetRect;
+            var transition;
+
+            self.animationFrame = null;
+            if (!self.isOpen || generation !== self.generation) {
+                return;
+            }
+
+            targetRect = self.previewImage.getBoundingClientRect();
+            if (!(sourceRect.width > 0 && sourceRect.height > 0 && targetRect.width > 0 && targetRect.height > 0)) {
+                return;
+            }
+
+            transition = self.calculateTransition(sourceRect, targetRect);
+            try {
+                self.animation = self.previewImage.animate([
+                    { transform: transition.transform, opacity: 0.35 },
+                    { transform: 'none', opacity: 1 }
+                ], {
+                    duration: 240,
+                    easing: 'cubic-bezier(.25,.46,.45,.94)'
+                });
+            } catch (error) {
+                self.animation = null;
+            }
+        });
+    },
+
+    open: function (link) {
+        var image = this.getSourceImage(link);
+        var href = link.getAttribute('href');
+
+        if (this.isOpen || !image || !href) {
+            return false;
+        }
+
+        this.sourceLink = link;
+        this.sourceImage = image;
+        this.previewImage.setAttribute('src', href);
+        this.previewImage.setAttribute('alt', image.getAttribute('alt') || '');
+        this.previewImage.setAttribute('width', String(image.naturalWidth));
+        this.previewImage.setAttribute('height', String(image.naturalHeight));
+
+        try {
+            this.dialog.showModal();
+        } catch (error) {
+            this.previewImage.removeAttribute('src');
+            this.sourceLink = null;
+            this.sourceImage = null;
+            return false;
+        }
+
+        this.isOpen = true;
+        VOID_DialogScrollLock.lock('image-zoom');
+        image.classList.add('void-image-zoom-source');
+        this.closeButton.focus();
+        this.animateOpen();
+        return true;
+    },
+
+    finishClose: function (restoreFocus, closeDialog) {
+        var sourceLink = this.sourceLink;
+        var sourceImage = this.sourceImage;
+
+        this.cancelAnimation();
+        this.isOpen = false;
+
+        if (closeDialog && this.dialog && this.dialog.open) {
+            try {
+                this.dialog.close();
+            } catch (error) {
+                this.dialog.removeAttribute('open');
+            }
+        }
+
+        VOID_DialogScrollLock.unlock('image-zoom');
+        if (sourceImage && sourceImage.classList) {
+            sourceImage.classList.remove('void-image-zoom-source');
+        }
+        if (this.previewImage) {
+            this.previewImage.removeAttribute('src');
+            this.previewImage.removeAttribute('width');
+            this.previewImage.removeAttribute('height');
+        }
+
+        this.sourceLink = null;
+        this.sourceImage = null;
+        if (restoreFocus && sourceLink && typeof sourceLink.focus === 'function') {
+            sourceLink.focus();
+        }
+    },
+
+    close: function (immediate, restoreFocus) {
+        var self = this;
+        var sourceRect;
+        var targetRect;
+        var transition;
+
+        if (!this.isOpen) {
+            return;
+        }
+
+        this.cancelAnimation();
+        if (immediate || this.isReducedMotion() || typeof this.previewImage.animate !== 'function'
+            || !this.sourceImage || !this.sourceImage.getBoundingClientRect) {
+            this.finishClose(restoreFocus !== false, true);
+            return;
+        }
+
+        sourceRect = this.sourceImage.getBoundingClientRect();
+        targetRect = this.previewImage.getBoundingClientRect();
+        if (!(sourceRect.width > 0 && sourceRect.height > 0 && targetRect.width > 0 && targetRect.height > 0)) {
+            this.finishClose(restoreFocus !== false, true);
+            return;
+        }
+
+        transition = this.calculateTransition(sourceRect, targetRect);
+        try {
+            this.animation = this.previewImage.animate([
+                { transform: 'none', opacity: 1 },
+                { transform: transition.transform, opacity: 0.35 }
+            ], {
+                duration: 200,
+                easing: 'cubic-bezier(.25,.46,.45,.94)'
+            });
+            this.animation.onfinish = function () {
+                self.finishClose(restoreFocus !== false, true);
+            };
+            this.closeTimer = window.setTimeout(function () {
+                self.finishClose(restoreFocus !== false, true);
+            }, 260);
+        } catch (error) {
+            this.finishClose(restoreFocus !== false, true);
+        }
+    },
+
+    init: function (root) {
+        var self = this;
+
+        this.destroy();
+        this.generation++;
+        this.root = root || document.getElementById('pjax-container') || document;
+        if (!this.root || typeof this.root.querySelector !== 'function'
+            || !this.root.querySelector('a[data-void-image-zoom]')) {
+            return;
+        }
+
+        this.dialog = document.createElement('dialog');
+        if (typeof this.dialog.showModal !== 'function') {
+            this.dialog = null;
+            return;
+        }
+
+        this.dialog.className = 'void-image-zoom';
+        this.dialog.setAttribute('aria-label', '图片放大预览');
+        this.previewImage = document.createElement('img');
+        this.previewImage.className = 'void-image-zoom__image';
+        this.previewImage.setAttribute('draggable', 'false');
+        this.closeButton = document.createElement('button');
+        this.closeButton.className = 'void-dialog-close';
+        this.closeButton.setAttribute('type', 'button');
+        this.closeButton.setAttribute('aria-label', '关闭图片预览');
+        this.closeButton.setAttribute('title', '关闭');
+        this.dialog.appendChild(this.previewImage);
+        this.dialog.appendChild(this.closeButton);
+        document.body.appendChild(this.dialog);
+
+        this.handlers = {
+            documentClick: function (event) {
+                var link = self.findLink(event.target);
+                if (self.canActivate(link, event) && self.open(link)) {
+                    event.preventDefault();
+                }
+            },
+            dialogClick: function (event) {
+                if (event.target === self.dialog || event.target === self.previewImage
+                    || event.target === self.closeButton) {
+                    self.close(false, true);
+                }
+            },
+            cancel: function (event) {
+                event.preventDefault();
+                self.close(false, true);
+            },
+            close: function () {
+                if (self.isOpen) {
+                    self.finishClose(true, false);
+                }
+            },
+            viewportChange: function () {
+                self.close(true, true);
+            }
+        };
+
+        document.addEventListener('click', this.handlers.documentClick);
+        this.dialog.addEventListener('click', this.handlers.dialogClick);
+        this.dialog.addEventListener('cancel', this.handlers.cancel);
+        this.dialog.addEventListener('close', this.handlers.close);
+        window.addEventListener('resize', this.handlers.viewportChange);
+        window.addEventListener('orientationchange', this.handlers.viewportChange);
+    },
+
+    destroy: function () {
+        this.generation++;
+        if (this.isOpen) {
+            this.finishClose(false, true);
+        } else {
+            this.cancelAnimation();
+            VOID_DialogScrollLock.unlock('image-zoom');
+        }
+
+        if (this.handlers) {
+            document.removeEventListener('click', this.handlers.documentClick);
+            if (this.dialog) {
+                this.dialog.removeEventListener('click', this.handlers.dialogClick);
+                this.dialog.removeEventListener('cancel', this.handlers.cancel);
+                this.dialog.removeEventListener('close', this.handlers.close);
+            }
+            window.removeEventListener('resize', this.handlers.viewportChange);
+            window.removeEventListener('orientationchange', this.handlers.viewportChange);
+        }
+
+        if (this.dialog && this.dialog.parentNode) {
+            this.dialog.parentNode.removeChild(this.dialog);
+        }
+
+        this.handlers = null;
+        this.dialog = null;
+        this.previewImage = null;
+        this.closeButton = null;
+        this.sourceLink = null;
+        this.sourceImage = null;
+        this.root = null;
+    },
+
+    __test: {
+        calculateFit: function (width, height, viewportWidth, viewportHeight, gutter) {
+            return VOID_ImageZoom.calculateFit(width, height, viewportWidth, viewportHeight, gutter);
+        },
+        calculateTransition: function (sourceRect, targetRect) {
+            return VOID_ImageZoom.calculateTransition(sourceRect, targetRect);
+        }
+    }
+};
+
 var VOID = {
     pjaxLifecycleBound: false,
     emotePicker: null,
@@ -590,13 +1253,14 @@ var VOID = {
         VOID_Ui.DarkModeSwitcher.checkColorScheme();
         VOID_Ui.checkScrollTop();
         VOID_Content.parseBoardThumbs();
+        VOID_PhotoSets.init();
+        VOID_ImageZoom.init();
         VOID_Ui.lazyload();
         VOID_Ui.headroom();
 
         VOID_Content.countWords();
         VOID_Content.parseDetails();
         VOID_Content.parseTOC();
-        VOID_Content.parsePhotos();
         VOID_Content.highlight();
         VOID_Content.parseUrl();
         VOID.safeRunPangu();
@@ -669,6 +1333,8 @@ var VOID = {
     // PJAX 开始前
     beforePjax: function () {
         NProgress.start();
+        VOID_ImageZoom.destroy();
+        VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
         VOID_Ui.reset();
     },
@@ -681,6 +1347,9 @@ var VOID = {
 	
         VOID_Content.parseBoardThumbs();
 
+        VOID_PhotoSets.init();
+        VOID_ImageZoom.init();
+
         if ($('#loggin-form').length) {
             $('#loggin-form').addClass('need-refresh');
         }
@@ -692,7 +1361,6 @@ var VOID = {
         VOID_Content.countWords();
         VOID_Content.parseDetails();
         VOID_Content.parseTOC();
-        VOID_Content.parsePhotos();
         VOID_Content.parseUrl();
         VOID_Content.highlight();
         VOID_Content.math();

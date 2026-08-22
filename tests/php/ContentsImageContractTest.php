@@ -15,6 +15,31 @@ class Helper
     }
 }
 
+class ImageContractParameter
+{
+    private $values;
+
+    public function __construct($values)
+    {
+        $this->values = $values;
+    }
+
+    public function __get($name)
+    {
+        return isset($this->values[$name]) ? $this->values[$name] : null;
+    }
+}
+
+class ImageContractWidget
+{
+    public $parameter;
+
+    public function __construct($values)
+    {
+        $this->parameter = new ImageContractParameter($values);
+    }
+}
+
 Helper::$options = new ImageContractOptions();
 
 require_once dirname(__DIR__, 2) . '/libs/Contents.php';
@@ -165,6 +190,89 @@ assertImageNotContains('<figcaption>', $withoutAlt, '缺少 alt 时不输出空 
 $protected = Contents::parseImages('<code><img src="/code.jpg" alt="code"></code><img src="/body.jpg" alt="body">');
 assertImageContains('<code><img src="/code.jpg" alt="code"></code>', $protected, '代码区域内的图片标签保持原文');
 assertImageSame(1, substr_count($protected, 'data-void-image-item'), '代码区域外图片仍正常解析');
+
+resetImageSettings();
+$oneFigure = Contents::parseImages('<img src="/one.jpg#vwid=900&vhei=600" alt="一张">');
+$singleSet = Contents::parsePhotoSet('[photos]' . $oneFigure . '[/photos]');
+assertImageContains(
+    '<div class="photos" data-void-photo-set data-void-photo-count="1" data-void-photo-layout="single">',
+    $singleSet,
+    '单张 photos 输出独立 single 布局契约'
+);
+assertImageNotContains('tabindex=', $singleSet, '单图不伪装成可滚动区域');
+
+$twoFigures = $oneFigure . Contents::parseImages('<img src="/two.jpg#vwid=600&vhei=900" alt="二张">');
+$pairSet = Contents::parsePhotoSet('[photos]' . $twoFigures . '[/photos]');
+assertImageContains('data-void-photo-count="2" data-void-photo-layout="pair"', $pairSet, '双图自动分类为 pair');
+assertImageNotContains('data-void-photo-position=', $pairSet, '双图不显示横带序号');
+
+$threeFigures = $twoFigures . Contents::parseImages('<img src="/three.jpg#vwid=1600&vhei=900" alt="三张">');
+$stripSet = Contents::parsePhotoSet('[photos]' . $threeFigures . '[/photos]');
+assertImageContains('data-void-photo-count="3" data-void-photo-layout="strip"', $stripSet, '三张及以上自动分类为 strip');
+assertImageContains('tabindex="0" role="region" aria-label="横向图片集，共 3 张"', $stripSet, '横带容器可聚焦并提供总数标签');
+assertImageSame(3, substr_count($stripSet, 'data-void-photo-position='), '横带为每张图片输出序号');
+assertImageContains('data-void-photo-index="1" data-void-photo-position="1 / 3"', $stripSet, '横带首图序号正确');
+assertImageContains('data-void-photo-index="3" data-void-photo-position="3 / 3"', $stripSet, '横带末图序号正确');
+
+$nearMatchFigures = $oneFigure
+    . '<figure data-void-image-item-extra><img src="/extra.jpg"></figure>'
+    . '<figure title="data-void-image-item"><img src="/title.jpg"></figure>';
+$nearMatchSet = Contents::parsePhotoSet('[photos]' . $nearMatchFigures . '[/photos]');
+assertImageContains('data-void-photo-count="1" data-void-photo-layout="single"', $nearMatchSet, '图片计数只识别精确语义属性');
+assertImageNotContains('data-void-photo-position=', $nearMatchSet, '相似属性名和值不触发横带序号');
+
+$GLOBALS['VOIDSetting']['largePhotoSet'] = true;
+$largePair = Contents::parsePhotoSet('[photos]' . $twoFigures . '[/photos]');
+assertImageContains('<div class="photos large"', $largePair, 'largePhotoSet 继续控制桌面加宽 class');
+
+$GLOBALS['VOIDSetting']['largePhotoSet'] = false;
+$multipleSets = Contents::parsePhotoSet('[photos]' . $oneFigure . '[/photos][photos mode="story"]' . $threeFigures . '[/photos]');
+assertImageSame(2, substr_count($multipleSets, 'data-void-photo-set'), '多个 photos shortcode 保持彼此隔离');
+assertImageContains('data-void-photo-layout="single"', $multipleSets, '多个 photos 中保留单图分类');
+assertImageContains('data-void-photo-layout="strip"', $multipleSets, '多个 photos 中保留横带分类');
+
+resetImageSettings();
+$feedSource = '[photos]<img src="/feed-one.jpg#vwid=640&vhei=480" alt="Feed 一"><img src="/feed-two.jpg#vwid=800&vhei=600" alt="Feed 二">[/photos]';
+$feedWidget = new ImageContractWidget(array('type' => 'feed'));
+$feedSet = Contents::contentEx($feedSource, $feedWidget, null);
+assertImageSame(2, substr_count($feedSet, '<figure><img '), 'Feed 展开 photos 后保留静态图片');
+assertImageNotContains('class="photos', $feedSet, 'Feed 不保留 photos 包装');
+assertImageNotContains('data-void-', $feedSet, 'Feed photos 不泄漏主题交互属性');
+assertImageNotContains('<a ', $feedSet, 'Feed photos 图片不输出原图链接');
+
+$legacyFeedWidget = new ImageContractWidget(array('isFeed' => true));
+$legacyFeed = Contents::contentEx(
+    '<div class="photos"><figure><div class="nested">嵌套</div></figure></div><p>保留</p>',
+    $legacyFeedWidget,
+    null
+);
+assertImageContains('<figure><div>嵌套</div></figure><p>保留</p>', $legacyFeed, 'isFeed 信号独立生效且嵌套 div 不截断照片集解包');
+
+$feedNearMatches = Contents::contentEx(
+    '<div class="photos-grid">网格</div><div data-class="photos">数据</div>',
+    $feedWidget,
+    null
+);
+assertImageContains('<div>网格</div><div>数据</div>', $feedNearMatches, 'Feed 不把相似 class 或 data-class 当成照片集');
+
+$renderedExcerpt = '<div class="photos large" data-void-photo-set data-void-photo-count="3" data-void-photo-layout="strip"><figure>图</figure></div><p>保留</p>';
+assertImageSame('<p>保留</p>', Contents::excerptEx($renderedExcerpt, null, null), '摘要移除带 data 属性的已渲染 photos');
+assertImageSame('保留', Contents::excerptEx('[PHOTOS mode="story"]保留[/PHOTOS]', null, null), '摘要移除带属性及大小写变化的 photos 标记');
+assertImageSame(
+    '<p>保留</p>',
+    Contents::excerptEx('<div data-void-photo-set><figure><div>嵌套</div></figure></div><p>保留</p>', null, null),
+    '摘要完整移除包含嵌套 div 的照片集'
+);
+assertImageSame(
+    '<div class="photos-grid">网格</div><div data-class="photos">数据</div>',
+    Contents::excerptEx('<div class="photos-grid">网格</div><div data-class="photos">数据</div>', null, null),
+    '摘要保留相似 class 和 data-class 容器'
+);
+assertImageSame(
+    '[photoshop]设计[/photoshop][photos-note]说明[/photos-note]',
+    Contents::excerptEx('[photoshop]设计[/photoshop][photos-note]说明[/photos-note]', null, null),
+    '摘要不误删名称相近的 shortcode'
+);
 
 assertImageSame('', Contents::parseImages(''), '空图片内容保持不变');
 assertImageSame(null, Contents::parseImages(null), '非字符串图片内容保持不变');

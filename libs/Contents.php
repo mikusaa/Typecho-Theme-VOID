@@ -126,7 +126,7 @@ Class Contents
         );
 
         $content = preg_replace('/<div class="board-list link-list">\s*(.*?)\s*<\/div>/is', '$1', $content);
-        $content = preg_replace('/<div class="photos(?: large)?">(.*?)<\/div>/is', '$1', $content);
+        $content = self::transformPhotoSetContainers($content, false);
         $content = preg_replace('/\s+no-pjax(?=[\s>])/i', '', $content);
         $content = preg_replace('/\s+(?:class|style|loading|data-[a-z0-9_-]+)="[^"]*"/i', '', $content);
         return $content;
@@ -173,9 +173,8 @@ Class Contents
         $text = self::parseBiaoQing($text);
         $text = self::parseNotice($text);
         // Typecho 1.3 的 excerpt 基于 content 生成，需要额外清理已渲染图集
-        $text = preg_replace('/<div class="photos(?: large)?">.*?<\/div>/is', '', $text);
-        $text = str_replace('[photos]', '', $text);
-        $text = str_replace('[/photos]', '', $text);
+        $text = self::transformPhotoSetContainers($text, true);
+        $text = preg_replace('/\[(?:photos(?=\s|\])[^\]]*|\/photos\s*)\]/i', '', $text);
         return $text;
     }
 
@@ -224,7 +223,7 @@ Class Contents
     {
         $setting = $GLOBALS['VOIDSetting'];
         self::$photoSetClass = $setting['largePhotoSet'] ? 'photos large' : 'photos';
-        $reg = '/(?:<p>\s*)?\[photos(?:[^\]]*)\](.*?)(?:\[\/photos\])(?:\s*<\/p>)?/is';
+        $reg = '/(?:<p>\s*)?\[photos(?=\s|\])[^\]]*\](.*?)\[\/photos\](?:\s*<\/p>)?/is';
         return preg_replace_callback($reg, array('Contents', 'parsePhotoSetCallBack'), $content);
     }
 
@@ -238,8 +237,40 @@ Class Contents
         $content = preg_replace('/<br\s*\/?>/i', '', $match[1]);
         $content = str_replace(array('<p>', '</p>'), '', $content);
         $content = trim($content);
+        $figurePattern = '/<figure\b[^>]*>/i';
+        preg_match_all($figurePattern, $content, $figures);
+        $count = 0;
+        foreach ($figures[0] as $figure) {
+            if (self::hasHtmlAttribute($figure, 'data-void-image-item')) {
+                $count++;
+            }
+        }
+        $layout = $count === 2 ? 'pair' : ($count >= 3 ? 'strip' : 'single');
 
-        return '<div class="' . self::$photoSetClass . '">' . $content . '</div>';
+        if ($layout === 'strip') {
+            $index = 0;
+            $content = preg_replace_callback(
+                $figurePattern,
+                function ($figureMatch) use (&$index, $count) {
+                    if (!self::hasHtmlAttribute($figureMatch[0], 'data-void-image-item')) {
+                        return $figureMatch[0];
+                    }
+                    $index++;
+                    return substr($figureMatch[0], 0, -1)
+                        . ' data-void-photo-index="' . $index . '"'
+                        . ' data-void-photo-position="' . $index . ' / ' . $count . '">';
+                },
+                $content
+            );
+        }
+
+        $accessibility = $layout === 'strip'
+            ? ' tabindex="0" role="region" aria-label="横向图片集，共 ' . $count . ' 张"'
+            : '';
+
+        return '<div class="' . self::$photoSetClass . '" data-void-photo-set data-void-photo-count="'
+            . $count . '" data-void-photo-layout="' . $layout . '"' . $accessibility . '>'
+            . $content . '</div>';
     }
 
     /**
@@ -341,6 +372,112 @@ Class Contents
         }
 
         return $length - 1;
+    }
+
+    /**
+     * 返回与指定 div 开标签配对的闭标签位置，并正确跨过嵌套 div。
+     */
+    static private function findClosingDivToken($content, $offset)
+    {
+        $depth = 1;
+        $length = strlen($content);
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                return null;
+            }
+
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            if (preg_match('/\A<\s*div\b/i', $tag) && !preg_match('/\/\s*>\z/', $tag)) {
+                $depth++;
+            } elseif (preg_match('/\A<\s*\/\s*div\s*>\z/i', $tag)) {
+                $depth--;
+                if ($depth === 0) {
+                    return array($tagStart, $tagEnd);
+                }
+            }
+
+            $offset = $tagEnd + 1;
+        }
+
+        return null;
+    }
+
+    /**
+     * 判断 div 是否为主题照片集，兼容旧版精确 photos class。
+     */
+    static private function isPhotoSetContainerTag($tag)
+    {
+        if (!preg_match('/\A<\s*div\b/i', $tag)) {
+            return false;
+        }
+
+        $attributes = self::parseHtmlAttributes($tag);
+        if (array_key_exists('data-void-photo-set', $attributes)) {
+            return true;
+        }
+
+        if (!isset($attributes['class']) || !is_string($attributes['class'])) {
+            return false;
+        }
+
+        $classes = preg_split('/\s+/', trim($attributes['class']));
+        return in_array('photos', $classes, true);
+    }
+
+    /**
+     * Feed 解包照片集，摘要则连同内容移除；不误伤相似 class 或嵌套 div。
+     */
+    static private function transformPhotoSetContainers($content, $removeContents)
+    {
+        if (!is_string($content) || stripos($content, '<div') === false) {
+            return $content;
+        }
+
+        $result = '';
+        $offset = 0;
+        $length = strlen($content);
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                $result .= substr($content, $offset);
+                break;
+            }
+
+            $result .= substr($content, $offset, $tagStart - $offset);
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $result .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            if (self::isPhotoSetContainerTag($tag) && !preg_match('/\/\s*>\z/', $tag)) {
+                $closing = self::findClosingDivToken($content, $tagEnd + 1);
+                if (null !== $closing) {
+                    if (!$removeContents) {
+                        $inner = substr($content, $tagEnd + 1, $closing[0] - $tagEnd - 1);
+                        $result .= self::transformPhotoSetContainers($inner, false);
+                    }
+                    $offset = $closing[1] + 1;
+                    continue;
+                }
+            }
+
+            $result .= $tag;
+            $offset = $tagEnd + 1;
+        }
+
+        return $result;
     }
 
     /**
@@ -637,7 +774,7 @@ Class Contents
             $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
             if (empty($protectedTags)
                 && preg_match('/\A<\s*img\b/i', $tag)
-                && stripos($tag, 'data-void-image-content') === false) {
+                && !self::hasHtmlAttribute($tag, 'data-void-image-content')) {
                 $result .= self::renderContentImage($tag);
             } else {
                 $result .= $tag;
@@ -653,22 +790,91 @@ Class Contents
     /**
      * 读取 HTML 标签中的属性并还原实体，供重新输出时按上下文转义。
      */
+    static private function parseHtmlAttributes($tag)
+    {
+        $attributes = array();
+        if (!preg_match('/\A<\s*[a-z][a-z0-9:_-]*/i', $tag, $tagMatch)) {
+            return $attributes;
+        }
+
+        $offset = strlen($tagMatch[0]);
+        $length = strlen($tag);
+        while ($offset < $length) {
+            while ($offset < $length && ctype_space($tag[$offset])) {
+                $offset++;
+            }
+            if ($offset >= $length || $tag[$offset] === '>'
+                || ($tag[$offset] === '/' && $offset + 1 < $length && $tag[$offset + 1] === '>')) {
+                break;
+            }
+
+            $nameStart = $offset;
+            while ($offset < $length
+                && !ctype_space($tag[$offset])
+                && strpos('=/>', $tag[$offset]) === false) {
+                $offset++;
+            }
+            if ($offset === $nameStart) {
+                $offset++;
+                continue;
+            }
+
+            $name = strtolower(substr($tag, $nameStart, $offset - $nameStart));
+            while ($offset < $length && ctype_space($tag[$offset])) {
+                $offset++;
+            }
+
+            $value = null;
+            if ($offset < $length && $tag[$offset] === '=') {
+                $offset++;
+                while ($offset < $length && ctype_space($tag[$offset])) {
+                    $offset++;
+                }
+
+                if ($offset < $length && ($tag[$offset] === '"' || $tag[$offset] === "'")) {
+                    $quote = $tag[$offset++];
+                    $valueStart = $offset;
+                    while ($offset < $length && $tag[$offset] !== $quote) {
+                        $offset++;
+                    }
+                    $value = substr($tag, $valueStart, $offset - $valueStart);
+                    if ($offset < $length) {
+                        $offset++;
+                    }
+                } else {
+                    $valueStart = $offset;
+                    while ($offset < $length
+                        && !ctype_space($tag[$offset])
+                        && $tag[$offset] !== '>') {
+                        $offset++;
+                    }
+                    $value = substr($tag, $valueStart, $offset - $valueStart);
+                }
+            }
+
+            if (!array_key_exists($name, $attributes)) {
+                $attributes[$name] = $value;
+            }
+        }
+
+        return $attributes;
+    }
+
+    static private function hasHtmlAttribute($tag, $name)
+    {
+        $attributes = self::parseHtmlAttributes($tag);
+        return array_key_exists(strtolower($name), $attributes);
+    }
+
     static private function getHtmlAttribute($tag, $name)
     {
-        $pattern = '/(?:^|\s)' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>"\']+))/i';
-        if (!preg_match($pattern, $tag, $matches)) {
+        $attributes = self::parseHtmlAttributes($tag);
+        $key = strtolower($name);
+        if (!array_key_exists($key, $attributes) || null === $attributes[$key]) {
             return null;
         }
 
-        if (isset($matches[1]) && $matches[1] !== '') {
-            $value = $matches[1];
-        } elseif (isset($matches[2]) && $matches[2] !== '') {
-            $value = $matches[2];
-        } else {
-            $value = isset($matches[3]) ? $matches[3] : '';
-        }
-
-        return html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return html_entity_decode($attributes[$key], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**

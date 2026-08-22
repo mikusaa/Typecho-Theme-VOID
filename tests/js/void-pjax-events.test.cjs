@@ -258,3 +258,17 @@ test('main-container PJAX events do not run the comment lifecycle', () => {
 
     assert.deepEqual(calls, ['beforePjax', 'afterPjax', 'endPjax']);
 });
+
+test('main PJAX teardown closes image zoom before photo-set and UI cleanup', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.NProgress = { start: () => calls.push('progress') };
+    context.VOID_ImageZoom.destroy = () => calls.push('zoom');
+    context.VOID_PhotoSets.destroy = () => calls.push('photoSets');
+    context.VOID.destroyEmotes = () => calls.push('emotes');
+    context.VOID_Ui = { reset: () => calls.push('ui') };
+
+    context.VOID.beforePjax();
+    assert.deepEqual(calls, ['progress', 'zoom', 'photoSets', 'emotes', 'ui']);
+});
