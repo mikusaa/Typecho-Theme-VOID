@@ -47,15 +47,6 @@
 
     "commentNotification": "请不要水评论",
 
-    // 夜间模式时间段
-    "darkModeTime" : {
-        "start": 22.5,  // 晚 22 点 30 分开始
-        "end": 7.0      // 直到早 6 点 59 分
-    },
-
-    // 旧版兼容项：设为 true 时会迁移为后台的“跟随设备”模式，新配置无需填写
-    "followSystemColorScheme" : false,
-
     // 大图集
     "largePhotoSet": true,
 

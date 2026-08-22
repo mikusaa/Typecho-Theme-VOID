@@ -511,7 +511,6 @@ VOID_Ui = {
     },
 
     DarkModeSwitcher: {
-        timer: null,
         mediaQuery: null,
         mediaListener: null,
 
@@ -522,21 +521,7 @@ VOID_Ui = {
 
         getMode: function () {
             var mode = parseInt(VOIDConfig.colorScheme, 10);
-            return mode >= 0 && mode <= 3 ? mode : 1;
-        },
-
-        isTimeDark: function (date) {
-            var start = Number(VOIDConfig.darkModeTime.start);
-            var end = Number(VOIDConfig.darkModeTime.end);
-            var current = date.getHours() + date.getMinutes() / 60;
-
-            if (!isFinite(start) || !isFinite(end) || start === end) {
-                return false;
-            }
-
-            return start < end
-                ? current >= start && current < end
-                : current >= start || current < end;
+            return mode >= 1 && mode <= 3 ? mode : 3;
         },
 
         getConfiguredState: function () {
@@ -549,9 +534,6 @@ VOID_Ui = {
                 return window.matchMedia
                     ? window.matchMedia('(prefers-color-scheme: dark)').matches
                     : false;
-            }
-            if (mode === 0) {
-                return this.isTimeDark(new Date());
             }
             return false;
         },
@@ -587,12 +569,7 @@ VOID_Ui = {
             control.setAttribute('title', label);
         },
 
-        stopAutomation: function () {
-            if (this.timer) {
-                window.clearTimeout(this.timer);
-                this.timer = null;
-            }
-
+        stopDeviceListener: function () {
             if (this.mediaQuery && this.mediaListener) {
                 if (this.mediaQuery.removeEventListener) {
                     this.mediaQuery.removeEventListener('change', this.mediaListener);
@@ -602,35 +579,6 @@ VOID_Ui = {
             }
             this.mediaQuery = null;
             this.mediaListener = null;
-        },
-
-        scheduleTimeChange: function () {
-            var self = this;
-            var now = new Date();
-            var isDark = this.isTimeDark(now);
-            var target = Number(isDark ? VOIDConfig.darkModeTime.end : VOIDConfig.darkModeTime.start);
-            var boundary;
-            var hours;
-            var minutes;
-
-            if (!isFinite(target) || Number(VOIDConfig.darkModeTime.start) === Number(VOIDConfig.darkModeTime.end)) {
-                return;
-            }
-
-            hours = Math.floor(target);
-            minutes = Math.round((target - hours) * 60);
-            boundary = new Date(now.getTime());
-            boundary.setHours(hours, minutes, 0, 0);
-            if (boundary <= now) {
-                boundary.setDate(boundary.getDate() + 1);
-            }
-
-            this.timer = window.setTimeout(function () {
-                if (!self.getOverride() && self.getMode() === 0) {
-                    self.apply(self.isTimeDark(new Date()));
-                    self.scheduleTimeChange();
-                }
-            }, boundary.getTime() - now.getTime() + 100);
         },
 
         startDeviceListener: function () {
@@ -658,7 +606,7 @@ VOID_Ui = {
             var override = this.getOverride();
             var mode = this.getMode();
 
-            this.stopAutomation();
+            this.stopDeviceListener();
             this.apply(override ? override === 'dark' : this.getConfiguredState());
 
             if (override) {
@@ -666,8 +614,6 @@ VOID_Ui = {
             }
             if (mode === 3) {
                 this.startDeviceListener();
-            } else if (mode === 0) {
-                this.scheduleTimeChange();
             }
         },
 
@@ -684,11 +630,11 @@ VOID_Ui = {
             window.setTimeout(function () {
                 if (!override) {
                     VOID_Util.setCookie('void_theme_override', 'light', 0);
-                    self.stopAutomation();
+                    self.stopDeviceListener();
                     self.apply(false);
                 } else if (override === 'light') {
                     VOID_Util.setCookie('void_theme_override', 'dark', 0);
-                    self.stopAutomation();
+                    self.stopDeviceListener();
                     self.apply(true);
                 } else {
                     VOID_Util.removeCookie('void_theme_override');

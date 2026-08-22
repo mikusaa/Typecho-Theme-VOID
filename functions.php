@@ -117,6 +117,11 @@ $GLOBALS['VOIDVersion'] = '3.5.4.1';
  */
 function themeConfig($form)
 {
+    $options = Helper::options();
+    if ($options->colorScheme !== null) {
+        $options->colorScheme = (string) Utils::normalizeColorScheme($options->colorScheme);
+    }
+
     echo '<style>
         p.notice {
         line-height: 1.75;
@@ -143,10 +148,11 @@ function themeConfig($form)
 
     $colorScheme = new Typecho_Widget_Helper_Form_Element_Radio('colorScheme', array(
         '3' => '跟随设备',
-        '0' => '定时切换',
         '1' => '日间模式',
         '2' => '夜间模式'
-    ), '3', '主题颜色模式', '跟随设备会响应访客设备的深浅色设置；定时切换默认在每天 22:00 到次日 06:59 使用夜间模式。');
+    ), '3', '主题颜色模式', '跟随设备会响应访客设备的深浅色设置，也可以固定使用日间或夜间模式。');
+    $colorScheme->addRule('required', '请选择主题颜色模式。');
+    $colorScheme->addRule('enum', '主题颜色模式无效。', array('1', '2', '3'));
     $form->addInput($colorScheme);
 
     $indexStyle = new Typecho_Widget_Helper_Form_Element_Radio('indexStyle', array(

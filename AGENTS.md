@@ -239,8 +239,9 @@ The following externally observable contracts must not change accidentally.
 
 ### Theme Color
 
-- Preserve device-following, scheduled, fixed-light, and fixed-dark behavior,
-  including compatibility with saved settings.
+- Preserve device-following, fixed-light, and fixed-dark behavior. Treat the
+  removed scheduled mode value `0` and invalid saved values as device-following
+  mode `3`; never repurpose the old numeric value.
 - Keep first-paint logic in `includes/head.php` aligned with runtime state in
   `assets/header.js` to avoid flashes and divergent state.
 - Keep the frontend cycle `auto -> manual light -> manual dark -> auto` unless a
