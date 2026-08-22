@@ -135,7 +135,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }
         </script>
         <?php endif; ?>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-13c60e2ef2.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-3bc14097f9.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {

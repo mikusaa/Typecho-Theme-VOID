@@ -139,7 +139,7 @@ class Utils
     public static function addButton()
     {
         echo '<script src="';
-        self::indexTheme('/assets/libs/emotes/emote-picker-b0060398c1.js');
+        self::indexTheme('/assets/libs/emotes/emote-picker-91946802cf.js');
         echo '"></script>';
 
         ob_start();

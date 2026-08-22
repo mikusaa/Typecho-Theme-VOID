@@ -7,7 +7,7 @@
   * Service Worker Toolbox caching
   */
 
-  var cacheVersion = '-toolbox-v4';
+  var cacheVersion = '-toolbox-v5';
   var staticVendorCacheName = 'static-vendor' + cacheVersion;
   var staticAssetsCacheName = 'static-assets' + cacheVersion;
   var emoteStaticCacheName = 'emote-static' + cacheVersion;
@@ -28,7 +28,11 @@
     'static-vendor-toolbox-v3',
     'static-assets-toolbox-v3',
     'emote-static-toolbox-v3',
-    'emote-animated-toolbox-v3'
+    'emote-animated-toolbox-v3',
+    'static-vendor-toolbox-v4',
+    'static-assets-toolbox-v4',
+    'emote-static-toolbox-v4',
+    'emote-animated-toolbox-v4'
   ];
 
 

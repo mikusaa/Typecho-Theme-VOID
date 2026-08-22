@@ -40,7 +40,7 @@
       "count": 20,
       "manifest": "packs/quyin.json",
       "icon": {
-        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/quyin/E89B86E99FB3E5A898_E581B7E79C8B.png"
+        "poster": "quyin/E89B86E99FB3E5A898_E581B7E79C8B.png"
       }
     },
     {
@@ -50,17 +50,17 @@
       "count": 15,
       "manifest": "packs/bilibili.json",
       "icon": {
-        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/2233/2233E5A898_E7ACACE4B880.png"
+        "poster": "bilibili/2233E5A898_E7ACACE4B880.png"
       }
     },
     {
       "id": "mihoyo",
       "label": "米哈游",
       "type": "image",
-      "count": 60,
+      "count": 61,
       "manifest": "packs/mihoyo.json",
       "icon": {
-        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/mihoyo/E98190E89DB6_E89DB4E89DB6.png"
+        "poster": "mihoyo/E98190E89DB6_E89DB4E89DB6.png"
       }
     },
     {
@@ -70,7 +70,7 @@
       "count": 62,
       "manifest": "packs/aru.json",
       "icon": {
-        "poster": "/usr/themes/VOID/assets/libs/owo/biaoqing/aru/E9AB98E585B4_2x.png"
+        "poster": "aru/E9AB98E585B4_2x.png"
       }
     }
   ]
