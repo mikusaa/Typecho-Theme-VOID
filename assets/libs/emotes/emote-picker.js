@@ -447,6 +447,7 @@
 
         var header = document.createElement('div');
         header.className = 'void-emotes-header';
+        this.header = header;
         this.headerIcon = document.createElement('span');
         this.headerIcon.className = 'void-emotes-header__icon';
         this.headerIcon.setAttribute('aria-hidden', 'true');
@@ -823,10 +824,34 @@
     };
 
     Picker.prototype.updateHeader = function (pack, count) {
+        var showIcon = pack.type !== 'emoticon';
+
+        this.header.classList.toggle('void-emotes-header--without-icon', !showIcon);
+        this.headerIcon.hidden = !showIcon;
         this.headerIcon.textContent = '';
-        this.headerIcon.appendChild(this.createIcon(pack.icon, 'void-emotes-header__icon-content'));
+        if (showIcon) {
+            this.headerIcon.appendChild(this.createIcon(pack.icon, 'void-emotes-header__icon-content'));
+        }
         this.headerTitle.textContent = pack.label;
         this.headerCount.textContent = String(typeof count === 'number' ? count : (pack.count || 0)) + ' 个';
+    };
+
+    Picker.prototype.hasEmoticonItems = function (items) {
+        var self = this;
+
+        return items.some(function (item) {
+            var sourcePack = self.getPack(item.pack || self.currentPack);
+            return sourcePack ? sourcePack.type === 'emoticon' : !(item.poster || item.src);
+        });
+    };
+
+    Picker.prototype.updateGridLayout = function (pack, items) {
+        var useEmoticonLayout = pack && pack.type === 'emoticon';
+
+        if (!useEmoticonLayout && items) {
+            useEmoticonLayout = this.hasEmoticonItems(items);
+        }
+        this.grid.classList.toggle('void-emotes-grid--emoticon', Boolean(useEmoticonLayout));
     };
 
     Picker.prototype.selectPack = function (packId) {
@@ -841,6 +866,7 @@
         var epoch = this.renderEpoch;
         this.updateTabs(packId);
         this.updateHeader(pack, packId === 'recent' ? this.recent.read().length : pack.count);
+        this.updateGridLayout(pack);
         this.showState('正在载入…');
         this.stopAnimations();
 
@@ -932,6 +958,7 @@
         this.currentItems = items;
         this.renderedCount = 0;
         this.tileButtons = [];
+        this.updateGridLayout(this.getPack(this.currentPack), items);
         this.grid.textContent = '';
         this.grid.scrollTop = 0;
         this.grid.setAttribute('aria-busy', 'false');

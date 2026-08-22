@@ -78,6 +78,10 @@
     border-bottom: 1px solid var(--void-emotes-border);
 }
 
+.void-emotes-header--without-icon {
+    grid-template-columns: minmax(0, auto) 1fr 40px;
+}
+
 .void-emotes-header__icon,
 .void-emotes-header__icon-content {
     display: inline-flex;
@@ -96,6 +100,10 @@
     width: 28px;
     height: 28px;
     object-fit: contain;
+}
+
+.void-emotes-header__icon[hidden] {
+    display: none;
 }
 
 .void-emotes-header__title {
@@ -202,6 +210,24 @@
     font-size: 13px;
     line-height: 1.35;
     overflow-wrap: anywhere;
+}
+
+.void-emotes-grid.void-emotes-grid--emoticon {
+    grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
+    grid-auto-rows: 56px;
+}
+
+.void-emotes-grid--emoticon .void-emotes-tile {
+    width: 100%;
+    height: 56px;
+    padding: 4px 8px;
+}
+
+.void-emotes-grid--emoticon .void-emotes-tile--text span {
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: normal;
+    white-space: nowrap;
 }
 
 .void-emotes-tabs {

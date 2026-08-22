@@ -325,6 +325,131 @@ test('navigation renders full-width text icons and a real history symbol', () =>
     assert.equal(history.children[0].children.length, 3);
 });
 
+test('emoticon headers omit the duplicate text icon and restore image pack icons', () => {
+    const { window, Element } = loadPickerEnvironment({
+        VOIDEmotesConfig: { baseUrl: '/assets/libs/emotes/' }
+    });
+    const picker = window.VoidEmotes.mount({
+        container: new Element('div'),
+        target: new Element('textarea'),
+        mode: 'inline'
+    });
+
+    picker.updateHeader({
+        id: 'kaomoji',
+        label: '颜文字',
+        type: 'emoticon',
+        count: 54,
+        icon: { text: 'OωO' }
+    }, 54);
+    assert.equal(picker.header.classList.contains('void-emotes-header--without-icon'), true);
+    assert.equal(picker.headerIcon.hidden, true);
+    assert.equal(picker.headerIcon.children.length, 0);
+    assert.equal(picker.headerTitle.textContent, '颜文字');
+    assert.equal(picker.headerCount.textContent, '54 个');
+
+    picker.updateHeader({
+        id: 'aru',
+        label: '阿鲁',
+        type: 'image',
+        count: 62,
+        icon: { poster: 'aru/happy.png' }
+    }, 62);
+    assert.equal(picker.header.classList.contains('void-emotes-header--without-icon'), false);
+    assert.equal(picker.headerIcon.hidden, false);
+    assert.equal(picker.headerIcon.children.length, 1);
+    assert.equal(picker.headerIcon.children[0].classList.contains('void-emotes-icon--image'), true);
+});
+
+test('emoticons and mixed recent entries use the wide text grid', () => {
+    const { window, Element } = loadPickerEnvironment();
+    const picker = window.VoidEmotes.mount({
+        container: new Element('div'),
+        target: new Element('textarea'),
+        mode: 'inline'
+    });
+    const kaomoji = {
+        id: '021',
+        label: '去吧大师球',
+        value: '(╯°A°)╯︵○○○'
+    };
+    const image = {
+        id: '001',
+        label: '高兴',
+        token: ':@(高兴)',
+        src: 'happy.png'
+    };
+
+    picker.index = {
+        tabs: [
+            { id: 'recent', type: 'virtual' },
+            { id: 'kaomoji', type: 'emoticon' },
+            { id: 'aru', type: 'image' }
+        ]
+    };
+
+    picker.currentPack = 'kaomoji';
+    picker.renderItems([kaomoji]);
+    assert.equal(picker.grid.classList.contains('void-emotes-grid--emoticon'), true);
+    assert.equal(picker.grid.children[0].children[0].textContent, kaomoji.value);
+
+    picker.currentPack = 'aru';
+    picker.renderItems([image]);
+    assert.equal(picker.grid.classList.contains('void-emotes-grid--emoticon'), false);
+
+    picker.currentPack = 'recent';
+    picker.renderItems([{ ...image, pack: 'aru' }, { ...kaomoji, pack: 'kaomoji' }]);
+    assert.equal(picker.grid.classList.contains('void-emotes-grid--emoticon'), true);
+
+    picker.renderItems([{ ...image, pack: 'aru' }]);
+    assert.equal(picker.grid.classList.contains('void-emotes-grid--emoticon'), false);
+});
+
+test('keyboard navigation follows the measured columns in the wide text grid', () => {
+    const { window, document, Element } = loadPickerEnvironment();
+    const picker = window.VoidEmotes.mount({
+        container: new Element('div'),
+        target: new Element('textarea'),
+        mode: 'inline'
+    });
+    const items = Array.from({ length: 6 }, (_, index) => ({
+        id: String(index + 1).padStart(3, '0'),
+        label: `颜文字 ${index + 1}`,
+        value: `(${index + 1})`
+    }));
+    let prevented = false;
+
+    picker.currentPack = 'kaomoji';
+    picker.renderItems(items);
+    picker.tileButtons.forEach((button, index) => {
+        button.offsetTop = Math.floor(index / 2) * 56;
+    });
+
+    picker.tileButtons[1].focus();
+    picker.handleGridKeydown({
+        key: 'ArrowDown',
+        preventDefault: () => { prevented = true; }
+    });
+    assert.equal(prevented, true);
+    assert.equal(document.activeElement, picker.tileButtons[3]);
+
+    picker.handleGridKeydown({ key: 'ArrowUp', preventDefault: () => {} });
+    assert.equal(document.activeElement, picker.tileButtons[1]);
+
+    picker.handleGridKeydown({ key: 'ArrowRight', preventDefault: () => {} });
+    assert.equal(document.activeElement, picker.tileButtons[2]);
+});
+
+test('emoticon CSS keeps wide tiles on a single line', () => {
+    const css = fs.readFileSync(
+        path.resolve(__dirname, '../../assets/libs/emotes/emote-picker.css'),
+        'utf8'
+    );
+
+    assert.match(css, /\.void-emotes-grid\.void-emotes-grid--emoticon\s*\{[^}]*minmax\(156px, 1fr\)[^}]*grid-auto-rows:\s*56px/s);
+    assert.match(css, /\.void-emotes-grid--emoticon \.void-emotes-tile--text span\s*\{[^}]*line-height:\s*1\.35[^}]*overflow-wrap:\s*normal[^}]*white-space:\s*nowrap/s);
+});
+
 test('recent entries are deduplicated by pack and id and capped at 20', () => {
     const stored = new Map();
     const storage = {
