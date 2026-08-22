@@ -267,6 +267,22 @@ class Utils
     }
 
     /**
+     * 规范化主题颜色模式，旧定时模式及非法值统一迁移为跟随设备。
+     */
+    public static function normalizeColorScheme($value)
+    {
+        if (is_int($value)) {
+            $mode = $value;
+        } elseif (is_string($value) && preg_match('/^[123]$/D', $value)) {
+            $mode = intval($value);
+        } else {
+            return 3;
+        }
+
+        return in_array($mode, array(1, 2, 3), true) ? $mode : 3;
+    }
+
+    /**
      * 超高级设置
      * 
      * @return array
@@ -289,7 +305,7 @@ class Utils
             'indexBannerTitle' => '',
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
-            'colorScheme' => 3, // 0: 定时切换，1: 日间，2: 夜间，3: 跟随设备
+            'colorScheme' => 3, // 1: 日间，2: 夜间，3: 跟随设备；旧值 0 迁移为 3
             'reward' => ''
         );
 
@@ -303,7 +319,7 @@ class Utils
         // 一些类型变换
         $themeSetting['enableMath'] = boolval($themeSetting['enableMath']);
         $themeSetting['lazyload'] = boolval($themeSetting['lazyload']);
-        $themeSetting['colorScheme'] = intval($themeSetting['colorScheme']);
+        $themeSetting['colorScheme'] = self::normalizeColorScheme($themeSetting['colorScheme']);
         $themeSetting['pjax'] = boolval($themeSetting['pjax']);
         $themeSetting['serifincontent'] = boolval($themeSetting['serifincontent']);
         $themeSetting['indexStyle'] = intval($themeSetting['indexStyle']);
@@ -324,15 +340,10 @@ class Utils
             'headerMode' => 1,
             'defaultFontSize' => 3,
             'useFiraCodeFont' => false,
-            'followSystemColorScheme' => false,
             'largePhotoSet' => true,
             'macStyleCodeBlock' => true,
             'lineNumbers' => true,
             'parseFigcaption' => true,
-            'darkModeTime' => array (
-                'start' => 22.0,
-                'end' => 7.0
-            ),
             'link' => array(),
             'commentFoldThreshold' => array(5, 1.5),
             'commentNotification' => '',
@@ -343,18 +354,18 @@ class Utils
 
         if(!empty($options->advance)){
             $settings = json_decode($options->advance, true);
-            foreach ($settings as $key => $value) {
-                $advanceSetting[$key] = $value;
+            if (is_array($settings)) {
+                foreach ($settings as $key => $value) {
+                    $advanceSetting[$key] = $value;
+                }
             }
         }
 
+        // 废弃键可以留在用户的自由格式配置中，但不再进入主题运行时设置。
+        unset($advanceSetting['darkModeTime'], $advanceSetting['followSystemColorScheme']);
+
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
             $advanceSetting['headerMode'] = $advanceSetting['headerModeMobile'];
-        }
-
-        // 旧版隐藏配置声明跟随系统时，迁移为新的独立模式。
-        if($themeSetting['colorScheme'] === 0 && !empty($advanceSetting['followSystemColorScheme'])){
-            $themeSetting['colorScheme'] = 3;
         }
 
         $output = array_merge($themeSetting, $advanceSetting);

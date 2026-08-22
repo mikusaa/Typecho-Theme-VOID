@@ -30,11 +30,7 @@ if (isset($_POST['void_action'])) {
     <script>
     (function () {
         var mode = <?php echo intval($setting['colorScheme']); ?>;
-        var start = <?php echo floatval($setting['darkModeTime']['start']); ?>;
-        var end = <?php echo floatval($setting['darkModeTime']['end']); ?>;
         var override = document.cookie.match(/(?:^|; )void_theme_override=(light|dark)(?:;|$)/);
-        var current = new Date();
-        var currentHour = current.getHours() + current.getMinutes() / 60;
         var isDark = false;
 
         if (override) {
@@ -43,10 +39,6 @@ if (isset($_POST['void_action'])) {
             isDark = true;
         } else if (mode === 3) {
             isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        } else if (mode === 0 && start !== end) {
-            isDark = start < end
-                ? currentHour >= start && currentHour < end
-                : currentHour >= start || currentHour < end;
         }
 
         document.documentElement.classList.toggle('theme-dark', isDark);
@@ -115,10 +107,6 @@ if (isset($_POST['void_action'])) {
         lightBg: "",
         darkBg: "",
         lineNumbers: <?php echo $setting['lineNumbers'] ? 'true' : 'false'; ?>,
-        darkModeTime: {
-            'start': <?php echo $setting['darkModeTime']['start']; ?>,
-            'end': <?php echo $setting['darkModeTime']['end']; ?>
-        },
         horizontalBg: <?php echo empty($setting['siteBg']) ? 'false' : 'true'; ?>,
         verticalBg: <?php echo empty($setting['siteBgVertical']) ? 'false' : 'true'; ?>,
         indexStyle: <?php echo $setting['indexStyle']; ?>,
@@ -126,7 +114,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-e08189838f.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-f32e41d5d5.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
