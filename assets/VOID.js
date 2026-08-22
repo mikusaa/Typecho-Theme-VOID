@@ -622,6 +622,7 @@ var VOID_PhotoSets = {
             set: set,
             active: false,
             dragging: false,
+            captured: false,
             pointerId: null,
             startX: 0,
             startScrollLeft: 0,
@@ -635,17 +636,10 @@ var VOID_PhotoSets = {
 
             record.active = true;
             record.dragging = false;
+            record.captured = false;
             record.pointerId = event.pointerId;
             record.startX = event.clientX;
             record.startScrollLeft = set.scrollLeft;
-
-            if (typeof set.setPointerCapture === 'function' && event.pointerId !== undefined) {
-                try {
-                    set.setPointerCapture(event.pointerId);
-                } catch (error) {
-                    record.pointerId = event.pointerId;
-                }
-            }
         };
 
         record.onPointerMove = function (event) {
@@ -660,8 +654,19 @@ var VOID_PhotoSets = {
                 return;
             }
 
-            record.dragging = true;
-            set.classList.add('is-dragging');
+            if (!record.dragging) {
+                record.dragging = true;
+                set.classList.add('is-dragging');
+
+                if (typeof set.setPointerCapture === 'function' && event.pointerId !== undefined) {
+                    try {
+                        set.setPointerCapture(event.pointerId);
+                        record.captured = true;
+                    } catch (error) {
+                        record.captured = false;
+                    }
+                }
+            }
             set.scrollLeft = record.startScrollLeft - delta;
             event.preventDefault();
         };
@@ -675,16 +680,17 @@ var VOID_PhotoSets = {
                 record.suppressClickUntil = Date.now() + 400;
             }
 
-            if (typeof set.releasePointerCapture === 'function' && record.pointerId !== null) {
+            if (record.captured && typeof set.releasePointerCapture === 'function' && record.pointerId !== null) {
                 try {
                     set.releasePointerCapture(record.pointerId);
                 } catch (error) {
-                    record.pointerId = null;
+                    record.captured = false;
                 }
             }
 
             record.active = false;
             record.dragging = false;
+            record.captured = false;
             record.pointerId = null;
             set.classList.remove('is-dragging');
         };

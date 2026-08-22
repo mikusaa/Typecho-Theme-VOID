@@ -36,8 +36,10 @@ class FakeElement {
         this.open = false;
         this.parentNode = null;
         this.rect = { left: 0, top: 0, width: 100, height: 100 };
+        this.releasePointerCaptureCalls = [];
         this.scrollLeft = 0;
         this.scrollToCalls = [];
+        this.setPointerCaptureCalls = [];
         this.styleValues = new Map();
         this.style = {
             setProperty: (name, value) => this.styleValues.set(name, String(value))
@@ -137,7 +139,9 @@ class FakeElement {
         return [];
     }
 
-    releasePointerCapture() {}
+    releasePointerCapture(pointerId) {
+        this.releasePointerCaptureCalls.push(pointerId);
+    }
 
     removeAttribute(name) {
         this.attributes.delete(name);
@@ -163,7 +167,9 @@ class FakeElement {
         this.attributes.set(name, String(value));
     }
 
-    setPointerCapture() {}
+    setPointerCapture(pointerId) {
+        this.setPointerCaptureCalls.push(pointerId);
+    }
 }
 
 class FakeDocument extends FakeElement {
@@ -407,18 +413,28 @@ test('strip drag uses a threshold, suppresses only the resulting click, and neve
     assert.equal(set.listenerCount('wheel'), 0);
 
     set.dispatch('pointerdown', { button: 0, clientX: 100, pointerId: 1, pointerType: 'mouse' });
+    assert.deepEqual(set.setPointerCaptureCalls, []);
     const smallMove = preventableEvent({ clientX: 96, pointerId: 1 });
     set.dispatch('pointermove', smallMove);
     assert.equal(smallMove.defaultPrevented, false);
     assert.equal(set.scrollLeft, 0);
+    assert.deepEqual(set.setPointerCaptureCalls, []);
 
+    set.dispatch('pointerup', { pointerId: 1 });
+    const ordinaryClick = preventableEvent({ target: link });
+    set.dispatch('click', ordinaryClick);
+    assert.equal(ordinaryClick.defaultPrevented, false);
+
+    set.dispatch('pointerdown', { button: 0, clientX: 100, pointerId: 1, pointerType: 'mouse' });
     const dragMove = preventableEvent({ clientX: 78, pointerId: 1 });
     set.dispatch('pointermove', dragMove);
     assert.equal(dragMove.defaultPrevented, true);
     assert.equal(set.scrollLeft, 22);
     assert.equal(set.classList.contains('is-dragging'), true);
+    assert.deepEqual(set.setPointerCaptureCalls, [1]);
     set.dispatch('pointerup', { pointerId: 1 });
     assert.equal(set.classList.contains('is-dragging'), false);
+    assert.deepEqual(set.releasePointerCaptureCalls, [1]);
 
     const suppressedClick = preventableEvent({ target: link });
     suppressedClick.stopImmediatePropagation = () => { suppressedClick.stopped = true; };
