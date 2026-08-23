@@ -25,7 +25,6 @@ module.exports = [
             'temp/**',
             'node_modules/**',
             'assets/bundle*.js',
-            'assets/libs/fancybox/**',
             'assets/libs/header/**',
             'assets/libs/headroom/**',
             'assets/libs/hyphen/**',

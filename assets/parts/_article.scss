@@ -223,7 +223,7 @@ article {
     img.biaoqing--bangumi {
         height: 3em;
     }
-    a[data-fancybox] {
+    a.void-image-link {
         display: block;
         width: 100%;
         img {
@@ -256,13 +256,22 @@ article {
         width: 100%;
         overflow: hidden;
         max-width: 100%!important;
-        a[data-fancybox="gallery"] {
-            display: block;
+        &[data-void-image-item] {
+            overflow: visible;
+        }
+        >a.void-image-link {
+            display: flex;
             position: relative;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
             max-width: 100%;
-            height: 0;
+            max-height: 680px;
+            max-height: min(78svh, 680px);
+            margin: 0 auto;
             padding: 0;
             overflow: hidden;
+            border-bottom: 0!important;
 
             transition: 0.3s $animationTimingFunc background-color;
             &.lazyload-container {
@@ -275,7 +284,17 @@ article {
                 }
             }
 
-            img {
+            img[data-void-image-content] {
+                display: block;
+                width: auto;
+                max-width: 100%;
+                height: auto;
+                max-height: 680px;
+                max-height: min(78svh, 680px);
+                object-fit: contain;
+                box-sizing: border-box;
+            }
+            img.blured-placeholder {
                 position: absolute;
                 width: 100%;
                 height: 100%;
@@ -284,6 +303,9 @@ article {
                 object-fit: cover;
                 box-sizing: border-box;
             }
+        }
+        &[data-void-image-width][data-void-image-height] >a.void-image-link {
+            aspect-ratio: var(--void-image-ratio);
         }
         figcaption {
             position: relative;
@@ -308,50 +330,151 @@ article {
     }
 
     .photos {
+        --void-photo-gap: 16px;
+        --void-photo-row-height: 480px;
+        width: 100%;
+        margin: 24px 0;
+        transition: $animationTime $animationTimingFunc all;
+
         figure {
-            margin: 2.5px;
-            flex: 1;
-            @media screen and (max-width: 767px) {
-                figcaption {
-                    display: none;
+            margin: 0;
+
+            figcaption {
+                display: block;
+                position: relative;
+                width: 100%;
+                margin: 10px 0 0;
+                padding: 0 8px!important;
+                color: $fadeColor;
+                background: none;
+                opacity: 1;
+                overflow-wrap: anywhere;
+
+                .theme-dark & {
+                    color: $td-textColor-dark;
                 }
             }
-            &:first-child {
-                margin-left: 0;
+        }
+
+        &[data-void-photo-layout="single"] {
+            display: block;
+
+            figure {
+                margin: 15px auto;
             }
-            &:last-child {
-                margin-right: 0;
+        }
+
+        &[data-void-photo-layout="pair"] {
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+            gap: 8px;
+
+            figure {
+                flex: var(--void-image-ratio, 1.3333) 1 0;
+                min-width: 0;
             }
-            figcaption {
-                position: absolute;
-                left: 0;
-                right: 0;
-                bottom: 0;
+
+            figure >a.void-image-link {
+                width: 100%;
+                max-height: none;
+                aspect-ratio: var(--void-image-ratio, 1.3333);
+
+                img[data-void-image-content] {
+                    width: 100%;
+                    height: 100%;
+                    max-height: none;
+                }
+            }
+        }
+
+        &[data-void-photo-layout="strip"] {
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+            gap: var(--void-photo-gap);
+            padding: 0 20px 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-padding-inline: 20px;
+            scroll-snap-type: x proximity;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+            cursor: grab;
+            scrollbar-width: thin;
+
+            &:focus-visible {
+                outline: 2px solid $highlightColor;
+                outline-offset: 3px;
+            }
+
+            &.is-dragging {
+                cursor: grabbing;
+                user-select: none;
+            }
+
+            figure {
+                flex: 0 0 auto;
+                width: fit-content;
+                max-width: none!important;
+                scroll-snap-align: start;
+
+                &::after {
+                    content: attr(data-void-photo-position);
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 2;
+                    padding: 3px 7px;
+                    border-radius: 2px;
+                    color: #fff;
+                    background: rgba(0, 0, 0, 0.62);
+                    font-size: 12px;
+                    font-weight: 700;
+                    line-height: 1.4;
+                    pointer-events: none;
+                }
+            }
+
+            figure >a.void-image-link {
                 width: auto;
-                margin: 0;
-                padding: 60px 0 10px!important;
-                color: #fff;
-                background-image: linear-gradient(
-                    180deg,
-                    hsla(0, 0%, 100%, 0) 0,
-                    rgba(0, 0, 0, 0.03) 26%,
-                    rgba(0, 0, 0, 0.4) 71%,
-                    rgba(0, 0, 0, 0.5)
-                );
-                opacity: 0.6;
-                transition: opacity 0.3s $animationTimingFunc;
+                height: var(--void-photo-row-height);
+                max-width: none;
+                max-height: none;
+                aspect-ratio: var(--void-image-ratio, 1.3333);
+
+                img[data-void-image-content] {
+                    width: 100%;
+                    height: 100%;
+                    max-width: none;
+                    max-height: none;
+                }
             }
-            &:hover figcaption {
-                opacity: 1;
+
+            figcaption {
+                width: 0;
+                min-width: 100%;
+                max-width: none;
             }
         }
-        display: flex;
-        flex-wrap: wrap;
-        transition: $animationTime $animationTimingFunc all;
+
+        @media screen and (max-width: 1024px) {
+            --void-photo-row-height: 400px;
+        }
+
         @media screen and (max-width: 860.5px) {
-            width: calc(100% + 40px);
-            margin-left: -20px;
+            &[data-void-photo-layout="pair"],
+            &[data-void-photo-layout="strip"] {
+                width: calc(100% + 40px);
+                margin-left: -20px;
+            }
         }
+
+        @media screen and (max-width: 600px) {
+            --void-photo-gap: 10px;
+            --void-photo-row-height: 260px;
+        }
+
         &.large {
             @media screen and (min-width: 1200px) {
                 width: 1024px;

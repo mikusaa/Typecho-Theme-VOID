@@ -165,11 +165,6 @@ p.notice {
     }
 }
 
-#reward, #reward img{
-    max-width: 100%;
-    max-height: 100%;
-}
-
 .toggle{
     position: relative;
     display: block;
@@ -756,6 +751,7 @@ body.theme-dark .clipboard {
 @include meta.load-css("parts/header");
 @include meta.load-css("parts/index");
 @include meta.load-css("parts/article");
+@include meta.load-css("parts/image-experience");
 @include meta.load-css("parts/archive");
 @include meta.load-css("parts/comments");
 @include meta.load-css("parts/footer");

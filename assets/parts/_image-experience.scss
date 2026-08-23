@@ -1,0 +1,258 @@
+@use "var" as *;
+
+body.void-dialog-open {
+    overflow: hidden;
+}
+
+html.void-image-zoom-active {
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
+.void-image-link[data-void-image-zoom] {
+    cursor: zoom-in;
+
+    &:focus-visible {
+        outline: 2px solid $highlightColor;
+        outline-offset: 3px;
+    }
+
+    img[data-void-image-content] {
+        -webkit-user-drag: none;
+        user-select: none;
+    }
+}
+
+.void-image-zoom-source {
+    visibility: hidden;
+}
+
+.void-image-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    background: $bgColor;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    cursor: zoom-out;
+    touch-action: pan-y pinch-zoom;
+    transition: opacity 300ms $animationTimingFunc;
+    will-change: opacity;
+
+    &.is-closing,
+    &.is-visible {
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    &.is-visible {
+        opacity: 1;
+    }
+
+    .theme-dark & {
+        background: $td-bgColor;
+    }
+}
+
+.void-image-zoom-stage {
+    position: absolute;
+    z-index: 4001;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-out;
+    touch-action: pan-y pinch-zoom;
+    transform-origin: center;
+    transition: transform 300ms $animationTimingFunc, opacity 300ms $animationTimingFunc;
+    will-change: transform, opacity;
+
+    &.is-preparing {
+        transition: none;
+    }
+}
+
+.void-image-zoom-overlay.is-input-locked,
+.void-image-zoom-stage.is-input-locked {
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+.void-image-zoom__button,
+.void-reward-dialog__image-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    appearance: none;
+    cursor: zoom-out;
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible >img {
+        outline: 2px solid $highlightColor;
+        outline-offset: 3px;
+    }
+}
+
+.void-image-zoom__button {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    touch-action: pan-y pinch-zoom;
+}
+
+.void-image-zoom__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: zoom-out;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+dialog.void-reward-dialog {
+    width: min(480px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    color: $textColor;
+    background: #fff;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+    overflow: visible;
+
+    &:not([open]) {
+        display: none;
+    }
+
+    &[open] {
+        animation: void-reward-dialog-in 180ms $animationTimingFunc both;
+    }
+
+    &::backdrop {
+        background: rgba(250, 250, 250, 0.9);
+        animation: void-reward-backdrop-in 180ms ease-out both;
+    }
+
+    .theme-dark & {
+        border-color: rgba(255, 255, 255, 0.16);
+        color: $td-textColor-light;
+        background: $td-bgColor-light;
+
+        &::backdrop {
+            background: rgba(10, 10, 10, 0.9);
+        }
+    }
+}
+
+.void-reward-dialog__content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    padding: 16px;
+    overflow: auto;
+
+    >.void-reward-dialog__image-button {
+        width: auto;
+        height: auto;
+        max-height: calc(100vh - 64px);
+        max-height: calc(100dvh - 64px);
+
+        >img {
+            display: block;
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            max-height: calc(100vh - 64px);
+            max-height: calc(100dvh - 64px);
+            object-fit: contain;
+        }
+    }
+
+    >img {
+        display: block;
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        max-height: calc(100vh - 64px);
+        max-height: calc(100dvh - 64px);
+        margin: auto;
+        object-fit: contain;
+    }
+}
+
+@keyframes void-reward-dialog-in {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes void-reward-backdrop-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .void-image-zoom-overlay {
+        padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+            max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    dialog.void-reward-dialog {
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .void-reward-dialog__content {
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+        padding: 12px;
+
+        >.void-reward-dialog__image-button,
+        >.void-reward-dialog__image-button >img,
+        >img {
+            max-height: calc(100vh - 48px);
+            max-height: calc(100dvh - 48px);
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .void-image-zoom-overlay,
+    .void-image-zoom-stage,
+    dialog.void-reward-dialog,
+    dialog.void-reward-dialog::backdrop {
+        animation: none!important;
+        transition: none!important;
+    }
+}

@@ -283,6 +283,85 @@ class Utils
     }
 
     /**
+     * 返回可安全用于赞赏二维码的 URL，非法输入返回 null。
+     */
+    public static function getSafeRewardUrl($value)
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $url = $value;
+        for ($i = 0; $i < 5; ++$i) {
+            $decoded = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $url) {
+                break;
+            }
+            $url = $decoded;
+        }
+
+        // Reject unusually deep entity nesting instead of validating a partially decoded URL.
+        if (html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8') !== $url) {
+            return null;
+        }
+
+        if ($url === '' || preg_match('//u', $url) !== 1) {
+            return null;
+        }
+
+        if (preg_match('/[\x{0000}-\x{001F}\x{007F}-\x{009F}]/u', $url) !== 0) {
+            return null;
+        }
+
+        $url = trim($url);
+        if (
+            $url === ''
+            || strpos($url, '\\') !== false
+            || preg_match('/\s/u', $url) !== 0
+            || preg_match('/%(?![0-9A-Fa-f]{2})/', $url) !== 0
+        ) {
+            return null;
+        }
+
+        if (preg_match('/^([A-Za-z][A-Za-z0-9+.-]*):/', $url, $matches) === 1) {
+            $scheme = strtolower($matches[1]);
+            if ($scheme !== 'http' && $scheme !== 'https') {
+                return null;
+            }
+
+            return self::isValidRewardAbsoluteUrl($url) ? $url : null;
+        }
+
+        if (substr($url, 0, 2) === '//') {
+            return self::isValidRewardAbsoluteUrl('https:' . $url) ? $url : null;
+        }
+
+        if (substr($url, 0, 1) !== '/' && preg_match('/^[^\/?#]*:/', $url) === 1) {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false || isset($parts['scheme']) || isset($parts['host'])) {
+            return null;
+        }
+
+        return $url;
+    }
+
+    /**
+     * 校验带主机名的 HTTP(S) URL。
+     */
+    private static function isValidRewardAbsoluteUrl($url)
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        return is_array($parts) && isset($parts['host']) && $parts['host'] !== '';
+    }
+
+    /**
      * 超高级设置
      * 
      * @return array

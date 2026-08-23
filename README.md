@@ -130,7 +130,15 @@
 
 <details><summary>图片排版</summary><br>
 
-在文章中，使用 `[photos][/photos]` 包起来的图片可显示在同一行。例如：
+正文图片会保留原图链接。普通左键点击已加载完成的图片时，主题会打开仅包含当前图片的全视口聚焦层；点击图片、背景或关闭按钮，或按 `Esc`，都可返回正文。该交互不提供上一张/下一张、二次缩放或相册导航；当 JavaScript 或浏览器原生 Dialog 不可用时，会直接打开原图。
+
+在文章中使用 `[photos][/photos]` 包裹图片，可按数量自动排版：
+
+* 1 张：与普通正文单图相同，居中显示。
+* 2 张：按原始宽高比等高并排，不裁切图片。
+* 3 张及以上：显示为单行横向图片带。触屏设备可原生滑动，桌面端可按住鼠标横向拖动；滚轮仍用于页面纵向滚动。
+
+每张图片保持独立的原图链接和键盘焦点，横向图片带会显示当前位置与总数。例如：
 
 ```
 [photos]
@@ -268,7 +276,7 @@ gulp build
 
 ### 开源项目
 
-[JQuery](https://github.com/jquery/jquery) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [fancyBox](http://fancyapps.com/fancybox/3/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
+[JQuery](https://github.com/jquery/jquery) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
 
 ### 其他
 
