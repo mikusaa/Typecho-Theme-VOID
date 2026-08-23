@@ -85,8 +85,8 @@ if (isset($_POST['void_action'])) {
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-45665c5cfe.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-7ecd3f68f2.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-322b12e845.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-edef062289.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>

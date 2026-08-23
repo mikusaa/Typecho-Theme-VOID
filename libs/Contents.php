@@ -126,7 +126,7 @@ Class Contents
         );
 
         $content = preg_replace('/<div class="board-list link-list">\s*(.*?)\s*<\/div>/is', '$1', $content);
-        $content = preg_replace('/<div class="photos(?: large)?">(.*?)<\/div>/is', '$1', $content);
+        $content = self::transformPhotoSetContainers($content, false);
         $content = preg_replace('/\s+no-pjax(?=[\s>])/i', '', $content);
         $content = preg_replace('/\s+(?:class|style|loading|data-[a-z0-9_-]+)="[^"]*"/i', '', $content);
         return $content;
@@ -145,7 +145,7 @@ Class Contents
 
         $isFeedContext = self::isFeedContext($widget);
         $text = self::parseRuby($text);
-        $text = self::parseFancyBox($text, $isFeedContext);
+        $text = self::parseImages($text, $isFeedContext);
         $text = self::parseBiaoQing($text);
         $text = self::parsePhotoSet($text);
         $text = self::parseNotice($text);
@@ -173,9 +173,8 @@ Class Contents
         $text = self::parseBiaoQing($text);
         $text = self::parseNotice($text);
         // Typecho 1.3 的 excerpt 基于 content 生成，需要额外清理已渲染图集
-        $text = preg_replace('/<div class="photos(?: large)?">.*?<\/div>/is', '', $text);
-        $text = str_replace('[photos]', '', $text);
-        $text = str_replace('[/photos]', '', $text);
+        $text = self::transformPhotoSetContainers($text, true);
+        $text = preg_replace('/\[(?:photos(?=\s|\])[^\]]*|\/photos\s*)\]/i', '', $text);
         return $text;
     }
 
@@ -224,7 +223,7 @@ Class Contents
     {
         $setting = $GLOBALS['VOIDSetting'];
         self::$photoSetClass = $setting['largePhotoSet'] ? 'photos large' : 'photos';
-        $reg = '/(?:<p>\s*)?\[photos(?:[^\]]*)\](.*?)(?:\[\/photos\])(?:\s*<\/p>)?/is';
+        $reg = '/(?:<p>\s*)?\[photos(?=\s|\])[^\]]*\](.*?)\[\/photos\](?:\s*<\/p>)?/is';
         return preg_replace_callback($reg, array('Contents', 'parsePhotoSetCallBack'), $content);
     }
 
@@ -238,8 +237,40 @@ Class Contents
         $content = preg_replace('/<br\s*\/?>/i', '', $match[1]);
         $content = str_replace(array('<p>', '</p>'), '', $content);
         $content = trim($content);
+        $figurePattern = '/<figure\b[^>]*>/i';
+        preg_match_all($figurePattern, $content, $figures);
+        $count = 0;
+        foreach ($figures[0] as $figure) {
+            if (self::hasHtmlAttribute($figure, 'data-void-image-item')) {
+                $count++;
+            }
+        }
+        $layout = $count === 2 ? 'pair' : ($count >= 3 ? 'strip' : 'single');
 
-        return '<div class="' . self::$photoSetClass . '">' . $content . '</div>';
+        if ($layout === 'strip') {
+            $index = 0;
+            $content = preg_replace_callback(
+                $figurePattern,
+                function ($figureMatch) use (&$index, $count) {
+                    if (!self::hasHtmlAttribute($figureMatch[0], 'data-void-image-item')) {
+                        return $figureMatch[0];
+                    }
+                    $index++;
+                    return substr($figureMatch[0], 0, -1)
+                        . ' data-void-photo-index="' . $index . '"'
+                        . ' data-void-photo-position="' . $index . ' / ' . $count . '">';
+                },
+                $content
+            );
+        }
+
+        $accessibility = $layout === 'strip'
+            ? ' tabindex="0" role="region" aria-label="横向图片集，共 ' . $count . ' 张"'
+            : '';
+
+        return '<div class="' . self::$photoSetClass . '" data-void-photo-set data-void-photo-count="'
+            . $count . '" data-void-photo-layout="' . $layout . '"' . $accessibility . '>'
+            . $content . '</div>';
     }
 
     /**
@@ -341,6 +372,112 @@ Class Contents
         }
 
         return $length - 1;
+    }
+
+    /**
+     * 返回与指定 div 开标签配对的闭标签位置，并正确跨过嵌套 div。
+     */
+    static private function findClosingDivToken($content, $offset)
+    {
+        $depth = 1;
+        $length = strlen($content);
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                return null;
+            }
+
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            if (preg_match('/\A<\s*div\b/i', $tag) && !preg_match('/\/\s*>\z/', $tag)) {
+                $depth++;
+            } elseif (preg_match('/\A<\s*\/\s*div\s*>\z/i', $tag)) {
+                $depth--;
+                if ($depth === 0) {
+                    return array($tagStart, $tagEnd);
+                }
+            }
+
+            $offset = $tagEnd + 1;
+        }
+
+        return null;
+    }
+
+    /**
+     * 判断 div 是否为主题照片集，兼容旧版精确 photos class。
+     */
+    static private function isPhotoSetContainerTag($tag)
+    {
+        if (!preg_match('/\A<\s*div\b/i', $tag)) {
+            return false;
+        }
+
+        $attributes = self::parseHtmlAttributes($tag);
+        if (array_key_exists('data-void-photo-set', $attributes)) {
+            return true;
+        }
+
+        if (!isset($attributes['class']) || !is_string($attributes['class'])) {
+            return false;
+        }
+
+        $classes = preg_split('/\s+/', trim($attributes['class']));
+        return in_array('photos', $classes, true);
+    }
+
+    /**
+     * Feed 解包照片集，摘要则连同内容移除；不误伤相似 class 或嵌套 div。
+     */
+    static private function transformPhotoSetContainers($content, $removeContents)
+    {
+        if (!is_string($content) || stripos($content, '<div') === false) {
+            return $content;
+        }
+
+        $result = '';
+        $offset = 0;
+        $length = strlen($content);
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                $result .= substr($content, $offset);
+                break;
+            }
+
+            $result .= substr($content, $offset, $tagStart - $offset);
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $result .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            if (self::isPhotoSetContainerTag($tag) && !preg_match('/\/\s*>\z/', $tag)) {
+                $closing = self::findClosingDivToken($content, $tagEnd + 1);
+                if (null !== $closing) {
+                    if (!$removeContents) {
+                        $inner = substr($content, $tagEnd + 1, $closing[0] - $tagEnd - 1);
+                        $result .= self::transformPhotoSetContainers($inner, false);
+                    }
+                    $offset = $closing[1] + 1;
+                    continue;
+                }
+            }
+
+            $result .= $tag;
+            $offset = $tagEnd + 1;
+        }
+
+        return $result;
     }
 
     /**
@@ -604,18 +741,254 @@ Class Contents
     }
 
     /**
-     * 解析 fancybox
-     * 
-     * @return string
-     * @param photoMode false: 普通解析，true: RSS(不包裹 a 标签)
+     * 将正文图片转换为主题语义结构；Feed 只保留静态 figure/img。
      */
-    static private $photoMode = false;
-    static public function parseFancyBox($content, $photoMode = false)
+    static private $imageFeedMode = false;
+    static public function parseImages($content, $feedMode = false)
     {
-        $reg = '/<img.*?src="(.*?)".*?alt="(.*?)".*?>/s';
-        self::$photoMode = $photoMode;
-        $new = preg_replace_callback($reg, array('Contents', 'parseFancyBoxCallback'), $content);
-        return $new;
+        if (!is_string($content) || $content === '' || stripos($content, '<img') === false) {
+            return $content;
+        }
+
+        self::$imageFeedMode = (bool) $feedMode;
+        $result = '';
+        $offset = 0;
+        $length = strlen($content);
+        $protectedTags = array();
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                $result .= substr($content, $offset);
+                break;
+            }
+
+            $result .= substr($content, $offset, $tagStart - $offset);
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $result .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            if (empty($protectedTags)
+                && preg_match('/\A<\s*img\b/i', $tag)
+                && !self::hasHtmlAttribute($tag, 'data-void-image-content')) {
+                $result .= self::renderContentImage($tag);
+            } else {
+                $result .= $tag;
+            }
+
+            self::updateProtectedEmoteTags($tag, $protectedTags);
+            $offset = $tagEnd + 1;
+        }
+
+        return $result;
+    }
+
+    /**
+     * 读取 HTML 标签中的属性并还原实体，供重新输出时按上下文转义。
+     */
+    static private function parseHtmlAttributes($tag)
+    {
+        $attributes = array();
+        if (!preg_match('/\A<\s*[a-z][a-z0-9:_-]*/i', $tag, $tagMatch)) {
+            return $attributes;
+        }
+
+        $offset = strlen($tagMatch[0]);
+        $length = strlen($tag);
+        while ($offset < $length) {
+            while ($offset < $length && ctype_space($tag[$offset])) {
+                $offset++;
+            }
+            if ($offset >= $length || $tag[$offset] === '>'
+                || ($tag[$offset] === '/' && $offset + 1 < $length && $tag[$offset + 1] === '>')) {
+                break;
+            }
+
+            $nameStart = $offset;
+            while ($offset < $length
+                && !ctype_space($tag[$offset])
+                && strpos('=/>', $tag[$offset]) === false) {
+                $offset++;
+            }
+            if ($offset === $nameStart) {
+                $offset++;
+                continue;
+            }
+
+            $name = strtolower(substr($tag, $nameStart, $offset - $nameStart));
+            while ($offset < $length && ctype_space($tag[$offset])) {
+                $offset++;
+            }
+
+            $value = null;
+            if ($offset < $length && $tag[$offset] === '=') {
+                $offset++;
+                while ($offset < $length && ctype_space($tag[$offset])) {
+                    $offset++;
+                }
+
+                if ($offset < $length && ($tag[$offset] === '"' || $tag[$offset] === "'")) {
+                    $quote = $tag[$offset++];
+                    $valueStart = $offset;
+                    while ($offset < $length && $tag[$offset] !== $quote) {
+                        $offset++;
+                    }
+                    $value = substr($tag, $valueStart, $offset - $valueStart);
+                    if ($offset < $length) {
+                        $offset++;
+                    }
+                } else {
+                    $valueStart = $offset;
+                    while ($offset < $length
+                        && !ctype_space($tag[$offset])
+                        && $tag[$offset] !== '>') {
+                        $offset++;
+                    }
+                    $value = substr($tag, $valueStart, $offset - $valueStart);
+                }
+            }
+
+            if (!array_key_exists($name, $attributes)) {
+                $attributes[$name] = $value;
+            }
+        }
+
+        return $attributes;
+    }
+
+    static private function hasHtmlAttribute($tag, $name)
+    {
+        $attributes = self::parseHtmlAttributes($tag);
+        return array_key_exists(strtolower($name), $attributes);
+    }
+
+    static private function getHtmlAttribute($tag, $name)
+    {
+        $attributes = self::parseHtmlAttributes($tag);
+        $key = strtolower($name);
+        if (!array_key_exists($key, $attributes) || null === $attributes[$key]) {
+            return null;
+        }
+
+        return html_entity_decode($attributes[$key], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * 从保存流程写入的 vwid/vhei 参数读取一组可信图片尺寸。
+     */
+    static private function getImageDimensions($src)
+    {
+        $parts = parse_url($src);
+        if (false === $parts || !is_array($parts)) {
+            return null;
+        }
+
+        $parameters = array();
+        foreach (array('query', 'fragment') as $partName) {
+            if (!isset($parts[$partName]) || !is_string($parts[$partName])) {
+                continue;
+            }
+
+            $current = array();
+            parse_str(html_entity_decode($parts[$partName], ENT_QUOTES | ENT_HTML5, 'UTF-8'), $current);
+            $parameters = array_merge($parameters, $current);
+        }
+
+        if (!isset($parameters['vwid'], $parameters['vhei'])
+            || !is_scalar($parameters['vwid'])
+            || !is_scalar($parameters['vhei'])) {
+            return null;
+        }
+
+        $widthText = (string) $parameters['vwid'];
+        $heightText = (string) $parameters['vhei'];
+        if (!preg_match('/^[1-9][0-9]*$/D', $widthText)
+            || !preg_match('/^[1-9][0-9]*$/D', $heightText)) {
+            return null;
+        }
+
+        $width = filter_var($widthText, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+        $height = filter_var($heightText, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+        if (false === $width || false === $height) {
+            return null;
+        }
+
+        return array((int) $width, (int) $height);
+    }
+
+    /**
+     * 输出单张正文图片。
+     */
+    static private function renderContentImage($tag)
+    {
+        $setting = $GLOBALS['VOIDSetting'];
+        $srcOriginal = self::getHtmlAttribute($tag, 'src');
+        if (!is_string($srcOriginal) || $srcOriginal === '') {
+            return $tag;
+        }
+
+        $alt = self::getHtmlAttribute($tag, 'alt');
+        $alt = null === $alt ? '' : $alt;
+        $dimensions = self::getImageDimensions($srcOriginal);
+        $dimensionAttributes = '';
+        $figureAttributes = '';
+
+        if (null !== $dimensions) {
+            $width = $dimensions[0];
+            $height = $dimensions[1];
+            $ratio = rtrim(rtrim(number_format($width / $height, 4, '.', ''), '0'), '.');
+            $dimensionAttributes = ' width="' . $width . '" height="' . $height . '"';
+            $figureAttributes = ' data-void-image-width="' . $width . '" data-void-image-height="' . $height
+                . '" style="--void-image-ratio: ' . $ratio . '"';
+        }
+
+        $escapedSrc = self::escapeHtml($srcOriginal);
+        $escapedAlt = self::escapeHtml($alt);
+        $figcaption = '';
+        if ($alt !== '' && !empty($setting['parseFigcaption'])) {
+            $figcaption = '<figcaption>' . $escapedAlt . '</figcaption>';
+        }
+
+        if (self::$imageFeedMode) {
+            return '<figure><img src="' . $escapedSrc . '" alt="' . $escapedAlt . '"'
+                . $dimensionAttributes . ' decoding="async">' . $figcaption . '</figure>';
+        }
+
+        $lazyload = Helper::options()->lazyload == '1';
+        $browserLazyload = $lazyload && !empty($setting['browserLevelLoadingLazy']);
+        $imageClass = '';
+        $imageSrc = $escapedSrc;
+        $lazyAttributes = '';
+        $placeholder = '';
+
+        if ($lazyload) {
+            $imageClass = $browserLazyload ? 'lazyload browserlevel-lazy' : 'lazyload';
+            $lazyAttributes = ' data-src="' . $escapedSrc . '"';
+
+            if ($browserLazyload) {
+                $lazyAttributes .= ' loading="lazy"';
+            } else {
+                $imageSrc = '';
+                if (!empty($setting['bluredLazyload'])) {
+                    $placeholderSrc = self::escapeHtml(self::genBluredPlaceholderSrc($srcOriginal));
+                    $placeholder = '<img class="blured-placeholder remove-after" src="' . $placeholderSrc
+                        . '" alt="" aria-hidden="true" decoding="async">';
+                }
+            }
+        }
+
+        $classAttribute = $imageClass === '' ? '' : ' class="' . $imageClass . '"';
+        $image = $placeholder . '<img data-void-image-content' . $dimensionAttributes . $classAttribute
+            . ' alt="' . $escapedAlt . '"' . $lazyAttributes . ' src="' . $imageSrc . '" decoding="async">';
+
+        return '<figure data-void-image-item' . $figureAttributes . '><a class="void-image-link'
+            . ($lazyload ? ' lazyload-container' : '')
+            . '" data-void-image-zoom no-pjax href="' . $escapedSrc . '">' . $image . '</a>'
+            . $figcaption . '</figure>';
     }
 
     /**
@@ -651,68 +1024,6 @@ Class Contents
         $srcWithoutFragment = $fragment !== null ? str_replace('#' . $fragment, '', $src) : $src;
 
         return $srcWithoutFragment . $addon;
-    }
-
-    /**
-     * 解析图片（正常文章）
-     * 
-     * @return string
-     */
-    private static function parseFancyBoxCallback($match)
-    {
-        $setting = $GLOBALS['VOIDSetting'];
-        $src_ori = $match[1];
-        $src = $src_ori;
-        $classList = '';
-
-        // 这里，若图片已获取长宽基础信息，则直接计算后输出
-        $attrAddOnA = '';
-        $attrAddOnFigure = '';
-        $matches = [];
-        if (strpos($src_ori, 'vwid') !== false) {
-            preg_match("/vwid=(\d{0,5})/i", $src_ori, $matches);
-            $width = !empty($matches[1]) ? floatval($matches[1]) : 0;
-            
-            preg_match("/vhei=(\d{0,5})/i", $src_ori, $matches);
-            $height = !empty($matches[1]) ? floatval($matches[1]) : 0;
-
-            if ($width > 0 && $height > 0) {
-                $ratio = $height / $width * 100;
-                $flex_grow = $width * 50 / $height;
-
-                $attrAddOnA = 'style="padding-top: '.$ratio.'%"';
-                $attrAddOnFigure = 'class="size-parsed" style="flex-grow: '.$flex_grow.'; width: '.$width.'px"';
-            }
-        }
-
-        $figcaption = '';
-        if ($match[2] != '' && $setting['parseFigcaption'])
-            $figcaption = '<figcaption>'.$match[2].'</figcaption>';
-
-        // 普通解析且开启懒加载
-        $placeholder = '';
-        if(!self::$photoMode && Helper::options()->lazyload == '1') {
-            $src = '';
-            $classList = 'lazyload';
-            if ($setting['bluredLazyload'])
-                $placeholder = '<img class="blured-placeholder remove-after" src="'.self::genBluredPlaceholderSrc($src_ori).'">';
-
-            $attrAddOnA .= ' class="lazyload-container" ';
-        }
-
-        // 使用浏览器原生的懒加载方法
-        if (!self::$photoMode && Helper::options()->lazyload == '1' && $setting['browserLevelLoadingLazy']) {
-            $classList .= ' browserlevel-lazy';
-            $img = '<img class="'.$classList.'" alt="'.$match[2].'" data-src="'.$src_ori.'" src="'.$src_ori.'" loading="lazy">';
-        } else {
-            $img = $placeholder.'<img class="'.$classList.'" alt="'.$match[2].'" data-src="'.$src_ori.'" src="'.$src.'">';
-        }
-
-        if (!self::$photoMode) {
-            return '<figure '.$attrAddOnFigure.' ><a '.$attrAddOnA.' no-pjax data-fancybox="gallery" data-caption="'.$match[2].'" href="'.$src_ori.'">'.$img.'</a>'.$figcaption.'</figure>';
-        } else {
-            return '<figure>'.$img.$figcaption.'</figure>';
-        }
     }
 
     /**
