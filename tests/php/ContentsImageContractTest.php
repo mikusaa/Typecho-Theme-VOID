@@ -33,10 +33,12 @@ class ImageContractParameter
 class ImageContractWidget
 {
     public $parameter;
+    public $template;
 
-    public function __construct($values)
+    public function __construct($values, $template = null)
     {
         $this->parameter = new ImageContractParameter($values);
+        $this->template = $template;
     }
 }
 
@@ -166,6 +168,26 @@ assertImageContains('data-src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLaz
 assertImageContains('src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLazy, '原生懒加载保留真实 src');
 assertImageContains('loading="lazy"', $browserLazy, '原生懒加载输出 loading 属性');
 assertImageNotContains('blured-placeholder', $browserLazy, '原生懒加载不重复输出模糊占位图');
+
+$galleryWidget = new ImageContractWidget(array(), 'Gallery.php');
+$galleryLazy = Contents::contentEx(
+    '<img src="/gallery-later.jpg#vwid=1200&vhei=800" alt="相册图片">',
+    $galleryWidget,
+    null
+);
+assertImageContains('class="lazyload"', $galleryLazy, 'Gallery 强制使用可由分批展示控制的脚本懒加载');
+assertImageContains('data-src="/gallery-later.jpg#vwid=1200&amp;vhei=800"', $galleryLazy, 'Gallery 保留延迟图片地址');
+assertImageContains('src=""', $galleryLazy, 'Gallery 折叠前不输出可提前请求的真实 src');
+assertImageNotContains('browserlevel-lazy', $galleryLazy, 'Gallery 不受全站原生懒加载模式影响');
+
+$ordinaryWidget = new ImageContractWidget(array(), 'page.php');
+$ordinaryNativeLazy = Contents::contentEx(
+    '<img src="/ordinary.jpg#vwid=1200&vhei=800" alt="普通正文图片">',
+    $ordinaryWidget,
+    null
+);
+assertImageContains('class="lazyload browserlevel-lazy"', $ordinaryNativeLazy, '普通正文继续使用配置的原生懒加载');
+assertImageContains('src="/ordinary.jpg#vwid=1200&amp;vhei=800"', $ordinaryNativeLazy, '普通正文继续输出真实原生懒加载 src');
 
 resetImageSettings();
 $feed = Contents::parseImages('<img src="/feed.jpg#vwid=640&vhei=480" alt="Feed 图">', true);

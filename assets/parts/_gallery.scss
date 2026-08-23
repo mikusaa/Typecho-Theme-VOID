@@ -167,6 +167,156 @@
     }
 }
 
+@keyframes void-gallery-row-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.void-gallery .void-gallery-row.is-revealing {
+    animation: void-gallery-row-reveal 0.4s $animationTimingFunc both;
+}
+
+.void-gallery [hidden] {
+    display: none!important;
+}
+
+.void-gallery-more {
+    display: flex;
+    justify-content: center;
+    width: 1440px;
+    max-width: 100%;
+    min-width: 0;
+    margin: 8px auto 0;
+    padding: 0 24px;
+    box-sizing: border-box;
+
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 288px;
+        max-width: 100%;
+        min-height: 44px;
+        padding: 10px 14px;
+        border: 1px solid rgba(#000, 0.14);
+        border-radius: 6px;
+        color: $textColor;
+        background: $bgColor;
+        box-shadow: 0 2px 8px rgba(#000, 0.055);
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.25;
+        letter-spacing: 0;
+        text-align: center;
+        appearance: none;
+        cursor: pointer;
+        touch-action: manipulation;
+        transition: border-color $animationTime $animationTimingFunc,
+                    background-color $animationTime $animationTimingFunc,
+                    box-shadow $animationTime $animationTimingFunc,
+                    transform $animationTime-fast $animationTimingFunc;
+
+        .theme-dark & {
+            border-color: rgba(#fff, 0.13);
+            color: $td-textColor-light;
+            background: $td-bgColor-light;
+            box-shadow: 0 2px 10px rgba(#000, 0.22);
+        }
+
+        &:hover {
+            border-color: rgba(#000, 0.28);
+            background: rgb(248, 248, 248);
+            box-shadow: 0 4px 14px rgba(#000, 0.085);
+
+            .theme-dark & {
+                border-color: rgba(#fff, 0.23);
+                background: rgb(42, 42, 42);
+                box-shadow: 0 4px 16px rgba(#000, 0.3);
+            }
+        }
+
+        &:focus-visible {
+            outline: 2px solid $highlightColor;
+            outline-offset: 3px;
+        }
+
+        &:active {
+            box-shadow: 0 1px 4px rgba(#000, 0.08);
+            transform: translateY(1px);
+
+            .theme-dark & {
+                box-shadow: 0 1px 5px rgba(#000, 0.3);
+            }
+        }
+
+        &:disabled,
+        &[aria-busy="true"] {
+            opacity: 0.58;
+            box-shadow: none;
+            cursor: default;
+        }
+    }
+
+    &__label,
+    &__count {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    &__label {
+        font-weight: 600;
+    }
+
+    &__count {
+        color: $fadeColor;
+        font-size: 0.82rem;
+        font-variant-numeric: tabular-nums;
+
+        .theme-dark & {
+            color: $td-textColor-dark;
+        }
+    }
+
+    &__icon {
+        display: inline-flex;
+        flex: 0 0 18px;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+        line-height: 1;
+        transform: translateY(0);
+        transition: transform $animationTime $animationTimingFunc;
+    }
+
+    &__button:hover &__icon,
+    &__button:focus-visible &__icon {
+        transform: translateY(2px);
+    }
+
+    &__status {
+        position: absolute!important;
+        width: 1px!important;
+        height: 1px!important;
+        margin: -1px!important;
+        padding: 0!important;
+        overflow: hidden!important;
+        clip: rect(0, 0, 0, 0)!important;
+        clip-path: inset(50%)!important;
+        white-space: nowrap!important;
+        border: 0!important;
+    }
+}
+
 @media (hover: hover) and (pointer: fine) {
     .void-gallery .void-gallery-row figure[data-void-image-item]:hover {
         box-shadow: 0 12px 30px rgba(#000, 0.14);
@@ -233,6 +383,17 @@
             font-size: 12px;
         }
     }
+
+    .void-gallery-more {
+        margin-top: 6px;
+        padding-right: 18px;
+        padding-left: 18px;
+
+        &__button {
+            width: 100%;
+            max-width: 320px;
+        }
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -251,6 +412,23 @@
     .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
     .void-gallery .void-gallery-row figure[data-void-image-item]:hover >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
     .void-gallery .void-gallery-row figure[data-void-image-item]:focus-within >a.void-image-link[data-void-image-zoom] img[data-void-image-content] {
+        transform: none;
+    }
+
+    .void-gallery .void-gallery-row.is-revealing {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .void-gallery-more__button,
+    .void-gallery-more__icon {
+        transition: none;
+    }
+
+    .void-gallery-more__button:active,
+    .void-gallery-more__button:hover .void-gallery-more__icon,
+    .void-gallery-more__button:focus-visible .void-gallery-more__icon {
         transform: none;
     }
 }

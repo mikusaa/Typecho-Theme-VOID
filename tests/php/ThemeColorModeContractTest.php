@@ -64,13 +64,23 @@ foreach (array(0, '0', null, false, true, '', 'invalid', '1foo', 1.0, 4, '4') as
     themeColorAssertSame(3, Utils::normalizeColorScheme($mode), 'legacy or invalid mode ' . var_export($mode, true));
 }
 
+foreach (array(0, 1, '0', '1') as $mode) {
+    themeColorAssertSame((int) $mode, Utils::normalizeFeedContentMode($mode), 'valid Feed mode ' . var_export($mode, true));
+}
+
+foreach (array(null, false, true, '', 'invalid', '1foo', 1.0, 2, '2') as $mode) {
+    themeColorAssertSame(0, Utils::normalizeFeedContentMode($mode), 'invalid Feed mode ' . var_export($mode, true));
+}
+
 $GLOBALS['VOIDPluginREQ'] = 1.4;
 Helper::$options = new ThemeColorTestOptions(array(
     'colorScheme' => '0',
+    'feedContentMode' => 'invalid',
     'advance' => json_encode(array(
         'darkModeTime' => array('start' => 21, 'end' => 6),
         'followSystemColorScheme' => true,
-        'headerMode' => 2
+        'headerMode' => 2,
+        'feedContentMode' => 1
     ))
 ));
 
@@ -79,6 +89,7 @@ themeColorAssertSame(3, $settings['colorScheme'], 'saved scheduled mode migrates
 themeColorAssertSame(false, array_key_exists('darkModeTime', $settings), 'darkModeTime is filtered from runtime settings');
 themeColorAssertSame(false, array_key_exists('followSystemColorScheme', $settings), 'legacy device flag is filtered from runtime settings');
 themeColorAssertSame(2, $settings['headerMode'], 'unrelated advanced settings remain available');
+themeColorAssertSame(0, $settings['feedContentMode'], 'invalid public Feed mode falls back without advance override');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} theme color contract test(s) failed.\n");

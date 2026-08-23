@@ -841,13 +841,30 @@ var VOID_PhotoSets = {
 var VOID_Gallery = {
     root: null,
     sets: [],
+    rows: [],
     resizeObserver: null,
     resizeHandler: null,
     imageLoadHandler: null,
+    loadMoreControl: null,
+    loadMoreButton: null,
+    loadMoreLabel: null,
+    loadMoreCount: null,
+    loadMoreStatus: null,
+    loadMoreHandler: null,
+    generatedRootId: false,
+    hiddenLeadNodes: [],
+    hiddenSets: [],
     rafId: null,
     rafUsesTimeout: false,
     generation: 0,
     observedWidth: 0,
+    observedViewportHeight: 0,
+    revealedItemCount: 0,
+    restoredRevealCount: 0,
+    progressiveTriggerScreens: 4.5,
+    progressiveInitialScreens: 2.75,
+    progressiveBatchScreens: 2,
+    progressiveMinRemainingItems: 4,
 
     calculateRows: function (ratios, containerWidth, options) {
         var rows = [];
@@ -988,6 +1005,377 @@ var VOID_Gallery = {
             element.focus({ preventScroll: true });
         } catch (error) {
             element.focus();
+        }
+    },
+
+    getViewportHeight: function () {
+        return window.innerHeight
+            || (document.documentElement && document.documentElement.clientHeight)
+            || 800;
+    },
+
+    getTotalItemCount: function () {
+        var total = 0;
+        var index;
+
+        for (index = 0; index < this.rows.length; index++) {
+            total += this.rows[index].itemCount;
+        }
+        return total;
+    },
+
+    getRowsHeight: function (start, end) {
+        var height = 0;
+        var index;
+
+        start = Math.max(0, start || 0);
+        end = typeof end === 'number' ? Math.min(end, this.rows.length) : this.rows.length;
+        for (index = start; index < end; index++) {
+            if (index > start) {
+                height += this.rows[index].gap;
+            }
+            height += this.rows[index].height;
+        }
+        return height;
+    },
+
+    getRowEndForHeight: function (start, budget) {
+        var end = Math.max(0, start || 0);
+        var height = 0;
+
+        while (end < this.rows.length) {
+            if (end > start) {
+                height += this.rows[end].gap;
+            }
+            height += this.rows[end].height;
+            end += 1;
+            if (height >= budget) {
+                break;
+            }
+        }
+        return end;
+    },
+
+    getItemCountThroughRow: function (end) {
+        var total = 0;
+        var index;
+
+        end = Math.min(end, this.rows.length);
+        for (index = 0; index < end; index++) {
+            total += this.rows[index].itemCount;
+        }
+        return total;
+    },
+
+    getVisibleRowCount: function (itemCount) {
+        var total = 0;
+        var index;
+
+        for (index = 0; index < this.rows.length; index++) {
+            total += this.rows[index].itemCount;
+            if (total >= itemCount) {
+                return index + 1;
+            }
+        }
+        return this.rows.length;
+    },
+
+    getRevealStorageKey: function () {
+        if (!window.location) {
+            return null;
+        }
+        return 'VOID_Gallery.revealed:' + (window.location.pathname || '') + (window.location.search || '');
+    },
+
+    readStoredRevealCount: function () {
+        var key = this.getRevealStorageKey();
+        var storage;
+        var value;
+
+        if (!key) {
+            return 0;
+        }
+        try {
+            storage = window.sessionStorage;
+            if (!storage) {
+                return 0;
+            }
+            value = parseInt(storage.getItem(key), 10);
+        } catch (error) {
+            return 0;
+        }
+        return value > 0 && isFinite(value) ? value : 0;
+    },
+
+    storeRevealCount: function () {
+        var key = this.getRevealStorageKey();
+        var storage;
+
+        if (!key || !(this.revealedItemCount > 0)) {
+            return;
+        }
+        try {
+            storage = window.sessionStorage;
+            if (storage) {
+                storage.setItem(key, String(this.revealedItemCount));
+            }
+        } catch (error) {
+            // Storage can be unavailable in private or restricted browsing modes.
+        }
+    },
+
+    getLeadNodesForSet: function (set) {
+        var children = Array.prototype.slice.call(this.root.children);
+        var setIndex = children.indexOf(set);
+        var previousSetIndex = -1;
+        var headingIndex = -1;
+        var index;
+
+        if (setIndex < 0) {
+            return [];
+        }
+        for (index = setIndex - 1; index >= 0; index--) {
+            if (children[index].hasAttribute && children[index].hasAttribute('data-void-gallery-set')) {
+                previousSetIndex = index;
+                break;
+            }
+        }
+        for (index = previousSetIndex + 1; index < setIndex; index++) {
+            if (children[index].tagName && /^H[2-6]$/.test(children[index].tagName.toUpperCase())) {
+                headingIndex = index;
+            }
+        }
+        return headingIndex >= 0 ? children.slice(headingIndex, setIndex) : [];
+    },
+
+    clearProgressiveVisibility: function () {
+        var index;
+
+        for (index = 0; index < this.rows.length; index++) {
+            this.rows[index].element.hidden = false;
+            this.rows[index].element.classList.remove('is-revealing');
+        }
+        for (index = 0; index < this.hiddenLeadNodes.length; index++) {
+            this.hiddenLeadNodes[index].hidden = false;
+        }
+        for (index = 0; index < this.hiddenSets.length; index++) {
+            this.hiddenSets[index].hidden = false;
+        }
+        this.hiddenLeadNodes = [];
+        this.hiddenSets = [];
+    },
+
+    ensureLoadMoreControl: function () {
+        var control;
+        var button;
+        var label;
+        var count;
+        var icon;
+        var status;
+        var rootId;
+        var self = this;
+
+        if (this.loadMoreControl || !this.root || !this.root.parentNode) {
+            return;
+        }
+        rootId = this.root.getAttribute('id');
+        if (!rootId) {
+            rootId = 'void-gallery-content';
+            this.root.setAttribute('id', rootId);
+            this.generatedRootId = true;
+        }
+
+        control = document.createElement('div');
+        control.className = 'void-gallery-more';
+
+        button = document.createElement('button');
+        button.className = 'void-gallery-more__button';
+        button.setAttribute('type', 'button');
+        button.setAttribute('data-void-gallery-more', '');
+        button.setAttribute('aria-controls', rootId);
+
+        label = document.createElement('span');
+        label.className = 'void-gallery-more__label';
+        label.textContent = '显示更多照片';
+
+        count = document.createElement('span');
+        count.className = 'void-gallery-more__count';
+
+        icon = document.createElement('i');
+        icon.className = 'void-gallery-more__icon voidicon-down';
+        icon.setAttribute('aria-hidden', 'true');
+
+        status = document.createElement('span');
+        status.className = 'void-gallery-more__status';
+        status.setAttribute('id', rootId + '-more-status');
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        status.setAttribute('aria-atomic', 'true');
+        button.setAttribute('aria-describedby', rootId + '-more-status');
+
+        button.appendChild(label);
+        button.appendChild(count);
+        button.appendChild(icon);
+        control.appendChild(button);
+        control.appendChild(status);
+        this.root.parentNode.insertBefore(control, this.root.nextSibling);
+
+        this.loadMoreHandler = function (event) {
+            self.revealMore(event);
+        };
+        button.addEventListener('click', this.loadMoreHandler);
+        this.loadMoreControl = control;
+        this.loadMoreButton = button;
+        this.loadMoreLabel = label;
+        this.loadMoreCount = count;
+        this.loadMoreStatus = status;
+    },
+
+    removeLoadMoreControl: function () {
+        if (this.loadMoreButton && this.loadMoreHandler) {
+            this.loadMoreButton.removeEventListener('click', this.loadMoreHandler);
+        }
+        if (this.loadMoreControl && this.loadMoreControl.parentNode) {
+            this.loadMoreControl.parentNode.removeChild(this.loadMoreControl);
+        }
+        this.loadMoreControl = null;
+        this.loadMoreButton = null;
+        this.loadMoreLabel = null;
+        this.loadMoreCount = null;
+        this.loadMoreStatus = null;
+        this.loadMoreHandler = null;
+    },
+
+    updateLoadMoreControl: function () {
+        var total = this.getTotalItemCount();
+        var remaining = Math.max(0, total - this.revealedItemCount);
+
+        if (!remaining) {
+            this.removeLoadMoreControl();
+            return;
+        }
+        this.ensureLoadMoreControl();
+        if (!this.loadMoreButton) {
+            return;
+        }
+        this.loadMoreLabel.textContent = '显示更多照片';
+        this.loadMoreCount.textContent = '还剩 ' + remaining + ' 张';
+        this.loadMoreButton.setAttribute('aria-label', '显示更多照片，还剩 ' + remaining + ' 张');
+        this.loadMoreStatus.textContent = '已显示 ' + this.revealedItemCount + ' / ' + total + ' 张照片';
+    },
+
+    applyProgressiveVisibility: function (animate) {
+        var visibleRowCount = this.getVisibleRowCount(this.revealedItemCount);
+        var index;
+
+        for (index = 0; index < this.hiddenLeadNodes.length; index++) {
+            this.hiddenLeadNodes[index].hidden = false;
+        }
+        for (index = 0; index < this.hiddenSets.length; index++) {
+            this.hiddenSets[index].hidden = false;
+        }
+        this.hiddenLeadNodes = [];
+        this.hiddenSets = [];
+
+        for (index = 0; index < this.rows.length; index++) {
+            var row = this.rows[index].element;
+            var wasHidden = !!row.hidden;
+            row.hidden = index >= visibleRowCount;
+            row.classList.remove('is-revealing');
+            if (animate && wasHidden && !row.hidden) {
+                row.classList.add('is-revealing');
+            }
+        }
+
+        for (index = 0; index < this.sets.length; index++) {
+            var set = this.sets[index];
+            var hasVisibleRow = false;
+            var rowIndex;
+
+            for (rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+                if (this.rows[rowIndex].set === set && !this.rows[rowIndex].element.hidden) {
+                    hasVisibleRow = true;
+                    break;
+                }
+            }
+            if (hasVisibleRow) {
+                set.hidden = false;
+                continue;
+            }
+
+            set.hidden = true;
+            this.hiddenSets.push(set);
+            var leadNodes = this.getLeadNodesForSet(set);
+            var leadIndex;
+            for (leadIndex = 0; leadIndex < leadNodes.length; leadIndex++) {
+                if (!leadNodes[leadIndex].hidden) {
+                    leadNodes[leadIndex].hidden = true;
+                    this.hiddenLeadNodes.push(leadNodes[leadIndex]);
+                }
+            }
+        }
+    },
+
+    refreshProgressiveDisplay: function () {
+        var total = this.getTotalItemCount();
+        var viewportHeight = this.getViewportHeight();
+        var totalHeight = this.getRowsHeight(0, this.rows.length);
+        var initialRowEnd;
+        var visibleRowCount;
+
+        if (!total || totalHeight <= viewportHeight * this.progressiveTriggerScreens) {
+            this.revealedItemCount = total;
+            this.clearProgressiveVisibility();
+            this.removeLoadMoreControl();
+            return;
+        }
+
+        initialRowEnd = this.getRowEndForHeight(0, viewportHeight * this.progressiveInitialScreens);
+        this.revealedItemCount = Math.max(
+            this.revealedItemCount,
+            this.getItemCountThroughRow(initialRowEnd)
+        );
+        this.revealedItemCount = Math.max(this.revealedItemCount, this.restoredRevealCount);
+        this.revealedItemCount = Math.min(this.revealedItemCount, total);
+        visibleRowCount = this.getVisibleRowCount(this.revealedItemCount);
+        this.revealedItemCount = this.getItemCountThroughRow(visibleRowCount);
+
+        if (total - this.revealedItemCount < this.progressiveMinRemainingItems) {
+            this.revealedItemCount = total;
+        }
+        this.applyProgressiveVisibility(false);
+        this.updateLoadMoreControl();
+    },
+
+    revealMore: function (event) {
+        var visibleRowCount = this.getVisibleRowCount(this.revealedItemCount);
+        var firstNewRow = this.rows[visibleRowCount];
+        var firstNewLink = firstNewRow && firstNewRow.element.querySelector
+            ? firstNewRow.element.querySelector('a[data-void-image-zoom]') : null;
+        var end = this.getRowEndForHeight(
+            visibleRowCount,
+            this.getViewportHeight() * this.progressiveBatchScreens
+        );
+        var total = this.getTotalItemCount();
+        var self = this;
+
+        this.revealedItemCount = Math.max(this.revealedItemCount, this.getItemCountThroughRow(end));
+        if (total - this.revealedItemCount < this.progressiveMinRemainingItems) {
+            this.revealedItemCount = total;
+        }
+        this.storeRevealCount();
+        this.applyProgressiveVisibility(true);
+        this.updateLoadMoreControl();
+
+        if (typeof VOID_Ui !== 'undefined' && VOID_Ui && typeof VOID_Ui.lazyload === 'function') {
+            VOID_Ui.lazyload();
+        }
+        if (event && event.detail === 0 && firstNewLink && typeof firstNewLink.focus === 'function') {
+            window.setTimeout(function () {
+                if (self.root && self.root.contains(firstNewLink)) {
+                    firstNewLink.focus();
+                }
+            }, 0);
         }
     },
 
@@ -1170,6 +1558,7 @@ var VOID_Gallery = {
         var activeElement;
         var restoreFocus;
         var viewportWidth;
+        var options;
         var rows;
         var figureIndex = 0;
         var index;
@@ -1196,7 +1585,8 @@ var VOID_Gallery = {
         }
 
         viewportWidth = window.innerWidth || document.documentElement.clientWidth || width;
-        rows = this.calculateRows(ratios, width, this.getLayoutOptions(width, viewportWidth));
+        options = this.getLayoutOptions(width, viewportWidth);
+        rows = this.calculateRows(ratios, width, options);
         for (index = 0; index < rows.length; index++) {
             var rowData = rows[index];
             var row = document.createElement('div');
@@ -1212,6 +1602,13 @@ var VOID_Gallery = {
                 row.appendChild(figure);
             }
             set.appendChild(row);
+            this.rows.push({
+                element: row,
+                set: set,
+                height: rowData.height,
+                gap: options.gap,
+                itemCount: rowData.widths.length
+            });
         }
 
         if (restoreFocus) {
@@ -1221,9 +1618,13 @@ var VOID_Gallery = {
 
     layout: function () {
         var index;
+
+        this.clearProgressiveVisibility();
+        this.rows = [];
         for (index = 0; index < this.sets.length; index++) {
             this.layoutSet(this.sets[index]);
         }
+        this.refreshProgressiveDisplay();
     },
 
     scheduleLayout: function (generation) {
@@ -1284,6 +1685,8 @@ var VOID_Gallery = {
         }
 
         this.root = root;
+        this.restoredRevealCount = this.readStoredRevealCount();
+        this.revealedItemCount = this.restoredRevealCount;
         generation = this.generation;
         activeElement = document.activeElement;
         restoreFocus = activeElement && root.contains(activeElement);
@@ -1300,13 +1703,25 @@ var VOID_Gallery = {
         }
         root.classList.add('is-ready');
         this.observedWidth = root.clientWidth;
+        this.observedViewportHeight = this.getViewportHeight();
 
         this.imageLoadHandler = function (event) {
             var target = event && event.target;
+            var figure;
+            var dimensions;
             if (generation !== self.generation || root !== self.root || !self.isContentImage(target)) {
                 return;
             }
             if (root.contains && !root.contains(target)) {
+                return;
+            }
+            figure = target.parentNode;
+            while (figure && figure !== root && !self.isImageFigure(figure)) {
+                figure = figure.parentNode;
+            }
+            dimensions = figure && figure !== root
+                ? VOID_PhotoSets.resolveDimensions(figure, target) : null;
+            if (dimensions && dimensions.source === 'semantic') {
                 return;
             }
             self.scheduleLayout(generation);
@@ -1328,16 +1743,49 @@ var VOID_Gallery = {
                 self.scheduleLayout(generation);
             });
             this.resizeObserver.observe(root);
-        } else {
-            this.resizeHandler = function () {
-                self.scheduleLayout(generation);
-            };
-            window.addEventListener('resize', this.resizeHandler);
         }
+
+        this.resizeHandler = function () {
+            var viewportHeight;
+            var width;
+
+            if (generation !== self.generation || root !== self.root) {
+                return;
+            }
+            viewportHeight = self.getViewportHeight();
+            width = root.clientWidth;
+            if (Math.abs(width - self.observedWidth) < 0.5
+                && Math.abs(viewportHeight - self.observedViewportHeight) < 1) {
+                return;
+            }
+            self.observedWidth = width;
+            self.observedViewportHeight = viewportHeight;
+            self.scheduleLayout(generation);
+        };
+        window.addEventListener('resize', this.resizeHandler);
+    },
+
+    suspend: function () {
+        if (this.loadMoreButton) {
+            this.loadMoreButton.setAttribute('disabled', '');
+            this.loadMoreButton.setAttribute('aria-busy', 'true');
+            if (this.loadMoreHandler) {
+                this.loadMoreButton.removeEventListener('click', this.loadMoreHandler);
+            }
+        }
+        this.teardown(true);
     },
 
     destroy: function () {
+        this.teardown(false);
+    },
+
+    teardown: function (preserveDisplay) {
         this.generation += 1;
+        if (!preserveDisplay) {
+            this.clearProgressiveVisibility();
+            this.removeLoadMoreControl();
+        }
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
         }
@@ -1355,14 +1803,26 @@ var VOID_Gallery = {
             }
         }
 
-        this.root = null;
-        this.sets = [];
         this.resizeObserver = null;
         this.resizeHandler = null;
         this.imageLoadHandler = null;
         this.rafId = null;
         this.rafUsesTimeout = false;
+        if (preserveDisplay) {
+            return;
+        }
+        if (this.root && this.generatedRootId) {
+            this.root.removeAttribute('id');
+        }
+
+        this.root = null;
+        this.sets = [];
+        this.rows = [];
         this.observedWidth = 0;
+        this.observedViewportHeight = 0;
+        this.revealedItemCount = 0;
+        this.restoredRevealCount = 0;
+        this.generatedRootId = false;
     },
 
     __test: {
@@ -2704,7 +3164,7 @@ var VOID = {
         NProgress.start();
         VOID_RewardDialog.destroy();
         VOID_ImageZoom.destroy();
-        VOID_Gallery.destroy();
+        VOID_Gallery.suspend();
         VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
         VOID_Ui.reset();

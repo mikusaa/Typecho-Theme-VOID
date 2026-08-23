@@ -81,7 +81,14 @@ VOID_Lazyload = {
     eventHandler: null,
 
     finish: function () {
-        return $('img.lazyload.loaded:not(.browserlevel-lazy)').length + $('img.lazyload.error:not(.browserlevel-lazy)').length == $('img.lazyload:not(.browserlevel-lazy)').length;
+        var pending = false;
+
+        $.each($('img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)'), function (i, item) {
+            if (!VOID_Lazyload.isHidden(item)) {
+                pending = true;
+            }
+        });
+        return !pending;
     },
 
     addEventListener: function () {
@@ -95,24 +102,39 @@ VOID_Lazyload = {
             window.removeEventListener('scroll', VOID_Lazyload.eventHandler);
     },
 
+    isHidden: function (item) {
+        return $(item).closest('[hidden]').length > 0;
+    },
+
     inViewport: function (item) {
         var viewPortHeight = document.documentElement.clientHeight; //可见区域高度
         var scrollTop = document.documentElement.scrollTop || document.body.scrollTop; //滚动条距离顶部高度
         var offset = 300; // 提前 200 px 加载
+        if (VOID_Lazyload.isHidden(item)) {
+            return false;
+        }
         return $(item).offset().top - offset < viewPortHeight + scrollTop 
                     && $(item).offset().top + $(item).height() + offset > scrollTop;
     },
 
     callback: function () {
         $.each($('img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)'), function (i, item) {
+            if (VOID_Lazyload.isHidden(item)) {
+                return;
+            }
+            if (item.__voidLazyLoading) {
+                return;
+            }
             var eager = item.getAttribute && item.getAttribute('loading') === 'eager';
             if (eager || VOID_Lazyload.inViewport(item)) {
                 var img = new Image();
                 var fetchPriority = item.getAttribute && item.getAttribute('fetchpriority');
+                item.__voidLazyLoading = true;
                 if (fetchPriority) {
                     img.setAttribute('fetchpriority', fetchPriority);
                 }
                 img.onload = function () {
+                    item.__voidLazyLoading = false;
                     $(item).attr('src', $(item).attr('data-src'));
                     $(item).addClass('loaded');
                     $(item).siblings('.blured-placeholder').addClass('loaded');
@@ -123,6 +145,7 @@ VOID_Lazyload = {
                     }, 1000);
                 };
                 img.onerror = function () {
+                    item.__voidLazyLoading = false;
                     $(item).addClass('error');
                     $(item).parent().addClass('error');
                     VOID_Lazyload.removeEventListener();

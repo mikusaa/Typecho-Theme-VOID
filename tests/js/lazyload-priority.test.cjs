@@ -4,10 +4,11 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function createItem(attributes) {
+function createItem(attributes, options = {}) {
     return {
         attributes: new Map(Object.entries(attributes)),
         classes: new Set(['lazyload']),
+        hiddenAncestor: options.hiddenAncestor === true,
         parentClasses: new Set(),
         placeholderClasses: new Set(),
         placeholderRemoved: false,
@@ -71,6 +72,11 @@ function loadLazyload(items, isVisible) {
                 }
                 target.setAttribute(name, value);
                 return this;
+            },
+            closest(selector) {
+                return {
+                    length: selector === '[hidden]' && target.hiddenAncestor ? 1 : 0
+                };
             },
             parent() {
                 return {
@@ -141,6 +147,7 @@ test('an eager Gallery image starts outside the viewport with propagated priorit
     const fixture = loadLazyload([item], () => false);
 
     fixture.context.VOID_Lazyload.callback();
+    fixture.context.VOID_Lazyload.callback();
 
     assert.deepEqual(fixture.requestLog, [{
         priority: 'high',
@@ -157,6 +164,34 @@ test('an eager Gallery image starts outside the viewport with propagated priorit
     assert.equal(item.parentClasses.has('loaded'), true);
     assert.equal(item.placeholderClasses.has('loaded'), true);
     assert.equal(item.placeholderRemoved, true);
+});
+
+test('an eager image waits while a hidden ancestor conceals it', () => {
+    const item = createItem({
+        'data-src': 'https://example.test/gallery-hidden-first.jpg',
+        fetchpriority: 'high',
+        loading: 'eager'
+    }, { hiddenAncestor: true });
+    const fixture = loadLazyload([item], () => false);
+
+    fixture.context.VOID_Lazyload.callback();
+
+    assert.deepEqual(fixture.requestLog, []);
+    assert.equal(fixture.preloadImages.length, 0);
+    assert.equal(fixture.context.VOID_Lazyload.finish(), true);
+
+    item.hiddenAncestor = false;
+    assert.equal(fixture.context.VOID_Lazyload.finish(), false);
+    fixture.context.VOID_Lazyload.callback();
+
+    assert.deepEqual(fixture.requestLog, [{
+        priority: 'high',
+        url: 'https://example.test/gallery-hidden-first.jpg'
+    }]);
+    assert.deepEqual(fixture.preloadImages[0].operations, [
+        'attribute:fetchpriority:high',
+        'src:https://example.test/gallery-hidden-first.jpg'
+    ]);
 });
 
 test('ordinary lazy images keep viewport gating and default request priority', () => {

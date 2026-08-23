@@ -9,16 +9,26 @@ class FakeClassList {
         this.names = new Set();
     }
 
-    add(name) {
-        this.names.add(name);
+    add(...names) {
+        names.forEach((name) => this.names.add(name));
     }
 
     contains(name) {
         return this.names.has(name);
     }
 
-    remove(name) {
-        this.names.delete(name);
+    remove(...names) {
+        names.forEach((name) => this.names.delete(name));
+    }
+
+    toggle(name, force) {
+        const shouldAdd = force === undefined ? !this.contains(name) : !!force;
+        if (shouldAdd) {
+            this.add(name);
+        } else {
+            this.remove(name);
+        }
+        return shouldAdd;
     }
 }
 
@@ -52,6 +62,34 @@ class FakeElement {
         return this.children[0] || null;
     }
 
+    get hidden() {
+        return this.hasAttribute('hidden');
+    }
+
+    set hidden(value) {
+        if (value) {
+            this.setAttribute('hidden', '');
+        } else {
+            this.removeAttribute('hidden');
+        }
+    }
+
+    get nextSibling() {
+        if (!this.parentNode) {
+            return null;
+        }
+        const index = this.parentNode.children.indexOf(this);
+        return this.parentNode.children[index + 1] || null;
+    }
+
+    get previousSibling() {
+        if (!this.parentNode) {
+            return null;
+        }
+        const index = this.parentNode.children.indexOf(this);
+        return index > 0 ? this.parentNode.children[index - 1] : null;
+    }
+
     addEventListener(name, listener, options) {
         const listeners = this.listeners.get(name) || [];
         listeners.push({ listener, options });
@@ -73,7 +111,16 @@ class FakeElement {
     }
 
     dispatch(name, event = {}) {
-        (this.listeners.get(name) || []).slice().forEach(({ listener }) => listener.call(this, event));
+        const dispatchedEvent = Object.assign({
+            currentTarget: this,
+            preventDefault() {},
+            target: this
+        }, event);
+        (this.listeners.get(name) || []).slice().forEach(({ listener }) => listener.call(this, dispatchedEvent));
+    }
+
+    click() {
+        this.dispatch('click');
     }
 
     focus(options) {
@@ -112,8 +159,30 @@ class FakeElement {
 
     querySelectorAll(selector) {
         const matches = (element) => {
+            const classNames = new Set([
+                ...String(element.className || '').split(/\s+/).filter(Boolean),
+                ...element.classList.names
+            ]);
+            if (selector === '.void-gallery-row') {
+                return classNames.has('void-gallery-row');
+            }
+            if (selector === '.void-gallery-more') {
+                return classNames.has('void-gallery-more');
+            }
             if (selector === '[data-void-gallery-set]') {
                 return element.hasAttribute('data-void-gallery-set');
+            }
+            if (selector === '[data-void-gallery-more]') {
+                return element.hasAttribute('data-void-gallery-more');
+            }
+            if (selector === '[data-void-gallery-more-count]') {
+                return element.hasAttribute('data-void-gallery-more-count');
+            }
+            if (selector === '[hidden]') {
+                return element.hasAttribute('hidden');
+            }
+            if (selector === 'button[data-void-gallery-more]') {
+                return element.tagName === 'BUTTON' && element.hasAttribute('data-void-gallery-more');
             }
             if (selector === '[data-void-photo-set]') {
                 return element.hasAttribute('data-void-photo-set');
@@ -158,6 +227,12 @@ class FakeElement {
         return child;
     }
 
+    remove() {
+        if (this.parentNode) {
+            this.parentNode.removeChild(this);
+        }
+    }
+
     removeEventListener(name, listener) {
         const listeners = this.listeners.get(name) || [];
         this.listeners.set(name, listeners.filter((record) => record.listener !== listener));
@@ -173,7 +248,7 @@ class FakeDocument {
         this.activeElement = null;
         this.bannerImage = null;
         this.body = new FakeElement('body', this);
-        this.documentElement = { clientWidth: 1280 };
+        this.documentElement = { clientHeight: 800, clientWidth: 1280 };
         this.galleryRoot = null;
     }
 
@@ -196,7 +271,7 @@ class FakeDocument {
         if (selector === '#banner img') {
             return this.bannerImage;
         }
-        return null;
+        return this.body.querySelector(selector);
     }
 }
 
@@ -223,6 +298,7 @@ class FakeWindow {
     constructor() {
         this.ResizeObserver = FakeResizeObserver;
         this.animationFrames = new Map();
+        this.innerHeight = 800;
         this.innerWidth = 1280;
         this.listeners = new Map();
         this.nextFrameId = 1;
@@ -235,6 +311,10 @@ class FakeWindow {
         const listeners = this.listeners.get(name) || [];
         listeners.push(listener);
         this.listeners.set(name, listeners);
+    }
+
+    dispatch(name) {
+        (this.listeners.get(name) || []).slice().forEach((listener) => listener());
     }
 
     cancelAnimationFrame(id) {
@@ -250,6 +330,12 @@ class FakeWindow {
     flushAnimationFrames() {
         const callbacks = Array.from(this.animationFrames.values());
         this.animationFrames.clear();
+        callbacks.forEach((callback) => callback());
+    }
+
+    flushTimers() {
+        const callbacks = Array.from(this.timers.values());
+        this.timers.clear();
         callbacks.forEach((callback) => callback());
     }
 
@@ -303,6 +389,7 @@ function loadGalleryEnvironment(root = null) {
     const window = new FakeWindow();
     document.galleryRoot = root;
     if (root) {
+        document.body.appendChild(root);
         const setOwnerDocument = (element) => {
             element.ownerDocument = document;
             element.children.forEach(setOwnerDocument);
@@ -340,6 +427,46 @@ function loadGalleryEnvironment(root = null) {
 
 function closeTo(actual, expected, precision = 0.000001) {
     assert.ok(Math.abs(actual - expected) < precision, `${actual} should be close to ${expected}`);
+}
+
+function createPanoramicGallery(count) {
+    const root = new FakeElement('article');
+    for (let index = 0; index < count; index++) {
+        root.appendChild(createImageFigure(null, { width: 4000, height: 1000 }).figure);
+    }
+    return root;
+}
+
+function getElementText(element) {
+    if (!element) {
+        return '';
+    }
+    return [element.textContent]
+        .concat(element.children.map((child) => getElementText(child)))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function getVisibleRows(root) {
+    return root.querySelectorAll('.void-gallery-row').filter((row) => !row.hidden);
+}
+
+function getHiddenPhotoCount(root) {
+    return root.querySelectorAll('.void-gallery-row').reduce((count, row) => {
+        return count + (row.hidden
+            ? row.querySelectorAll('figure[data-void-image-item]').length
+            : 0);
+    }, 0);
+}
+
+function getWallHeight(rows, gap = 16) {
+    const heights = rows.map((row) => {
+        const figure = row.querySelector('figure[data-void-image-item]');
+        return figure ? parseFloat(figure.style.getPropertyValue('--void-gallery-item-height')) : 0;
+    });
+    return heights.reduce((total, height) => total + height, 0)
+        + Math.max(0, heights.length - 1) * gap;
 }
 
 test('mobile rows keep very wide photos full-width and pair moderate ratios', () => {
@@ -540,7 +667,257 @@ test('repeated init restores a focused image link after DOM normalization', () =
     assert.equal(source.link.focusCalls[0].preventScroll, true);
 });
 
-test('image load schedules one relayout and does not write intrinsic dimensions', () => {
+test('progressive disclosure only activates when the gallery exceeds 4.5 viewports', () => {
+    const shortRoot = createPanoramicGallery(10);
+    const shortFixture = loadGalleryEnvironment(shortRoot);
+    shortFixture.window.innerHeight = 600;
+    shortFixture.document.documentElement.clientHeight = 600;
+
+    shortFixture.context.VOID_Gallery.init();
+
+    const shortRows = shortRoot.querySelectorAll('.void-gallery-row');
+    assert.equal(shortRows.length, 10);
+    assert.ok(getWallHeight(shortRows) < 600 * 4.5);
+    assert.equal(shortRows.some((row) => row.hidden), false);
+    assert.equal(shortFixture.document.body.querySelector('[data-void-gallery-more]'), null);
+
+    const longRoot = createPanoramicGallery(11);
+    const longFixture = loadGalleryEnvironment(longRoot);
+    longFixture.window.innerHeight = 600;
+    longFixture.document.documentElement.clientHeight = 600;
+
+    longFixture.context.VOID_Gallery.init();
+
+    const longRows = longRoot.querySelectorAll('.void-gallery-row');
+    const visibleRows = getVisibleRows(longRoot);
+    const rowAllowance = 266;
+    assert.equal(longRows.length, 11);
+    assert.equal(longFixture.context.VOID_Gallery.rows.length, longRows.length);
+    assert.equal(longFixture.context.VOID_Gallery.rows[0].element, longRows[0]);
+    assert.equal(longFixture.context.VOID_Gallery.rows[0].height, 250);
+    assert.equal(longFixture.context.VOID_Gallery.rows[0].gap, 16);
+    assert.equal(longFixture.context.VOID_Gallery.rows[0].itemCount, 1);
+    assert.ok(getWallHeight(longRows) > 600 * 4.5);
+    assert.ok(visibleRows.length > 0 && visibleRows.length < longRows.length);
+    assert.ok(Math.abs(getWallHeight(visibleRows) - 600 * 2.75) <= rowAllowance);
+});
+
+test('load more control exposes an accessible remaining count and reveals complete rows', () => {
+    const root = createPanoramicGallery(24);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+
+    context.VOID_Gallery.init();
+
+    const button = document.body.querySelector('button[data-void-gallery-more]');
+    const initialVisibleRows = getVisibleRows(root);
+    const initialVisibleHeight = getWallHeight(initialVisibleRows);
+    const initialRemaining = getHiddenPhotoCount(root);
+    assert.ok(button);
+    assert.equal(button.getAttribute('type'), 'button');
+    assert.match(getElementText(button), /显示更多照片/);
+    assert.match(getElementText(button), new RegExp(`还剩\\s*${initialRemaining}\\s*张`));
+    assert.equal(document.body.querySelectorAll('[data-void-gallery-more]').length, 1);
+    assert.ok(initialRemaining > 0);
+
+    button.click();
+
+    const nextVisibleRows = getVisibleRows(root);
+    const revealedHeight = getWallHeight(nextVisibleRows) - initialVisibleHeight;
+    const nextRemaining = getHiddenPhotoCount(root);
+    assert.ok(nextVisibleRows.length > initialVisibleRows.length);
+    assert.ok(Math.abs(revealedHeight - 600 * 2) <= 266);
+    assert.ok(nextRemaining < initialRemaining);
+    assert.equal(
+        root.querySelectorAll('figure[data-void-image-item]').some((figure) => figure.hidden),
+        false
+    );
+    assert.match(getElementText(button), new RegExp(`还剩\\s*${nextRemaining}\\s*张`));
+
+    while (document.body.querySelector('[data-void-gallery-more]')) {
+        document.body.querySelector('[data-void-gallery-more]').click();
+    }
+    assert.equal(getHiddenPhotoCount(root), 0);
+});
+
+test('keyboard load-more activation focuses the first newly revealed photo', () => {
+    const root = createPanoramicGallery(24);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+    context.VOID_Gallery.init();
+    const button = document.body.querySelector('[data-void-gallery-more]');
+    const firstNewRow = root.querySelectorAll('.void-gallery-row')[getVisibleRows(root).length];
+    const firstNewLink = firstNewRow.querySelector('a[data-void-image-zoom]');
+    document.activeElement = button;
+
+    button.dispatch('click', { detail: 0 });
+
+    assert.equal(firstNewRow.hidden, false);
+    assert.equal(document.activeElement, button);
+    assert.equal(window.timers.size, 1);
+    window.flushTimers();
+    assert.equal(document.activeElement, firstNewLink);
+    assert.equal(firstNewLink.focusCalls.length, 1);
+});
+
+test('pointer load-more activation does not force focus into newly revealed photos', () => {
+    const root = createPanoramicGallery(24);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+    context.VOID_Gallery.init();
+    const button = document.body.querySelector('[data-void-gallery-more]');
+    const firstNewRow = root.querySelectorAll('.void-gallery-row')[getVisibleRows(root).length];
+    const firstNewLink = firstNewRow.querySelector('a[data-void-image-zoom]');
+    document.activeElement = button;
+
+    button.dispatch('click', { detail: 1 });
+    window.flushTimers();
+
+    assert.equal(firstNewRow.hidden, false);
+    assert.equal(document.activeElement, button);
+    assert.equal(firstNewLink.focusCalls.length, 0);
+});
+
+test('relayout keeps the revealed photo high-water mark', () => {
+    const root = createPanoramicGallery(24);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+    context.VOID_Gallery.init();
+    document.body.querySelector('[data-void-gallery-more]').click();
+    const visibleBeforeResize = root.querySelectorAll('.void-gallery-row').reduce((count, row) => {
+        return count + (row.hidden ? 0 : row.querySelectorAll('figure[data-void-image-item]').length);
+    }, 0);
+    const set = root.querySelector('[data-void-gallery-set]');
+    root.clientWidth = 900;
+    set.clientWidth = 900;
+
+    FakeResizeObserver.instances[0].callback([{ contentRect: { width: 900 } }]);
+    window.flushAnimationFrames();
+
+    const visibleAfterResize = root.querySelectorAll('.void-gallery-row').reduce((count, row) => {
+        return count + (row.hidden ? 0 : row.querySelectorAll('figure[data-void-image-item]').length);
+    }, 0);
+    assert.ok(visibleAfterResize >= visibleBeforeResize);
+});
+
+test('viewport-height changes reveal to the new budget without hiding prior rows', () => {
+    const root = createPanoramicGallery(24);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 400;
+    document.documentElement.clientHeight = 400;
+    context.VOID_Gallery.init();
+    const visibleAtSmallHeight = getVisibleRows(root).length;
+
+    window.innerHeight = 900;
+    document.documentElement.clientHeight = 900;
+    window.dispatch('resize');
+    window.flushAnimationFrames();
+
+    const visibleAtLargeHeight = getVisibleRows(root).length;
+    assert.ok(visibleAtLargeHeight > visibleAtSmallHeight);
+    assert.ok(document.body.querySelector('[data-void-gallery-more]'));
+
+    window.innerHeight = 1600;
+    document.documentElement.clientHeight = 1600;
+    window.dispatch('resize');
+    window.flushAnimationFrames();
+
+    assert.equal(getVisibleRows(root).length, root.querySelectorAll('.void-gallery-row').length);
+    assert.equal(document.body.querySelector('[data-void-gallery-more]'), null);
+});
+
+test('component visibility never exposes author-hidden lead content', () => {
+    const root = new FakeElement('article');
+    for (let index = 0; index < 7; index++) {
+        root.appendChild(createImageFigure(null, { width: 4000, height: 1000 }).figure);
+    }
+    const heading = new FakeElement('h2');
+    const authorHiddenNote = new FakeElement('p');
+    authorHiddenNote.hidden = true;
+    root.appendChild(heading);
+    root.appendChild(authorHiddenNote);
+    for (let index = 0; index < 10; index++) {
+        root.appendChild(createImageFigure(null, { width: 4000, height: 1000 }).figure);
+    }
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+
+    context.VOID_Gallery.init();
+    assert.equal(heading.hidden, true);
+    assert.equal(authorHiddenNote.hidden, true);
+
+    context.VOID_Gallery.destroy();
+    assert.equal(heading.hidden, false);
+    assert.equal(authorHiddenNote.hidden, true);
+});
+
+test('PJAX suspension preserves the current wall until replacement or reinit', () => {
+    const root = createPanoramicGallery(11);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+    context.VOID_Gallery.init();
+    const hiddenBefore = getHiddenPhotoCount(root);
+    const button = document.body.querySelector('[data-void-gallery-more]');
+
+    context.VOID_Gallery.suspend();
+
+    assert.equal(getHiddenPhotoCount(root), hiddenBefore);
+    assert.equal(document.body.querySelector('[data-void-gallery-more]'), button);
+    assert.equal(button.hasAttribute('disabled'), true);
+    assert.equal(button.getAttribute('aria-busy'), 'true');
+    assert.equal(button.listenerCount('click'), 0);
+
+    context.VOID_Gallery.init();
+    assert.equal(document.body.querySelectorAll('[data-void-gallery-more]').length, 1);
+    assert.equal(document.body.querySelector('[data-void-gallery-more]').hasAttribute('disabled'), false);
+});
+
+test('repeated init does not duplicate controls and destroy restores hidden rows', () => {
+    const root = createPanoramicGallery(11);
+    const { context, document, window } = loadGalleryEnvironment(root);
+    window.innerHeight = 600;
+    document.documentElement.clientHeight = 600;
+
+    context.VOID_Gallery.init();
+    assert.equal(document.body.querySelectorAll('[data-void-gallery-more]').length, 1);
+    assert.ok(root.querySelectorAll('[hidden]').length > 0);
+    context.VOID_Gallery.init();
+
+    assert.equal(document.body.querySelectorAll('[data-void-gallery-more]').length, 1);
+    assert.equal(document.body.querySelector('[data-void-gallery-more]').listenerCount('click'), 1);
+    context.VOID_Gallery.destroy();
+
+    assert.equal(document.body.querySelectorAll('[data-void-gallery-more]').length, 0);
+    assert.equal(root.querySelectorAll('[hidden]').length, 0);
+});
+
+test('loads for images with semantic dimensions do not schedule a redundant relayout', () => {
+    const root = new FakeElement('article');
+    const source = createImageFigure(null, {
+        complete: false,
+        height: 1000,
+        width: 2000
+    });
+    root.appendChild(source.figure);
+    const { context, window } = loadGalleryEnvironment(root);
+
+    context.VOID_Gallery.init();
+    source.image.complete = true;
+    source.image.naturalWidth = 2000;
+    source.image.naturalHeight = 1000;
+    root.dispatch('load', { target: source.image });
+    root.dispatch('load', { target: source.image });
+
+    assert.equal(window.animationFrames.size, 0);
+});
+
+test('loads without semantic dimensions still schedule one relayout without writing dimensions', () => {
     const root = new FakeElement('article');
     const source = createImageFigure(null, { complete: false });
     root.appendChild(source.figure);
@@ -622,6 +999,7 @@ test('gallery sources use the current image contract without Fancybox fallbacks'
     assert.match(style, /--void-gallery-gap:\s*16px;/);
     assert.match(style, /max-width:\s*959px[\s\S]*--void-gallery-gap:\s*14px;/);
     assert.match(style, /&\.is-last\s*\{\s*justify-content:\s*center;/);
+    assert.match(style, /\.void-gallery \[hidden\]\s*\{\s*display:\s*none!important;/);
     assert.match(style, /@media \(hover:\s*none\)[\s\S]*figcaption\s*\{[^}]*opacity:\s*1;/);
     assert.match(
         style,
@@ -648,7 +1026,7 @@ test('gallery sources use the current image contract without Fancybox fallbacks'
     );
     assert.match(
         script,
-        /VOID_ImageZoom\.destroy\(\);\s*VOID_Gallery\.destroy\(\);\s*VOID_PhotoSets\.destroy\(\);/
+        /VOID_ImageZoom\.destroy\(\);\s*VOID_Gallery\.suspend\(\);\s*VOID_PhotoSets\.destroy\(\);/
     );
     assert.doesNotMatch(
         gallerySource,
