@@ -4,6 +4,11 @@ body.void-dialog-open {
     overflow: hidden;
 }
 
+html.void-image-zoom-active {
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
 .void-image-link[data-void-image-zoom] {
     cursor: zoom-in;
 
@@ -22,100 +27,100 @@ body.void-dialog-open {
     visibility: hidden;
 }
 
-dialog.void-image-zoom {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    max-width: none;
-    height: 100vh;
-    height: 100dvh;
-    max-height: none;
-    margin: 0;
+.void-image-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
     padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
         max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
-    border: 0;
-    color: $textColor;
-    background: rgba(250, 250, 250, 0.96);
-    overflow: hidden;
+    background: $bgColor;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
     cursor: zoom-out;
+    touch-action: pan-y pinch-zoom;
+    transition: opacity 300ms $animationTimingFunc;
+    will-change: opacity;
 
-    &[open] {
-        display: flex;
+    &.is-closing,
+    &.is-visible {
+        visibility: visible;
+        pointer-events: auto;
     }
 
-    &::backdrop {
-        background: transparent;
+    &.is-visible {
+        opacity: 1;
     }
 
     .theme-dark & {
-        color: $td-textColor-light;
-        background: rgba(10, 10, 10, 0.96);
+        background: $td-bgColor;
     }
+}
+
+.void-image-zoom-stage {
+    position: absolute;
+    z-index: 4001;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-out;
+    touch-action: pan-y pinch-zoom;
+    transform-origin: center;
+    transition: transform 300ms $animationTimingFunc, opacity 300ms $animationTimingFunc;
+    will-change: transform, opacity;
+
+    &.is-preparing {
+        transition: none;
+    }
+}
+
+.void-image-zoom-overlay.is-input-locked,
+.void-image-zoom-stage.is-input-locked {
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+.void-image-zoom__button,
+.void-reward-dialog__image-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    appearance: none;
+    cursor: zoom-out;
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible >img {
+        outline: 2px solid $highlightColor;
+        outline-offset: 3px;
+    }
+}
+
+.void-image-zoom__button {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    touch-action: pan-y pinch-zoom;
 }
 
 .void-image-zoom__image {
     display: block;
-    width: auto;
-    max-width: 100%;
-    height: auto;
-    max-height: 100%;
-    margin: auto;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     cursor: zoom-out;
-    transform-origin: center;
-    will-change: transform, opacity;
-}
-
-.void-dialog-close {
-    position: absolute;
-    top: max(12px, env(safe-area-inset-top));
-    right: max(12px, env(safe-area-inset-right));
-    z-index: 3;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 50%;
-    color: $textColor;
-    background: rgba(255, 255, 255, 0.88);
-    cursor: pointer;
-
-    &::before,
-    &::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 20px;
-        height: 2px;
-        border-radius: 1px;
-        background: currentColor;
-        transform: translate(-50%, -50%) rotate(45deg);
-    }
-
-    &::after {
-        transform: translate(-50%, -50%) rotate(-45deg);
-    }
-
-    &:hover {
-        background: #fff;
-    }
-
-    &:focus-visible {
-        outline: 2px solid $highlightColor;
-        outline-offset: 2px;
-    }
-
-    .theme-dark & {
-        border-color: rgba(255, 255, 255, 0.16);
-        color: $td-textColor-light;
-        background: rgba(26, 26, 26, 0.88);
-
-        &:hover {
-            background: $td-bgColor-light;
-        }
-    }
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 dialog.void-reward-dialog {
@@ -158,34 +163,39 @@ dialog.void-reward-dialog {
 
 .void-reward-dialog__content {
     position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 44px minmax(0, 1fr);
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     min-height: 180px;
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
     padding: 16px;
     overflow: auto;
 
-    >.void-dialog-close {
-        position: relative;
-        top: auto;
-        right: auto;
-        grid-row: 1;
-        justify-self: end;
+    >.void-reward-dialog__image-button {
+        width: auto;
+        height: auto;
+        max-height: calc(100vh - 64px);
+        max-height: calc(100dvh - 64px);
+
+        >img {
+            display: block;
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            max-height: calc(100vh - 64px);
+            max-height: calc(100dvh - 64px);
+            object-fit: contain;
+        }
     }
 
     >img {
         display: block;
-        grid-row: 2;
         width: auto;
         max-width: 100%;
         height: auto;
-        max-height: calc(100vh - 116px);
-        max-height: calc(100dvh - 116px);
+        max-height: calc(100vh - 64px);
+        max-height: calc(100dvh - 64px);
         margin: auto;
         object-fit: contain;
     }
@@ -212,7 +222,7 @@ dialog.void-reward-dialog {
 }
 
 @media screen and (max-width: 600px) {
-    dialog.void-image-zoom {
+    .void-image-zoom-overlay {
         padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
             max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     }
@@ -228,17 +238,18 @@ dialog.void-reward-dialog {
         max-height: calc(100dvh - 24px);
         padding: 12px;
 
+        >.void-reward-dialog__image-button,
+        >.void-reward-dialog__image-button >img,
         >img {
-            max-height: calc(100vh - 100px);
-            max-height: calc(100dvh - 100px);
+            max-height: calc(100vh - 48px);
+            max-height: calc(100dvh - 48px);
         }
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .void-image-zoom__image,
-    dialog.void-image-zoom,
-    .void-dialog-close,
+    .void-image-zoom-overlay,
+    .void-image-zoom-stage,
     dialog.void-reward-dialog,
     dialog.void-reward-dialog::backdrop {
         animation: none!important;

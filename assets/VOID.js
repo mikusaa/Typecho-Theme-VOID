@@ -629,9 +629,33 @@ var VOID_PhotoSets = {
             suppressClickUntil: 0
         };
 
+        record.resetPointer = function (releaseCapture) {
+            var pointerId = record.pointerId;
+            var shouldRelease = releaseCapture && record.captured
+                && typeof set.releasePointerCapture === 'function' && pointerId !== null;
+
+            record.active = false;
+            record.dragging = false;
+            record.captured = false;
+            record.pointerId = null;
+            set.classList.remove('is-dragging');
+
+            if (shouldRelease) {
+                try {
+                    set.releasePointerCapture(pointerId);
+                } catch (error) {
+                    // Pointer capture may already have been released by the browser.
+                }
+            }
+        };
+
         record.onPointerDown = function (event) {
             if ((event.pointerType && event.pointerType !== 'mouse') || event.button !== 0) {
                 return;
+            }
+
+            if (record.active) {
+                record.resetPointer(true);
             }
 
             record.active = true;
@@ -671,28 +695,47 @@ var VOID_PhotoSets = {
             event.preventDefault();
         };
 
-        record.finishPointer = function (event) {
+        record.onPointerUp = function (event) {
+            var wasDragging;
+
             if (!record.active || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
                 return;
             }
 
-            if (record.dragging) {
+            wasDragging = record.dragging;
+            record.resetPointer(true);
+
+            if (wasDragging) {
                 record.suppressClickUntil = Date.now() + 400;
             }
+        };
 
-            if (record.captured && typeof set.releasePointerCapture === 'function' && record.pointerId !== null) {
-                try {
-                    set.releasePointerCapture(record.pointerId);
-                } catch (error) {
-                    record.captured = false;
-                }
+        record.onPointerCancel = function (event) {
+            if (!record.active || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
+                return;
             }
 
-            record.active = false;
-            record.dragging = false;
-            record.captured = false;
-            record.pointerId = null;
-            set.classList.remove('is-dragging');
+            record.suppressClickUntil = 0;
+            record.resetPointer(true);
+        };
+
+        record.onPointerLeave = function (event) {
+            if (!record.active || record.captured
+                || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
+                return;
+            }
+
+            record.suppressClickUntil = 0;
+            record.resetPointer(false);
+        };
+
+        record.onLostPointerCapture = function (event) {
+            if (!record.active || (record.pointerId !== null && event.pointerId !== record.pointerId)) {
+                return;
+            }
+
+            record.suppressClickUntil = 0;
+            record.resetPointer(false);
         };
 
         record.onClick = function (event) {
@@ -722,8 +765,10 @@ var VOID_PhotoSets = {
 
         set.addEventListener('pointerdown', record.onPointerDown);
         set.addEventListener('pointermove', record.onPointerMove);
-        set.addEventListener('pointerup', record.finishPointer);
-        set.addEventListener('pointercancel', record.finishPointer);
+        set.addEventListener('pointerup', record.onPointerUp);
+        set.addEventListener('pointercancel', record.onPointerCancel);
+        set.addEventListener('pointerleave', record.onPointerLeave);
+        set.addEventListener('lostpointercapture', record.onLostPointerCapture);
         set.addEventListener('click', record.onClick, true);
         set.addEventListener('focusin', record.onFocusIn);
         set.addEventListener('dragstart', record.onDragStart);
@@ -766,14 +811,16 @@ var VOID_PhotoSets = {
 
         for (index = 0; index < this.setBindings.length; index++) {
             record = this.setBindings[index];
+            record.resetPointer(true);
             record.set.removeEventListener('pointerdown', record.onPointerDown);
             record.set.removeEventListener('pointermove', record.onPointerMove);
-            record.set.removeEventListener('pointerup', record.finishPointer);
-            record.set.removeEventListener('pointercancel', record.finishPointer);
+            record.set.removeEventListener('pointerup', record.onPointerUp);
+            record.set.removeEventListener('pointercancel', record.onPointerCancel);
+            record.set.removeEventListener('pointerleave', record.onPointerLeave);
+            record.set.removeEventListener('lostpointercapture', record.onLostPointerCapture);
             record.set.removeEventListener('click', record.onClick, true);
             record.set.removeEventListener('focusin', record.onFocusIn);
             record.set.removeEventListener('dragstart', record.onDragStart);
-            record.set.classList.remove('is-dragging');
         }
 
         this.imageBindings = [];
@@ -793,17 +840,38 @@ var VOID_PhotoSets = {
 
 var VOID_ImageZoom = {
     root: null,
-    dialog: null,
+    overlay: null,
+    stage: null,
+    previewButton: null,
     previewImage: null,
-    closeButton: null,
     sourceLink: null,
     sourceImage: null,
     isOpen: false,
+    isClosing: false,
+    scrollArmed: false,
+    inputLocked: false,
     generation: 0,
-    animation: null,
-    animationFrame: null,
-    closeTimer: null,
+    transitionFrame: null,
+    transitionTimer: null,
+    transitionPhase: null,
+    transitionGeneration: 0,
+    transitionProperty: 'transform',
+    transitionReady: false,
+    scrollCloseTimer: null,
+    inputFrame: null,
+    inputResetTimer: null,
+    inputIntent: 0,
+    inputPending: 0,
+    inputStartScrollY: 0,
+    scrollStart: 0,
+    touchY: null,
+    openTransform: '',
+    viewportWidth: 0,
+    restoreFocusOnClose: true,
+    fallbackLink: null,
     handlers: null,
+    scrollThreshold: 40,
+    transitionFallback: 360,
 
     isReducedMotion: function () {
         return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -821,6 +889,10 @@ var VOID_ImageZoom = {
 
     getSourceImage: function (link) {
         return link && link.querySelector ? link.querySelector('img[data-void-image-content]') : null;
+    },
+
+    getPreviewSource: function (image) {
+        return (image && (image.currentSrc || image.src || image.getAttribute('src'))) || '';
     },
 
     canActivate: function (link, event) {
@@ -849,18 +921,25 @@ var VOID_ImageZoom = {
         }
 
         image = this.getSourceImage(link);
-        return !!(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+        return !!(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
+            && this.getPreviewSource(image));
     },
 
-    calculateTransition: function (sourceRect, targetRect) {
+    isValidRect: function (rect) {
+        return !!(rect && isFinite(rect.left) && isFinite(rect.top)
+            && isFinite(rect.width) && isFinite(rect.height)
+            && rect.width > 0 && rect.height > 0);
+    },
+
+    calculateTransform: function (sourceRect, targetRect) {
         var sourceCenterX = sourceRect.left + sourceRect.width / 2;
         var sourceCenterY = sourceRect.top + sourceRect.height / 2;
         var targetCenterX = targetRect.left + targetRect.width / 2;
         var targetCenterY = targetRect.top + targetRect.height / 2;
-        var scaleX = targetRect.width > 0 ? sourceRect.width / targetRect.width : 1;
-        var scaleY = targetRect.height > 0 ? sourceRect.height / targetRect.height : 1;
-        var translateX = sourceCenterX - targetCenterX;
-        var translateY = sourceCenterY - targetCenterY;
+        var scaleX = sourceRect.width > 0 ? targetRect.width / sourceRect.width : 1;
+        var scaleY = sourceRect.height > 0 ? targetRect.height / sourceRect.height : 1;
+        var translateX = targetCenterX - sourceCenterX;
+        var translateY = targetCenterY - sourceCenterY;
 
         return {
             scaleX: scaleX,
@@ -872,180 +951,638 @@ var VOID_ImageZoom = {
         };
     },
 
-    calculateFit: function (width, height, viewportWidth, viewportHeight, gutter) {
-        var availableWidth = Math.max(0, viewportWidth - gutter * 2);
-        var availableHeight = Math.max(0, viewportHeight - gutter * 2);
-        var scale = Math.min(availableWidth / width, availableHeight / height, 1);
+    calculateFit: function (width, height, viewportWidth, viewportHeight, padding) {
+        var insets = typeof padding === 'number'
+            ? { top: padding, right: padding, bottom: padding, left: padding }
+            : padding;
+        var availableWidth;
+        var availableHeight;
+        var scale;
+        var fittedWidth;
+        var fittedHeight;
+
+        insets = insets || { top: 0, right: 0, bottom: 0, left: 0 };
+        availableWidth = Math.max(0, viewportWidth - insets.left - insets.right);
+        availableHeight = Math.max(0, viewportHeight - insets.top - insets.bottom);
+        scale = Math.min(availableWidth / width, availableHeight / height, 1);
+        fittedWidth = width * scale;
+        fittedHeight = height * scale;
 
         return {
-            width: width * scale,
-            height: height * scale,
-            left: (viewportWidth - width * scale) / 2,
-            top: (viewportHeight - height * scale) / 2
+            width: fittedWidth,
+            height: fittedHeight,
+            left: insets.left + (availableWidth - fittedWidth) / 2,
+            top: insets.top + (availableHeight - fittedHeight) / 2
         };
     },
 
-    cancelAnimation: function () {
-        if (this.animationFrame !== null && window.cancelAnimationFrame) {
-            window.cancelAnimationFrame(this.animationFrame);
+    getScrollY: function () {
+        if (typeof window.scrollY === 'number') {
+            return window.scrollY;
         }
-        this.animationFrame = null;
-
-        if (this.animation && typeof this.animation.cancel === 'function') {
-            this.animation.cancel();
-        }
-        this.animation = null;
-
-        if (this.closeTimer !== null) {
-            window.clearTimeout(this.closeTimer);
-            this.closeTimer = null;
-        }
+        return typeof window.pageYOffset === 'number' ? window.pageYOffset : 0;
     },
 
-    animateOpen: function () {
-        var self = this;
-        var generation = this.generation;
-        var sourceRect = this.sourceImage.getBoundingClientRect();
+    getScrollX: function () {
+        if (typeof window.scrollX === 'number') {
+            return window.scrollX;
+        }
+        return typeof window.pageXOffset === 'number' ? window.pageXOffset : 0;
+    },
 
-        if (this.isReducedMotion() || typeof this.previewImage.animate !== 'function') {
+    getViewportWidth: function () {
+        if (typeof window.innerWidth === 'number') {
+            return window.innerWidth;
+        }
+        return document.documentElement ? document.documentElement.clientWidth : 0;
+    },
+
+    getViewportHeight: function () {
+        if (typeof window.innerHeight === 'number') {
+            return window.innerHeight;
+        }
+        return document.documentElement ? document.documentElement.clientHeight : 0;
+    },
+
+    getOverlayPadding: function () {
+        var style = window.getComputedStyle && this.overlay ? window.getComputedStyle(this.overlay) : null;
+        var readInset = function (name, fallback) {
+            var value = style ? parseFloat(style[name]) : NaN;
+            return isFinite(value) ? value : fallback;
+        };
+
+        return {
+            top: readInset('paddingTop', 24),
+            right: readInset('paddingRight', 24),
+            bottom: readInset('paddingBottom', 24),
+            left: readInset('paddingLeft', 24)
+        };
+    },
+
+    rectToDocument: function (rect) {
+        return {
+            left: rect.left + this.getScrollX(),
+            top: rect.top + this.getScrollY(),
+            width: rect.width,
+            height: rect.height
+        };
+    },
+
+    setStageBase: function (rect) {
+        this.stage.style.left = rect.left + 'px';
+        this.stage.style.top = rect.top + 'px';
+        this.stage.style.width = rect.width + 'px';
+        this.stage.style.height = rect.height + 'px';
+    },
+
+    clearStagePresentation: function () {
+        if (!this.stage) {
             return;
         }
 
-        this.animationFrame = window.requestAnimationFrame(function () {
-            var targetRect;
-            var transition;
+        this.stage.style.left = '';
+        this.stage.style.top = '';
+        this.stage.style.width = '';
+        this.stage.style.height = '';
+        this.stage.style.transform = '';
+        this.stage.style.opacity = '';
+        this.stage.classList.remove('is-preparing');
+        this.stage.classList.remove('is-closing');
+        this.stage.classList.remove('is-input-locked');
+    },
 
-            self.animationFrame = null;
-            if (!self.isOpen || generation !== self.generation) {
+    forceStageLayout: function () {
+        if (this.stage && this.stage.getBoundingClientRect) {
+            this.stage.getBoundingClientRect();
+        }
+    },
+
+    focusWithoutScroll: function (element) {
+        if (!element || typeof element.focus !== 'function') {
+            return;
+        }
+
+        try {
+            element.focus({ preventScroll: true });
+        } catch (error) {
+            element.focus();
+        }
+    },
+
+    restoreScrollPosition: function (scrollX, scrollY) {
+        if (typeof window.scrollTo !== 'function'
+            || (Math.abs(this.getScrollX() - scrollX) <= 0.5 && Math.abs(this.getScrollY() - scrollY) <= 0.5)) {
+            return;
+        }
+
+        try {
+            window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+        } catch (error) {
+            window.scrollTo(scrollX, scrollY);
+        }
+    },
+
+    setRootOverflowClip: function (active) {
+        var root = document.documentElement;
+
+        if (!root || !root.classList) {
+            return;
+        }
+        if (active) {
+            root.classList.add('void-image-zoom-active');
+        } else {
+            root.classList.remove('void-image-zoom-active');
+        }
+    },
+
+    activateFallback: function (link) {
+        if (!link || typeof link.click !== 'function') {
+            return;
+        }
+
+        this.fallbackLink = link;
+        try {
+            link.click();
+        } catch (error) {
+            // The restored real link remains available for a subsequent click.
+        }
+        this.fallbackLink = null;
+    },
+
+    handlePreviewError: function () {
+        var generation = this.generation;
+        var link = this.sourceLink;
+        var canActivateFallback;
+
+        if (!this.isOpen || this.isClosing || !link) {
+            return;
+        }
+
+        canActivateFallback = !!(this.root && this.root.contains && this.root.contains(link));
+        this.finishClose(false, generation);
+        if (canActivateFallback) {
+            this.activateFallback(link);
+        }
+    },
+
+    setInputLock: function (locked) {
+        if (locked === this.inputLocked || !this.handlers) {
+            return;
+        }
+
+        this.inputLocked = locked;
+        if (locked) {
+            window.addEventListener('wheel', this.handlers.blockInput, { passive: false });
+            window.addEventListener('touchmove', this.handlers.blockInput, { passive: false });
+            this.overlay.classList.add('is-input-locked');
+            this.stage.classList.add('is-input-locked');
+        } else {
+            window.removeEventListener('wheel', this.handlers.blockInput, { passive: false });
+            window.removeEventListener('touchmove', this.handlers.blockInput, { passive: false });
+            if (this.overlay) {
+                this.overlay.classList.remove('is-input-locked');
+            }
+            if (this.stage) {
+                this.stage.classList.remove('is-input-locked');
+            }
+        }
+    },
+
+    cancelTransitionWork: function () {
+        if (this.transitionFrame !== null && window.cancelAnimationFrame) {
+            window.cancelAnimationFrame(this.transitionFrame);
+        }
+        this.transitionFrame = null;
+
+        if (this.transitionTimer !== null) {
+            window.clearTimeout(this.transitionTimer);
+            this.transitionTimer = null;
+        }
+
+        this.transitionPhase = null;
+        this.transitionGeneration = 0;
+        this.transitionProperty = 'transform';
+        this.transitionReady = false;
+    },
+
+    clearInputIntent: function () {
+        if (this.inputFrame !== null && window.cancelAnimationFrame) {
+            window.cancelAnimationFrame(this.inputFrame);
+        }
+        this.inputFrame = null;
+        if (this.inputResetTimer !== null) {
+            window.clearTimeout(this.inputResetTimer);
+            this.inputResetTimer = null;
+        }
+
+        this.inputIntent = 0;
+        this.inputPending = 0;
+        this.touchY = null;
+    },
+
+    cancelScrollWork: function () {
+        if (this.scrollCloseTimer !== null) {
+            window.clearTimeout(this.scrollCloseTimer);
+            this.scrollCloseTimer = null;
+        }
+        this.clearInputIntent();
+    },
+
+    cancelAsyncWork: function () {
+        this.cancelTransitionWork();
+        this.cancelScrollWork();
+        this.setInputLock(false);
+    },
+
+    armScrollClose: function (generation) {
+        if (!this.isOpen || this.isClosing || this.scrollArmed || generation !== this.generation) {
+            return;
+        }
+
+        if (this.transitionFrame !== null && window.cancelAnimationFrame) {
+            window.cancelAnimationFrame(this.transitionFrame);
+        }
+        this.transitionFrame = null;
+        if (this.transitionTimer !== null) {
+            window.clearTimeout(this.transitionTimer);
+            this.transitionTimer = null;
+        }
+        this.transitionPhase = null;
+        this.transitionGeneration = 0;
+
+        this.stage.classList.remove('is-preparing');
+        this.stage.style.transform = this.openTransform;
+        this.overlay.classList.remove('is-closing');
+        this.overlay.classList.add('is-visible');
+        this.setInputLock(false);
+
+        this.scrollStart = this.getScrollY();
+        this.inputStartScrollY = this.scrollStart;
+        this.inputIntent = 0;
+        this.inputPending = 0;
+        this.scrollArmed = true;
+    },
+
+    startOpenTransition: function (generation) {
+        var self = this;
+        var start = function () {
+            self.transitionFrame = null;
+            if (!self.isOpen || self.isClosing || generation !== self.generation) {
                 return;
             }
 
-            targetRect = self.previewImage.getBoundingClientRect();
-            if (!(sourceRect.width > 0 && sourceRect.height > 0 && targetRect.width > 0 && targetRect.height > 0)) {
-                return;
-            }
+            self.stage.classList.remove('is-preparing');
+            self.overlay.classList.add('is-visible');
+            self.stage.style.transform = self.openTransform;
+        };
 
-            transition = self.calculateTransition(sourceRect, targetRect);
-            try {
-                self.animation = self.previewImage.animate([
-                    { transform: transition.transform, opacity: 0.35 },
-                    { transform: 'none', opacity: 1 }
-                ], {
-                    duration: 240,
-                    easing: 'cubic-bezier(.25,.46,.45,.94)'
-                });
-            } catch (error) {
-                self.animation = null;
-            }
-        });
+        if (this.isReducedMotion()) {
+            start();
+            this.armScrollClose(generation);
+            return;
+        }
+
+        this.transitionPhase = 'opening';
+        this.transitionGeneration = generation;
+        this.transitionProperty = 'transform';
+        this.transitionTimer = window.setTimeout(function () {
+            self.armScrollClose(generation);
+        }, this.transitionFallback);
+
+        if (window.requestAnimationFrame) {
+            this.transitionFrame = window.requestAnimationFrame(start);
+        } else {
+            start();
+        }
     },
 
     open: function (link) {
         var image = this.getSourceImage(link);
-        var href = link.getAttribute('href');
+        var previewSource = this.getPreviewSource(image);
+        var sourceRect;
+        var sourceDocumentRect;
+        var targetRect;
+        var targetDocumentRect;
+        var generation;
+        var alt;
 
-        if (this.isOpen || !image || !href) {
+        if (this.isOpen || !image || !previewSource) {
             return false;
         }
 
+        sourceRect = image.getBoundingClientRect ? image.getBoundingClientRect() : null;
+        if (!this.isValidRect(sourceRect)) {
+            return false;
+        }
+
+        targetRect = this.calculateFit(
+            image.naturalWidth,
+            image.naturalHeight,
+            this.getViewportWidth(),
+            this.getViewportHeight(),
+            this.getOverlayPadding()
+        );
+        if (!this.isValidRect(targetRect)) {
+            return false;
+        }
+
+        sourceDocumentRect = this.rectToDocument(sourceRect);
+        targetDocumentRect = this.rectToDocument(targetRect);
+        this.cancelAsyncWork();
+        this.generation++;
+        generation = this.generation;
         this.sourceLink = link;
         this.sourceImage = image;
-        this.previewImage.setAttribute('src', href);
-        this.previewImage.setAttribute('alt', image.getAttribute('alt') || '');
-        this.previewImage.setAttribute('width', String(image.naturalWidth));
-        this.previewImage.setAttribute('height', String(image.naturalHeight));
+        this.isOpen = true;
+        this.isClosing = false;
+        this.scrollArmed = false;
+        this.restoreFocusOnClose = true;
+        this.viewportWidth = this.getViewportWidth();
+        this.openTransform = this.calculateTransform(sourceDocumentRect, targetDocumentRect).transform;
+        alt = image.getAttribute('alt') || '';
 
         try {
-            this.dialog.showModal();
+            this.previewImage.setAttribute('src', previewSource);
+            this.previewImage.setAttribute('alt', '');
+            this.previewImage.setAttribute('width', String(image.naturalWidth));
+            this.previewImage.setAttribute('height', String(image.naturalHeight));
+            this.previewButton.setAttribute('aria-label', alt ? '关闭图片预览：' + alt : '关闭图片预览');
+
+            this.clearStagePresentation();
+            this.setStageBase(sourceDocumentRect);
+            this.stage.style.transform = 'none';
+            this.stage.style.opacity = '1';
+            this.stage.classList.add('is-preparing');
+            this.overlay.classList.remove('is-visible');
+            this.overlay.classList.remove('is-closing');
+            this.overlay.hidden = false;
+            this.stage.hidden = false;
+            this.setRootOverflowClip(true);
+            link.classList.add('void-image-zoom-source');
+            this.setInputLock(true);
+            this.focusWithoutScroll(this.previewButton);
+            this.forceStageLayout();
+            this.startOpenTransition(generation);
         } catch (error) {
-            this.previewImage.removeAttribute('src');
-            this.sourceLink = null;
-            this.sourceImage = null;
+            this.finishClose(false, generation);
             return false;
         }
 
-        this.isOpen = true;
-        VOID_DialogScrollLock.lock('image-zoom');
-        image.classList.add('void-image-zoom-source');
-        this.closeButton.focus();
-        this.animateOpen();
         return true;
     },
 
-    finishClose: function (restoreFocus, closeDialog) {
+    finishClose: function (restoreFocus, generation) {
         var sourceLink = this.sourceLink;
-        var sourceImage = this.sourceImage;
+        var scrollX;
+        var scrollY;
 
-        this.cancelAnimation();
-        this.isOpen = false;
-
-        if (closeDialog && this.dialog && this.dialog.open) {
-            try {
-                this.dialog.close();
-            } catch (error) {
-                this.dialog.removeAttribute('open');
-            }
+        if (!this.isOpen || (typeof generation === 'number' && generation !== this.generation)) {
+            return;
         }
 
-        VOID_DialogScrollLock.unlock('image-zoom');
-        if (sourceImage && sourceImage.classList) {
-            sourceImage.classList.remove('void-image-zoom-source');
+        scrollX = this.getScrollX();
+        scrollY = this.getScrollY();
+        this.cancelAsyncWork();
+        this.isOpen = false;
+        this.isClosing = false;
+        this.scrollArmed = false;
+        this.setRootOverflowClip(false);
+
+        if (sourceLink && sourceLink.classList) {
+            sourceLink.classList.remove('void-image-zoom-source');
+        }
+        if (this.overlay) {
+            this.overlay.classList.remove('is-visible');
+            this.overlay.classList.remove('is-closing');
+            this.overlay.classList.remove('is-input-locked');
+            this.overlay.hidden = true;
+        }
+        if (this.stage) {
+            this.clearStagePresentation();
+            this.stage.hidden = true;
         }
         if (this.previewImage) {
             this.previewImage.removeAttribute('src');
             this.previewImage.removeAttribute('width');
             this.previewImage.removeAttribute('height');
         }
+        if (this.previewButton) {
+            this.previewButton.setAttribute('aria-label', '关闭图片预览');
+        }
 
         this.sourceLink = null;
         this.sourceImage = null;
-        if (restoreFocus && sourceLink && typeof sourceLink.focus === 'function') {
-            sourceLink.focus();
+        this.openTransform = '';
+        this.viewportWidth = 0;
+        if (restoreFocus) {
+            this.focusWithoutScroll(sourceLink);
+            this.restoreScrollPosition(scrollX, scrollY);
         }
     },
 
     close: function (immediate, restoreFocus) {
         var self = this;
         var sourceRect;
-        var targetRect;
-        var transition;
+        var stageRect;
+        var sourceDocumentRect;
+        var stageDocumentRect;
+        var canReturnToSource;
+        var generation;
 
-        if (!this.isOpen) {
+        if (!this.isOpen || this.isClosing) {
             return;
         }
 
-        this.cancelAnimation();
-        if (immediate || this.isReducedMotion() || typeof this.previewImage.animate !== 'function'
-            || !this.sourceImage || !this.sourceImage.getBoundingClientRect) {
-            this.finishClose(restoreFocus !== false, true);
+        this.restoreFocusOnClose = restoreFocus !== false;
+        this.isClosing = true;
+        this.scrollArmed = false;
+        this.generation++;
+        generation = this.generation;
+        this.cancelAsyncWork();
+
+        if (immediate || this.isReducedMotion()) {
+            this.finishClose(this.restoreFocusOnClose, generation);
             return;
         }
 
-        sourceRect = this.sourceImage.getBoundingClientRect();
-        targetRect = this.previewImage.getBoundingClientRect();
-        if (!(sourceRect.width > 0 && sourceRect.height > 0 && targetRect.width > 0 && targetRect.height > 0)) {
-            this.finishClose(restoreFocus !== false, true);
-            return;
+        sourceRect = this.sourceImage && this.sourceImage.getBoundingClientRect
+            ? this.sourceImage.getBoundingClientRect() : null;
+        stageRect = this.stage && this.stage.getBoundingClientRect
+            ? this.stage.getBoundingClientRect() : null;
+        canReturnToSource = !!(this.sourceLink && this.sourceImage && this.root
+            && this.root.contains && this.root.contains(this.sourceLink)
+            && this.sourceLink.contains && this.sourceLink.contains(this.sourceImage)
+            && this.isValidRect(sourceRect) && this.isValidRect(stageRect));
+
+        this.transitionPhase = 'closing';
+        this.transitionGeneration = generation;
+        this.transitionProperty = canReturnToSource ? 'transform' : 'opacity';
+        this.stage.classList.add('is-preparing');
+
+        if (canReturnToSource) {
+            sourceDocumentRect = this.rectToDocument(sourceRect);
+            stageDocumentRect = this.rectToDocument(stageRect);
+            this.setStageBase(sourceDocumentRect);
+            this.stage.style.transform = this.calculateTransform(
+                sourceDocumentRect,
+                stageDocumentRect
+            ).transform;
+            this.stage.style.opacity = '1';
+        } else {
+            this.stage.style.opacity = '1';
         }
 
-        transition = this.calculateTransition(sourceRect, targetRect);
-        try {
-            this.animation = this.previewImage.animate([
-                { transform: 'none', opacity: 1 },
-                { transform: transition.transform, opacity: 0.35 }
-            ], {
-                duration: 200,
-                easing: 'cubic-bezier(.25,.46,.45,.94)'
+        this.forceStageLayout();
+        this.stage.classList.remove('is-preparing');
+        this.stage.classList.add('is-closing');
+        this.overlay.classList.remove('is-visible');
+        this.overlay.classList.add('is-closing');
+
+        if (canReturnToSource) {
+            this.stage.style.transform = 'none';
+        } else {
+            this.stage.style.opacity = '0';
+        }
+
+        if (window.requestAnimationFrame) {
+            this.transitionFrame = window.requestAnimationFrame(function () {
+                self.transitionFrame = null;
+                if (self.isOpen && self.isClosing && generation === self.generation
+                    && self.transitionPhase === 'closing') {
+                    self.transitionReady = true;
+                }
             });
-            this.animation.onfinish = function () {
-                self.finishClose(restoreFocus !== false, true);
-            };
-            this.closeTimer = window.setTimeout(function () {
-                self.finishClose(restoreFocus !== false, true);
-            }, 260);
-        } catch (error) {
-            this.finishClose(restoreFocus !== false, true);
+        } else {
+            this.transitionReady = true;
         }
+
+        this.transitionTimer = window.setTimeout(function () {
+            VOID_ImageZoom.finishClose(VOID_ImageZoom.restoreFocusOnClose, generation);
+        }, this.transitionFallback);
+    },
+
+    handleTransitionEnd: function (event) {
+        var phase = this.transitionPhase;
+        var generation = this.transitionGeneration;
+
+        if (!this.isOpen || !event || event.target !== this.stage
+            || (event.propertyName && event.propertyName !== this.transitionProperty)) {
+            return;
+        }
+
+        if (phase === 'opening') {
+            this.armScrollClose(generation);
+        } else if (phase === 'closing' && this.isClosing && this.transitionReady) {
+            this.finishClose(this.restoreFocusOnClose, generation);
+        }
+    },
+
+    requestScrollClose: function () {
+        var self = this;
+        var generation = this.generation;
+
+        if (!this.isOpen || this.isClosing || !this.scrollArmed || this.scrollCloseTimer !== null) {
+            return;
+        }
+
+        this.scrollArmed = false;
+        if (this.isReducedMotion()) {
+            this.close(true, true);
+            return;
+        }
+
+        this.scrollCloseTimer = window.setTimeout(function () {
+            self.scrollCloseTimer = null;
+            if (self.isOpen && !self.isClosing && generation === self.generation) {
+                self.close(false, true);
+            }
+        }, 150);
+    },
+
+    evaluateScroll: function () {
+        if (!this.isOpen || this.isClosing || !this.scrollArmed) {
+            return;
+        }
+
+        if (Math.abs((this.getScrollY() - this.scrollStart) + this.inputIntent) >= this.scrollThreshold) {
+            this.requestScrollClose();
+        }
+    },
+
+    resetInputIntentSoon: function () {
+        var self = this;
+
+        if (!this.isOpen || this.isClosing) {
+            return;
+        }
+
+        if (this.inputResetTimer !== null) {
+            window.clearTimeout(this.inputResetTimer);
+        }
+        this.inputResetTimer = window.setTimeout(function () {
+            self.inputResetTimer = null;
+            self.inputIntent = 0;
+            self.inputPending = 0;
+        }, 220);
+    },
+
+    recordInputIntent: function (delta, resetSoon) {
+        var self = this;
+        var evaluate = function () {
+            var currentScrollY = self.getScrollY();
+            var actualDelta = currentScrollY - self.inputStartScrollY;
+            var unconsumedInput = self.inputPending;
+
+            self.inputFrame = null;
+            if (!self.isOpen || self.isClosing || !self.scrollArmed) {
+                self.inputPending = 0;
+                return;
+            }
+
+            if (unconsumedInput * actualDelta > 0) {
+                if (Math.abs(actualDelta) >= Math.abs(unconsumedInput)) {
+                    unconsumedInput = 0;
+                } else {
+                    unconsumedInput -= actualDelta;
+                }
+            }
+            self.inputIntent += unconsumedInput;
+            self.inputPending = 0;
+            self.evaluateScroll();
+        };
+
+        if (!this.isOpen || this.isClosing || !this.scrollArmed || !isFinite(delta) || delta === 0) {
+            return;
+        }
+
+        if (this.inputFrame === null) {
+            this.inputStartScrollY = this.getScrollY();
+        }
+        this.inputPending += delta;
+        if (resetSoon) {
+            this.resetInputIntentSoon();
+        }
+        if (this.inputFrame !== null) {
+            return;
+        }
+
+        if (window.requestAnimationFrame) {
+            this.inputFrame = window.requestAnimationFrame(evaluate);
+        } else {
+            evaluate();
+        }
+    },
+
+    isOpeningScrollKey: function (event) {
+        var key = event.key;
+        if ((key === ' ' || key === 'Spacebar' || key === 'Enter')
+            && event.target === this.previewButton) {
+            return false;
+        }
+
+        return key === 'ArrowUp' || key === 'ArrowDown' || key === 'PageUp'
+            || key === 'PageDown' || key === 'Home' || key === 'End'
+            || key === ' ' || key === 'Spacebar';
     },
 
     init: function (root) {
@@ -1055,113 +1592,237 @@ var VOID_ImageZoom = {
         this.generation++;
         this.root = root || document.getElementById('pjax-container') || document;
         if (!this.root || typeof this.root.querySelector !== 'function'
-            || !this.root.querySelector('a[data-void-image-zoom]')) {
+            || !this.root.querySelector('a[data-void-image-zoom]') || !document.body) {
             return;
         }
 
-        this.dialog = document.createElement('dialog');
-        if (typeof this.dialog.showModal !== 'function') {
-            this.dialog = null;
-            return;
-        }
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'void-image-zoom-overlay';
+        this.overlay.setAttribute('aria-hidden', 'true');
+        this.overlay.hidden = true;
 
-        this.dialog.className = 'void-image-zoom';
-        this.dialog.setAttribute('aria-label', '图片放大预览');
+        this.stage = document.createElement('div');
+        this.stage.className = 'void-image-zoom-stage';
+        this.stage.setAttribute('role', 'dialog');
+        this.stage.setAttribute('aria-modal', 'true');
+        this.stage.setAttribute('aria-label', '图片放大预览');
+        this.stage.hidden = true;
+
+        this.previewButton = document.createElement('button');
+        this.previewButton.className = 'void-image-zoom__button';
+        this.previewButton.setAttribute('type', 'button');
+        this.previewButton.setAttribute('aria-label', '关闭图片预览');
+
         this.previewImage = document.createElement('img');
         this.previewImage.className = 'void-image-zoom__image';
+        this.previewImage.setAttribute('alt', '');
         this.previewImage.setAttribute('draggable', 'false');
-        this.closeButton = document.createElement('button');
-        this.closeButton.className = 'void-dialog-close';
-        this.closeButton.setAttribute('type', 'button');
-        this.closeButton.setAttribute('aria-label', '关闭图片预览');
-        this.closeButton.setAttribute('title', '关闭');
-        this.dialog.appendChild(this.previewImage);
-        this.dialog.appendChild(this.closeButton);
-        document.body.appendChild(this.dialog);
+        this.previewButton.appendChild(this.previewImage);
+        this.stage.appendChild(this.previewButton);
+        document.body.appendChild(this.overlay);
+        document.body.appendChild(this.stage);
 
         this.handlers = {
             documentClick: function (event) {
                 var link = self.findLink(event.target);
+                if (link && link === self.fallbackLink) {
+                    return;
+                }
                 if (self.canActivate(link, event) && self.open(link)) {
                     event.preventDefault();
                 }
             },
-            dialogClick: function (event) {
-                if (event.target === self.dialog || event.target === self.previewImage
-                    || event.target === self.closeButton) {
+            overlayClick: function (event) {
+                if (event.target === self.overlay) {
                     self.close(false, true);
                 }
             },
-            cancel: function (event) {
-                event.preventDefault();
+            previewClick: function () {
                 self.close(false, true);
             },
-            close: function () {
-                if (self.isOpen) {
-                    self.finishClose(true, false);
+            keydown: function (event) {
+                if (!self.isOpen) {
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    self.close(false, true);
+                    return;
+                }
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    self.focusWithoutScroll(self.previewButton);
+                    return;
+                }
+                if (self.inputLocked && self.isOpeningScrollKey(event)) {
+                    event.preventDefault();
                 }
             },
-            viewportChange: function () {
+            transitionEnd: function (event) {
+                self.handleTransitionEnd(event);
+            },
+            previewError: function () {
+                self.handlePreviewError();
+            },
+            resize: function () {
+                if (self.isOpen && Math.abs(self.getViewportWidth() - self.viewportWidth) > 1) {
+                    self.close(true, true);
+                }
+            },
+            orientationChange: function () {
                 self.close(true, true);
+            },
+            scroll: function () {
+                self.evaluateScroll();
+            },
+            wheel: function (event) {
+                var delta = event.deltaY || 0;
+                if (event.ctrlKey) {
+                    self.clearInputIntent();
+                    return;
+                }
+                if (event.deltaMode === 1) {
+                    delta *= 16;
+                } else if (event.deltaMode === 2) {
+                    delta *= window.innerHeight || 800;
+                }
+                self.recordInputIntent(delta, true);
+            },
+            touchStart: function (event) {
+                var touch = event.touches && event.touches[0];
+                if (!self.isOpen || self.isClosing || !self.scrollArmed) {
+                    return;
+                }
+                self.clearInputIntent();
+                if (!event.touches || event.touches.length !== 1) {
+                    return;
+                }
+                self.touchY = touch ? touch.clientY : null;
+            },
+            touchMove: function (event) {
+                var touch = event.touches && event.touches[0];
+                var nextY;
+                if (!event.touches || event.touches.length !== 1 || !touch) {
+                    self.clearInputIntent();
+                    return;
+                }
+                nextY = touch.clientY;
+                if (self.touchY !== null) {
+                    self.recordInputIntent(self.touchY - nextY, false);
+                }
+                self.touchY = nextY;
+            },
+            touchEnd: function () {
+                self.touchY = null;
+                self.resetInputIntentSoon();
+            },
+            touchCancel: function () {
+                self.clearInputIntent();
+            },
+            blockInput: function (event) {
+                if (self.isOpen && self.inputLocked && event.preventDefault) {
+                    event.preventDefault();
+                }
             }
         };
 
         document.addEventListener('click', this.handlers.documentClick);
-        this.dialog.addEventListener('click', this.handlers.dialogClick);
-        this.dialog.addEventListener('cancel', this.handlers.cancel);
-        this.dialog.addEventListener('close', this.handlers.close);
-        window.addEventListener('resize', this.handlers.viewportChange);
-        window.addEventListener('orientationchange', this.handlers.viewportChange);
+        document.addEventListener('keydown', this.handlers.keydown);
+        this.overlay.addEventListener('click', this.handlers.overlayClick);
+        this.previewButton.addEventListener('click', this.handlers.previewClick);
+        this.previewImage.addEventListener('error', this.handlers.previewError);
+        this.stage.addEventListener('transitionend', this.handlers.transitionEnd);
+        window.addEventListener('scroll', this.handlers.scroll, { passive: true });
+        window.addEventListener('wheel', this.handlers.wheel, { passive: true });
+        window.addEventListener('touchstart', this.handlers.touchStart, { passive: true });
+        window.addEventListener('touchmove', this.handlers.touchMove, { passive: true });
+        window.addEventListener('touchend', this.handlers.touchEnd, { passive: true });
+        window.addEventListener('touchcancel', this.handlers.touchCancel, { passive: true });
+        window.addEventListener('resize', this.handlers.resize);
+        window.addEventListener('orientationchange', this.handlers.orientationChange);
     },
 
     destroy: function () {
         this.generation++;
         if (this.isOpen) {
-            this.finishClose(false, true);
+            this.finishClose(false, this.generation);
         } else {
-            this.cancelAnimation();
-            VOID_DialogScrollLock.unlock('image-zoom');
+            this.cancelAsyncWork();
+            this.setRootOverflowClip(false);
+            if (this.sourceLink && this.sourceLink.classList) {
+                this.sourceLink.classList.remove('void-image-zoom-source');
+            }
         }
 
         if (this.handlers) {
             document.removeEventListener('click', this.handlers.documentClick);
-            if (this.dialog) {
-                this.dialog.removeEventListener('click', this.handlers.dialogClick);
-                this.dialog.removeEventListener('cancel', this.handlers.cancel);
-                this.dialog.removeEventListener('close', this.handlers.close);
+            document.removeEventListener('keydown', this.handlers.keydown);
+            if (this.overlay) {
+                this.overlay.removeEventListener('click', this.handlers.overlayClick);
             }
-            window.removeEventListener('resize', this.handlers.viewportChange);
-            window.removeEventListener('orientationchange', this.handlers.viewportChange);
+            if (this.previewButton) {
+                this.previewButton.removeEventListener('click', this.handlers.previewClick);
+            }
+            if (this.previewImage) {
+                this.previewImage.removeEventListener('error', this.handlers.previewError);
+            }
+            if (this.stage) {
+                this.stage.removeEventListener('transitionend', this.handlers.transitionEnd);
+            }
+            window.removeEventListener('scroll', this.handlers.scroll, { passive: true });
+            window.removeEventListener('wheel', this.handlers.wheel, { passive: true });
+            window.removeEventListener('touchstart', this.handlers.touchStart, { passive: true });
+            window.removeEventListener('touchmove', this.handlers.touchMove, { passive: true });
+            window.removeEventListener('touchend', this.handlers.touchEnd, { passive: true });
+            window.removeEventListener('touchcancel', this.handlers.touchCancel, { passive: true });
+            window.removeEventListener('resize', this.handlers.resize);
+            window.removeEventListener('orientationchange', this.handlers.orientationChange);
+            window.removeEventListener('wheel', this.handlers.blockInput, { passive: false });
+            window.removeEventListener('touchmove', this.handlers.blockInput, { passive: false });
         }
 
-        if (this.dialog && this.dialog.parentNode) {
-            this.dialog.parentNode.removeChild(this.dialog);
+        if (this.overlay && this.overlay.parentNode) {
+            this.overlay.parentNode.removeChild(this.overlay);
+        }
+        if (this.stage && this.stage.parentNode) {
+            this.stage.parentNode.removeChild(this.stage);
         }
 
         this.handlers = null;
-        this.dialog = null;
+        this.overlay = null;
+        this.stage = null;
+        this.previewButton = null;
         this.previewImage = null;
-        this.closeButton = null;
         this.sourceLink = null;
         this.sourceImage = null;
+        this.isOpen = false;
+        this.isClosing = false;
+        this.scrollArmed = false;
+        this.inputLocked = false;
+        this.openTransform = '';
+        this.viewportWidth = 0;
+        this.restoreFocusOnClose = true;
+        this.fallbackLink = null;
         this.root = null;
     },
 
     __test: {
-        calculateFit: function (width, height, viewportWidth, viewportHeight, gutter) {
-            return VOID_ImageZoom.calculateFit(width, height, viewportWidth, viewportHeight, gutter);
+        calculateFit: function (width, height, viewportWidth, viewportHeight, padding) {
+            return VOID_ImageZoom.calculateFit(width, height, viewportWidth, viewportHeight, padding);
         },
-        calculateTransition: function (sourceRect, targetRect) {
-            return VOID_ImageZoom.calculateTransition(sourceRect, targetRect);
+        calculateTransform: function (sourceRect, targetRect) {
+            return VOID_ImageZoom.calculateTransform(sourceRect, targetRect);
+        },
+        rectToDocument: function (rect) {
+            return VOID_ImageZoom.rectToDocument(rect);
         }
     }
 };
-
 var VOID_RewardDialog = {
     root: null,
     trigger: null,
     dialog: null,
-    closeButton: null,
+    imageButton: null,
     isOpen: false,
     restoreFocusOnClose: true,
     handlers: null,
@@ -1193,8 +1854,12 @@ var VOID_RewardDialog = {
         this.isOpen = true;
         this.restoreFocusOnClose = true;
         VOID_DialogScrollLock.lock('reward');
-        if (this.closeButton && typeof this.closeButton.focus === 'function') {
-            this.closeButton.focus();
+        if (this.imageButton && typeof this.imageButton.focus === 'function') {
+            try {
+                this.imageButton.focus({ preventScroll: true });
+            } catch (error) {
+                this.imageButton.focus();
+            }
         }
         return true;
     },
@@ -1207,7 +1872,11 @@ var VOID_RewardDialog = {
         this.isOpen = false;
         VOID_DialogScrollLock.unlock('reward');
         if (this.restoreFocusOnClose && this.trigger && typeof this.trigger.focus === 'function') {
-            this.trigger.focus();
+            try {
+                this.trigger.focus({ preventScroll: true });
+            } catch (error) {
+                this.trigger.focus();
+            }
         }
     },
 
@@ -1244,8 +1913,8 @@ var VOID_RewardDialog = {
             return;
         }
 
-        this.closeButton = this.dialog.querySelector('[data-void-reward-close]');
-        if (!this.closeButton) {
+        this.imageButton = this.dialog.querySelector('[data-void-reward-close]');
+        if (!this.imageButton) {
             this.trigger = null;
             this.dialog = null;
             return;
@@ -1257,11 +1926,12 @@ var VOID_RewardDialog = {
                     event.preventDefault();
                 }
             },
-            closeClick: function () {
+            imageClick: function () {
                 self.close(true);
             },
             dialogClick: function (event) {
-                if (event.target === self.dialog) {
+                if (event.target === self.dialog
+                    || (self.imageButton && !self.imageButton.contains(event.target))) {
                     self.close(true);
                 }
             },
@@ -1275,7 +1945,7 @@ var VOID_RewardDialog = {
         };
 
         this.trigger.addEventListener('click', this.handlers.triggerClick);
-        this.closeButton.addEventListener('click', this.handlers.closeClick);
+        this.imageButton.addEventListener('click', this.handlers.imageClick);
         this.dialog.addEventListener('click', this.handlers.dialogClick);
         this.dialog.addEventListener('cancel', this.handlers.cancel);
         this.dialog.addEventListener('close', this.handlers.close);
@@ -1292,8 +1962,8 @@ var VOID_RewardDialog = {
             if (this.trigger) {
                 this.trigger.removeEventListener('click', this.handlers.triggerClick);
             }
-            if (this.closeButton) {
-                this.closeButton.removeEventListener('click', this.handlers.closeClick);
+            if (this.imageButton) {
+                this.imageButton.removeEventListener('click', this.handlers.imageClick);
             }
             if (this.dialog) {
                 this.dialog.removeEventListener('click', this.handlers.dialogClick);
@@ -1305,7 +1975,7 @@ var VOID_RewardDialog = {
         this.root = null;
         this.trigger = null;
         this.dialog = null;
-        this.closeButton = null;
+        this.imageButton = null;
         this.handlers = null;
         this.restoreFocusOnClose = true;
     }

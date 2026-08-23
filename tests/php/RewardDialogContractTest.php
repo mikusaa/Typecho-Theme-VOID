@@ -28,6 +28,11 @@ function rewardUrlAssertNotContains($needle, $haystack, $message)
     rewardUrlAssertSame(false, strpos($haystack, $needle) !== false, $message);
 }
 
+function rewardUrlAssertMatches($pattern, $haystack, $message)
+{
+    rewardUrlAssertSame(1, preg_match($pattern, $haystack), $message);
+}
+
 $validUrls = array(
     'https://cdn.example/reward.png' => 'HTTPS URL',
     'http://cdn.example:8080/reward.png?size=2#qr' => 'HTTP URL with port, query and fragment',
@@ -90,6 +95,14 @@ rewardUrlAssertContains('target="_blank"', $template, 'fallback link opens the Q
 rewardUrlAssertContains('rel="noopener noreferrer"', $template, 'fallback link isolates the opener');
 rewardUrlAssertContains('href="<?php echo $rewardUrlHtml; ?>"', $template, 'reward trigger uses the validated real URL');
 rewardUrlAssertContains('data-void-reward-dialog', $template, 'template exposes the native dialog contract');
+rewardUrlAssertMatches(
+    '/<button\b[^>]*data-void-reward-close[^>]*>\s*'
+        . '<img src="<\?php echo \$rewardUrlHtml; \?>" alt="" decoding="async">\s*<\/button>/',
+    $template,
+    'reward QR image is the dialog close button'
+);
+rewardUrlAssertContains('aria-label="关闭赞赏二维码"', $template, 'reward image button has an accessible name');
+rewardUrlAssertNotContains('void-dialog-close', $template, 'reward dialog has no standalone close control');
 rewardUrlAssertNotContains('data-fancybox', $template, 'reward markup no longer depends on Fancybox');
 
 if ($failures > 0) {

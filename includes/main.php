@@ -64,13 +64,13 @@ $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUO
                             <dialog class="void-reward-dialog" data-void-reward-dialog aria-label="赞赏二维码">
                                 <div class="void-reward-dialog__content">
                                     <button
-                                        class="void-dialog-close"
+                                        class="void-reward-dialog__image-button"
                                         data-void-reward-close
                                         type="button"
                                         aria-label="关闭赞赏二维码"
-                                        title="关闭"
-                                    ></button>
-                                    <img src="<?php echo $rewardUrlHtml; ?>" alt="赞赏二维码" decoding="async">
+                                    >
+                                        <img src="<?php echo $rewardUrlHtml; ?>" alt="" decoding="async">
+                                    </button>
                                 </div>
                             </dialog>
                         <?php endif; ?>
