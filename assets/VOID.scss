@@ -58,16 +58,6 @@ body{
         position: fixed;
         width: 100%;
     }
-    &::-webkit-scrollbar{
-        width: 8px;
-        height: 8px;
-        background: $td-bgColor;
-    }
-    &::-webkit-scrollbar-thumb{
-        background-color: #656565;
-        border-radius: 0px;
-    }
-
     &[fontsize="1"] {
         font-size: 14px;
     }
