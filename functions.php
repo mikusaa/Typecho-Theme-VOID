@@ -96,15 +96,23 @@ Typecho_Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addBut
 VOID_registerContentsHook('markdown', array('Contents', 'markdown'));
 VOID_registerContentsHook('contentEx', array('Contents', 'contentEx'));
 VOID_registerContentsHook('excerptEx', array('Contents', 'excerptEx'));
+VOID_registerContentsHook('contentEx_999', array('Contents', 'contentEx_999'));
+VOID_registerContentsHook('excerptEx_999', array('Contents', 'excerptEx_999'));
 
 /**
  * 主题启用
  */
 function themeInit($archive = null)
 {
-    Helper::options()->commentsAntiSpam = false;
-    Helper::options()->commentsMaxNestingLevels = 999;
-    Helper::options()->commentsOrder = 'DESC';
+    $options = Helper::options();
+    $options->commentsAntiSpam = false;
+    $options->commentsMaxNestingLevels = 999;
+    $options->commentsOrder = 'DESC';
+
+    if (Contents::shouldTruncateFeed($archive)) {
+        // 仅覆盖当前 Feed 请求，让核心始终使用主题截断后的 content。
+        $options->feedFullText = true;
+    }
 
     VOID_refreshArchiveComputedFields($archive);
 }
@@ -120,6 +128,9 @@ function themeConfig($form)
     $options = Helper::options();
     if ($options->colorScheme !== null) {
         $options->colorScheme = (string) Utils::normalizeColorScheme($options->colorScheme);
+    }
+    if ($options->feedContentMode !== null) {
+        $options->feedContentMode = (string) Utils::normalizeFeedContentMode($options->feedContentMode);
     }
 
     echo '<style>
@@ -154,6 +165,13 @@ function themeConfig($form)
     $colorScheme->addRule('required', '请选择主题颜色模式。');
     $colorScheme->addRule('enum', '主题颜色模式无效。', array('1', '2', '3'));
     $form->addInput($colorScheme);
+
+    $feedContentMode = new Typecho_Widget_Helper_Form_Element_Radio('feedContentMode', array(
+        '0' => '保持 Typecho 默认行为',
+        '1' => '仅输出正文开头'
+    ), '0', 'Feed（RSS/Atom）输出', '启用后优先于 Typecho 的“聚合全文输出”和文章中的 <code>&lt;!--more--&gt;</code> 分隔符，仅在文章 Feed 中输出正文开头。');
+    $feedContentMode->addRule('enum', 'Feed 内容输出方式无效。', array('0', '1'));
+    $form->addInput($feedContentMode);
 
     $indexStyle = new Typecho_Widget_Helper_Form_Element_Radio('indexStyle', array(
         '0' => '双栏',
