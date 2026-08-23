@@ -16,6 +16,7 @@
         options: null,
         requestId: 0,
         controller: null,
+        requestOptions: null,
         onceScriptCache: {}
     };
 
@@ -362,6 +363,7 @@
             return Promise.resolve(false);
         }
 
+        var previousOptions = runtime.requestOptions;
         runtime.requestId += 1;
         var requestId = runtime.requestId;
 
@@ -371,6 +373,11 @@
 
         var controller = typeof window.AbortController === 'function' ? new AbortController() : null;
         runtime.controller = controller;
+        runtime.requestOptions = options;
+
+        if (previousOptions) {
+            safeEmit('pjax:abort', [null, 'abort', previousOptions], previousOptions);
+        }
 
         var timeoutId = null;
         var timedOut = false;
@@ -402,6 +409,9 @@
             }
             if (runtime.controller === controller) {
                 runtime.controller = null;
+            }
+            if (runtime.requestOptions === options) {
+                runtime.requestOptions = null;
             }
         }
 

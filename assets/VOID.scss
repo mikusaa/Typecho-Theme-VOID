@@ -752,6 +752,7 @@ body.theme-dark .clipboard {
 @include meta.load-css("parts/index");
 @include meta.load-css("parts/article");
 @include meta.load-css("parts/image-experience");
+@include meta.load-css("parts/gallery");
 @include meta.load-css("parts/archive");
 @include meta.load-css("parts/comments");
 @include meta.load-css("parts/footer");

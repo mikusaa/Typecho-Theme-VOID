@@ -105,8 +105,13 @@ VOID_Lazyload = {
 
     callback: function () {
         $.each($('img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)'), function (i, item) {
-            if (VOID_Lazyload.inViewport(item)) {
+            var eager = item.getAttribute && item.getAttribute('loading') === 'eager';
+            if (eager || VOID_Lazyload.inViewport(item)) {
                 var img = new Image();
+                var fetchPriority = item.getAttribute && item.getAttribute('fetchpriority');
+                if (fetchPriority) {
+                    img.setAttribute('fetchpriority', fetchPriority);
+                }
                 img.onload = function () {
                     $(item).attr('src', $(item).attr('data-src'));
                     $(item).addClass('loaded');

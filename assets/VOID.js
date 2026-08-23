@@ -838,6 +838,549 @@ var VOID_PhotoSets = {
     }
 };
 
+var VOID_Gallery = {
+    root: null,
+    sets: [],
+    resizeObserver: null,
+    resizeHandler: null,
+    imageLoadHandler: null,
+    rafId: null,
+    rafUsesTimeout: false,
+    generation: 0,
+    observedWidth: 0,
+
+    calculateRows: function (ratios, containerWidth, options) {
+        var rows = [];
+        var current = [];
+        var currentRatio = 0;
+        var offset = 0;
+        var width = parseFloat(containerWidth);
+        var gap = options && parseFloat(options.gap);
+        var targetHeight = options && parseFloat(options.targetHeight);
+        var maxItems = options && parseInt(options.maxItems, 10);
+        var singleItemMinRatio = options && parseFloat(options.singleItemMinRatio);
+        var index;
+
+        if (!(width > 0 && isFinite(width))) {
+            return rows;
+        }
+        if (!(gap >= 0 && isFinite(gap))) {
+            gap = 8;
+        }
+        if (!(targetHeight > 0 && isFinite(targetHeight))) {
+            targetHeight = 240;
+        }
+        if (!(maxItems > 0 && isFinite(maxItems))) {
+            maxItems = ratios.length || 1;
+        }
+        if (!(singleItemMinRatio > 0 && isFinite(singleItemMinRatio))) {
+            singleItemMinRatio = 0;
+        }
+
+        var finishRow = function (justified) {
+            var availableWidth = Math.max(1, width - gap * Math.max(0, current.length - 1));
+            var height = justified ? availableWidth / currentRatio : targetHeight;
+            var widths = [];
+            var usedWidth = 0;
+            var itemIndex;
+
+            if (!justified && current.length === 1) {
+                height = Math.min(targetHeight * 1.75, availableWidth / currentRatio);
+            }
+
+            for (itemIndex = 0; itemIndex < current.length; itemIndex++) {
+                var itemWidth = current[itemIndex] * height;
+                if (justified && itemIndex === current.length - 1) {
+                    itemWidth = Math.max(1, availableWidth - usedWidth);
+                }
+                widths.push(itemWidth);
+                usedWidth += itemWidth;
+            }
+
+            rows.push({
+                start: offset,
+                end: offset + current.length,
+                height: height,
+                justified: justified,
+                widths: widths
+            });
+            offset += current.length;
+            current = [];
+            currentRatio = 0;
+        };
+
+        for (index = 0; index < ratios.length; index++) {
+            var ratio = parseFloat(ratios[index]);
+            if (!(ratio > 0 && isFinite(ratio))) {
+                ratio = 4 / 3;
+            }
+
+            if (singleItemMinRatio && ratio >= singleItemMinRatio) {
+                if (current.length) {
+                    finishRow(false);
+                }
+                current.push(ratio);
+                currentRatio += ratio;
+                finishRow(true);
+                continue;
+            }
+
+            current.push(ratio);
+            currentRatio += ratio;
+            var availableWidth = Math.max(1, width - gap * Math.max(0, current.length - 1));
+            var candidateHeight = availableWidth / currentRatio;
+            if (candidateHeight <= targetHeight || current.length >= maxItems) {
+                finishRow(true);
+            }
+        }
+
+        if (current.length) {
+            finishRow(false);
+        }
+
+        return rows;
+    },
+
+    getLayoutOptions: function (width, viewportWidth) {
+        var currentViewportWidth = viewportWidth || width;
+        if (currentViewportWidth <= 639) {
+            return {
+                gap: 14,
+                targetHeight: 160,
+                maxItems: 2,
+                singleItemMinRatio: 1.6
+            };
+        }
+        if (currentViewportWidth <= 959) {
+            return { gap: 14, targetHeight: 240, maxItems: 2 };
+        }
+        return { gap: 16, targetHeight: 320, maxItems: 4 };
+    },
+
+    isImageFigure: function (element) {
+        return !!(element && element.tagName && element.hasAttribute
+            && element.tagName.toLowerCase() === 'figure'
+            && element.hasAttribute('data-void-image-item'));
+    },
+
+    isContentImage: function (element) {
+        return !!(element && element.tagName && element.hasAttribute
+            && element.tagName.toLowerCase() === 'img'
+            && element.hasAttribute('data-void-image-content'));
+    },
+
+    getFigureRatio: function (figure) {
+        var image = VOID_Content.getFigureImage(figure);
+        var dimensions = VOID_PhotoSets.resolveDimensions(figure, image);
+
+        if (dimensions && dimensions.width > 0 && dimensions.height > 0) {
+            return dimensions.width / dimensions.height;
+        }
+        return 4 / 3;
+    },
+
+    focusWithoutScroll: function (element) {
+        if (!element || typeof element.focus !== 'function') {
+            return;
+        }
+
+        try {
+            element.focus({ preventScroll: true });
+        } catch (error) {
+            element.focus();
+        }
+    },
+
+    unwrapGeneratedSets: function (root) {
+        var sets = Array.prototype.slice.call(root.querySelectorAll('[data-void-gallery-set]'));
+        var index;
+
+        for (index = 0; index < sets.length; index++) {
+            var set = sets[index];
+            var parent = set.parentNode;
+            var figures;
+            var figureIndex;
+
+            if (!parent) {
+                continue;
+            }
+            figures = Array.prototype.slice.call(set.querySelectorAll('figure[data-void-image-item]'));
+            for (figureIndex = 0; figureIndex < figures.length; figureIndex++) {
+                parent.insertBefore(figures[figureIndex], set);
+            }
+            parent.removeChild(set);
+        }
+    },
+
+    flattenPhotoSets: function (root) {
+        var wrappers = Array.prototype.slice.call(root.querySelectorAll('[data-void-photo-set]'));
+        var index;
+
+        for (index = 0; index < wrappers.length; index++) {
+            var wrapper = wrappers[index];
+            var parent = wrapper.parentNode;
+            if (!parent) {
+                continue;
+            }
+            while (wrapper.firstChild) {
+                parent.insertBefore(wrapper.firstChild, wrapper);
+            }
+            parent.removeChild(wrapper);
+        }
+    },
+
+    unwrapFigureParagraphs: function (root) {
+        var children = Array.prototype.slice.call(root.children);
+        var index;
+
+        for (index = 0; index < children.length; index++) {
+            var paragraph = children[index];
+            var nodes;
+            var hasFigure = false;
+            var onlyFigures = true;
+            var nodeIndex;
+
+            if (!paragraph.tagName || paragraph.tagName.toLowerCase() !== 'p') {
+                continue;
+            }
+
+            nodes = Array.prototype.slice.call(paragraph.childNodes);
+            for (nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+                var node = nodes[nodeIndex];
+                if (node.nodeType === 3 && !node.nodeValue.trim()) {
+                    continue;
+                }
+                if (node.nodeType === 1 && this.isImageFigure(node)) {
+                    hasFigure = true;
+                    continue;
+                }
+                onlyFigures = false;
+                break;
+            }
+
+            if (!hasFigure || !onlyFigures) {
+                continue;
+            }
+            while (paragraph.firstChild) {
+                root.insertBefore(paragraph.firstChild, paragraph);
+            }
+            root.removeChild(paragraph);
+        }
+    },
+
+    removePhotoSeparators: function (root) {
+        var children = Array.prototype.slice.call(root.children);
+        var isSeparator = function (element) {
+            var tagName = element.tagName.toLowerCase();
+            var nodes;
+            var index;
+
+            if (tagName === 'br') {
+                return true;
+            }
+            if (tagName !== 'p') {
+                return false;
+            }
+
+            nodes = Array.prototype.slice.call(element.childNodes);
+            for (index = 0; index < nodes.length; index++) {
+                if (nodes[index].nodeType === 3 && !nodes[index].nodeValue.trim()) {
+                    continue;
+                }
+                if (nodes[index].nodeType === 1 && nodes[index].tagName.toLowerCase() === 'br') {
+                    continue;
+                }
+                return false;
+            }
+            return true;
+        };
+        var index;
+
+        for (index = 0; index < children.length; index++) {
+            if (!isSeparator(children[index])) {
+                continue;
+            }
+
+            var previousIndex = index - 1;
+            var nextIndex = index + 1;
+            while (previousIndex >= 0 && isSeparator(children[previousIndex])) {
+                previousIndex -= 1;
+            }
+            while (nextIndex < children.length && isSeparator(children[nextIndex])) {
+                nextIndex += 1;
+            }
+
+            var previous = previousIndex >= 0 ? children[previousIndex] : null;
+            var next = nextIndex < children.length ? children[nextIndex] : null;
+            if (this.isImageFigure(previous) && this.isImageFigure(next)) {
+                root.removeChild(children[index]);
+            }
+        }
+    },
+
+    createSets: function (root) {
+        var self = this;
+        var sets = [];
+        var figures = [];
+        var children = Array.prototype.slice.call(root.children);
+        var index;
+
+        var finishSet = function () {
+            var set;
+            var figureIndex;
+
+            if (!figures.length) {
+                return;
+            }
+            set = document.createElement('div');
+            set.className = 'void-gallery-set';
+            set.setAttribute('data-void-gallery-set', '');
+            root.insertBefore(set, figures[0]);
+            for (figureIndex = 0; figureIndex < figures.length; figureIndex++) {
+                set.appendChild(figures[figureIndex]);
+            }
+            sets.push(set);
+            figures = [];
+        };
+
+        for (index = 0; index < children.length; index++) {
+            if (self.isImageFigure(children[index])) {
+                figures.push(children[index]);
+            } else {
+                finishSet();
+            }
+        }
+        finishSet();
+        return sets;
+    },
+
+    normalize: function (root) {
+        this.unwrapGeneratedSets(root);
+        this.flattenPhotoSets(root);
+        this.unwrapFigureParagraphs(root);
+        this.removePhotoSeparators(root);
+        this.sets = this.createSets(root);
+    },
+
+    layoutSet: function (set) {
+        var width = set.clientWidth;
+        var figures;
+        var ratios = [];
+        var fragment;
+        var activeElement;
+        var restoreFocus;
+        var viewportWidth;
+        var rows;
+        var figureIndex = 0;
+        var index;
+
+        if (!(width > 0)) {
+            return;
+        }
+
+        figures = Array.prototype.slice.call(set.querySelectorAll('figure[data-void-image-item]'));
+        if (!figures.length) {
+            return;
+        }
+
+        fragment = document.createDocumentFragment();
+        activeElement = document.activeElement;
+        restoreFocus = activeElement && set.contains(activeElement);
+
+        for (index = 0; index < figures.length; index++) {
+            ratios.push(this.getFigureRatio(figures[index]));
+            fragment.appendChild(figures[index]);
+        }
+        while (set.firstChild) {
+            set.removeChild(set.firstChild);
+        }
+
+        viewportWidth = window.innerWidth || document.documentElement.clientWidth || width;
+        rows = this.calculateRows(ratios, width, this.getLayoutOptions(width, viewportWidth));
+        for (index = 0; index < rows.length; index++) {
+            var rowData = rows[index];
+            var row = document.createElement('div');
+            var itemIndex;
+            row.className = 'void-gallery-row'
+                + (rowData.justified ? ' is-justified' : ' is-last')
+                + (rowData.widths.length === 1 ? ' is-single' : '');
+
+            for (itemIndex = 0; itemIndex < rowData.widths.length; itemIndex++) {
+                var figure = figures[figureIndex++];
+                figure.style.setProperty('--void-gallery-item-width', Math.max(1, rowData.widths[itemIndex]) + 'px');
+                figure.style.setProperty('--void-gallery-item-height', Math.max(1, rowData.height) + 'px');
+                row.appendChild(figure);
+            }
+            set.appendChild(row);
+        }
+
+        if (restoreFocus) {
+            this.focusWithoutScroll(activeElement);
+        }
+    },
+
+    layout: function () {
+        var index;
+        for (index = 0; index < this.sets.length; index++) {
+            this.layoutSet(this.sets[index]);
+        }
+    },
+
+    scheduleLayout: function (generation) {
+        if (this.rafId !== null) {
+            return;
+        }
+
+        var callback = function () {
+            VOID_Gallery.rafId = null;
+            VOID_Gallery.rafUsesTimeout = false;
+            if (generation === VOID_Gallery.generation && VOID_Gallery.root !== null) {
+                VOID_Gallery.layout();
+            }
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            this.rafUsesTimeout = false;
+            this.rafId = window.requestAnimationFrame(callback);
+        } else {
+            this.rafUsesTimeout = true;
+            this.rafId = window.setTimeout(callback, 16);
+        }
+    },
+
+    promoteFirstImage: function () {
+        var firstFigure;
+        var image;
+
+        if (document.querySelector('#banner img')) {
+            return;
+        }
+
+        firstFigure = this.root.querySelector('figure[data-void-image-item]');
+        image = firstFigure ? VOID_Content.getFigureImage(firstFigure) : null;
+        if (!image) {
+            return;
+        }
+
+        image.setAttribute('loading', 'eager');
+        image.setAttribute('fetchpriority', 'high');
+        image.setAttribute('decoding', 'async');
+    },
+
+    init: function () {
+        var self = this;
+        var root;
+        var generation;
+        var activeElement;
+        var restoreFocus;
+
+        this.destroy();
+        if (typeof document.querySelector !== 'function') {
+            return;
+        }
+        root = document.querySelector('[data-void-gallery]');
+        if (!root) {
+            return;
+        }
+
+        this.root = root;
+        generation = this.generation;
+        activeElement = document.activeElement;
+        restoreFocus = activeElement && root.contains(activeElement);
+        this.normalize(root);
+        if (!this.sets.length) {
+            root.classList.add('is-ready');
+            return;
+        }
+
+        this.promoteFirstImage();
+        this.layout();
+        if (restoreFocus && document.activeElement !== activeElement) {
+            this.focusWithoutScroll(activeElement);
+        }
+        root.classList.add('is-ready');
+        this.observedWidth = root.clientWidth;
+
+        this.imageLoadHandler = function (event) {
+            var target = event && event.target;
+            if (generation !== self.generation || root !== self.root || !self.isContentImage(target)) {
+                return;
+            }
+            if (root.contains && !root.contains(target)) {
+                return;
+            }
+            self.scheduleLayout(generation);
+        };
+        root.addEventListener('load', this.imageLoadHandler, true);
+
+        if (typeof window.ResizeObserver === 'function') {
+            this.resizeObserver = new window.ResizeObserver(function (entries) {
+                var width;
+                if (generation !== self.generation || root !== self.root) {
+                    return;
+                }
+                width = entries.length && entries[0].contentRect
+                    ? entries[0].contentRect.width : root.clientWidth;
+                if (Math.abs(width - self.observedWidth) < 0.5) {
+                    return;
+                }
+                self.observedWidth = width;
+                self.scheduleLayout(generation);
+            });
+            this.resizeObserver.observe(root);
+        } else {
+            this.resizeHandler = function () {
+                self.scheduleLayout(generation);
+            };
+            window.addEventListener('resize', this.resizeHandler);
+        }
+    },
+
+    destroy: function () {
+        this.generation += 1;
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+        if (this.root && this.imageLoadHandler) {
+            this.root.removeEventListener('load', this.imageLoadHandler, true);
+        }
+        if (this.rafId !== null) {
+            if (this.rafUsesTimeout) {
+                window.clearTimeout(this.rafId);
+            } else if (typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this.rafId);
+            }
+        }
+
+        this.root = null;
+        this.sets = [];
+        this.resizeObserver = null;
+        this.resizeHandler = null;
+        this.imageLoadHandler = null;
+        this.rafId = null;
+        this.rafUsesTimeout = false;
+        this.observedWidth = 0;
+    },
+
+    __test: {
+        calculateRows: function (ratios, containerWidth, options) {
+            return VOID_Gallery.calculateRows(ratios, containerWidth, options);
+        },
+        getLayoutOptions: function () {
+            return VOID_Gallery.getLayoutOptions.apply(VOID_Gallery, arguments);
+        },
+        getFigureRatio: function (figure) {
+            return VOID_Gallery.getFigureRatio(figure);
+        },
+        removePhotoSeparators: function (root) {
+            return VOID_Gallery.removePhotoSeparators(root);
+        }
+    }
+};
+
 var VOID_ImageZoom = {
     root: null,
     overlay: null,
@@ -2047,6 +2590,14 @@ var VOID = {
             }
         });
 
+        $(document).on('pjax:abort', function () {
+            var options = VOID.resolvePjaxOptions(arguments);
+
+            if (VOID.isMainPjaxRequest(options)) {
+                VOID.afterPjax();
+            }
+        });
+
         $(document).on('pjax:end', function () {
             var options = VOID.resolvePjaxOptions(arguments);
 
@@ -2069,6 +2620,7 @@ var VOID = {
         VOID_Ui.DarkModeSwitcher.checkColorScheme();
         VOID_Ui.checkScrollTop();
         VOID_Content.parseBoardThumbs();
+        VOID_Gallery.init();
         VOID_PhotoSets.init();
         VOID_ImageZoom.init();
         VOID_RewardDialog.init();
@@ -2152,6 +2704,7 @@ var VOID = {
         NProgress.start();
         VOID_RewardDialog.destroy();
         VOID_ImageZoom.destroy();
+        VOID_Gallery.destroy();
         VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
         VOID_Ui.reset();
@@ -2163,6 +2716,7 @@ var VOID = {
 	
         VOID_Content.parseBoardThumbs();
 
+        VOID_Gallery.init();
         VOID_PhotoSets.init();
         VOID_ImageZoom.init();
         VOID_RewardDialog.init();

@@ -191,6 +191,36 @@ test('native and jQuery listeners receive one complete event with event detail',
     assert.equal(jqueryEvent.originalEvent, nativeEvent);
 });
 
+test('a superseded request emits abort before the replacement send', () => {
+    const { document, window } = loadPjaxEnvironment();
+    const events = [];
+
+    window.fetch = () => new Promise(() => {});
+    document.addEventListener('pjax:send', (event) => {
+        events.push(`send:${event.detail.options.container}`);
+    });
+    document.addEventListener('pjax:abort', (event) => {
+        events.push(`abort:${event.detail.options.container}`);
+    });
+
+    window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/main'
+    });
+    window.VoidPjax.visit({
+        container: '#comments',
+        timeout: 0,
+        url: 'https://example.test/comments'
+    });
+
+    assert.deepEqual(events, [
+        'send:#pjax-container',
+        'abort:#pjax-container',
+        'send:#comments'
+    ]);
+});
+
 test('resolvePjaxOptions prefers native detail and supports legacy jQuery arguments', () => {
     const { context } = loadVoidEnvironment();
     const detailOptions = { container: '#comments' };
@@ -220,6 +250,9 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
     context.VOID.beforePjax = () => calls.push('beforePjax');
     context.VOID.afterPjax = () => calls.push('afterPjax');
     context.VOID.endPjax = () => calls.push('endPjax');
+    context.VOID_Gallery.init = () => calls.push('gallery');
+    context.VOID_PhotoSets.init = () => calls.push('photoSets');
+    context.VOID_ImageZoom.init = () => calls.push('imageZoom');
     context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
     context.AjaxComment.afterPagePjax = () => calls.push('afterPagePjax');
     context.AjaxComment.endPagePjax = () => calls.push('endPagePjax');
@@ -266,10 +299,26 @@ test('main PJAX teardown closes dialogs before photo-set and UI cleanup', () => 
     context.NProgress = { start: () => calls.push('progress') };
     context.VOID_RewardDialog.destroy = () => calls.push('reward');
     context.VOID_ImageZoom.destroy = () => calls.push('zoom');
+    context.VOID_Gallery.destroy = () => calls.push('gallery');
     context.VOID_PhotoSets.destroy = () => calls.push('photoSets');
     context.VOID.destroyEmotes = () => calls.push('emotes');
     context.VOID_Ui = { reset: () => calls.push('ui') };
 
     context.VOID.beforePjax();
-    assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'photoSets', 'emotes', 'ui']);
+    assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'gallery', 'photoSets', 'emotes', 'ui']);
+});
+
+test('only an aborted main request restores the main-container lifecycle', () => {
+    const { context, handlers } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID.afterPjax = () => calls.push('afterPjax');
+    context.AjaxComment.afterPagePjax = () => calls.push('afterPagePjax');
+    context.VOIDConfig = { PJAX: true };
+
+    context.VOID.bindPjaxLifecycle();
+    handlers.get('pjax:abort')(wrappedPjaxEvent({ container: '#pjax-container' }));
+    handlers.get('pjax:abort')(wrappedPjaxEvent({ container: '#comments' }));
+
+    assert.deepEqual(calls, ['afterPjax']);
 });

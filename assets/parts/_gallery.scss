@@ -1,0 +1,256 @@
+@use "var" as *;
+
+.void-gallery-page {
+    padding: 56px 0 88px;
+}
+
+.void-gallery {
+    width: 1440px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 24px;
+    --void-gallery-gap: 16px;
+
+    >h2 {
+        margin: 4.5rem 0 1.35rem;
+        padding: 0;
+        border: 0;
+        color: $fadeColor;
+        font-size: 1.08rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        line-height: 1.4;
+        letter-spacing: 0;
+
+        &:first-child {
+            margin-top: 0;
+        }
+
+        .theme-dark & {
+            color: $td-textColor-dark;
+        }
+    }
+
+    >p,
+    >blockquote,
+    >h3,
+    >h4,
+    >h5,
+    >h6,
+    >ul,
+    >ol {
+        width: $mainWidth;
+        max-width: 100%;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    // Keep photo-set wrappers aligned until Gallery flattens them.
+    .photos[data-void-photo-set] {
+        width: 100%;
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .void-gallery-set {
+        display: flex;
+        flex-direction: column;
+        gap: var(--void-gallery-gap);
+        width: 100%;
+        margin: 0 0 var(--void-gallery-gap);
+    }
+
+    .void-gallery-row {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--void-gallery-gap);
+        width: 100%;
+        min-width: 0;
+
+        &.is-last {
+            justify-content: center;
+        }
+    }
+
+    .void-gallery-row figure[data-void-image-item] {
+        position: relative;
+        isolation: isolate;
+        flex: 0 0 var(--void-gallery-item-width)!important;
+        width: var(--void-gallery-item-width)!important;
+        min-width: 0;
+        max-width: none!important;
+        height: var(--void-gallery-item-height);
+        max-height: none;
+        margin: 0!important;
+        overflow: hidden;
+        border-radius: 6px;
+        background: rgb(240, 240, 240);
+        box-shadow: 0 2px 8px rgba(#000, 0.08);
+        transition: box-shadow $animationTime-slow $animationTimingFunc;
+
+        .theme-dark & {
+            background: $td-bgColor-light;
+            box-shadow: 0 2px 14px rgba(#000, 0.24),
+                        0 0 0 1px rgba(#fff, 0.035);
+        }
+
+        >a.void-image-link[data-void-image-zoom] {
+            display: block;
+            width: 100%;
+            max-width: none;
+            height: 100%;
+            max-height: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            border-radius: inherit;
+
+            &:focus-visible {
+                outline: 2px solid $highlightColor;
+                outline-offset: -3px;
+            }
+
+            img[data-void-image-content] {
+                display: block;
+                width: 100%;
+                max-width: none;
+                height: 100%;
+                max-height: none;
+                margin: 0;
+                object-fit: cover;
+                transform: scale(1);
+                transition: opacity 0.8s ease-in-out,
+                            transform $animationTime-slow $animationTimingFunc;
+            }
+        }
+
+        figcaption {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            width: auto;
+            margin: 0;
+            padding: 48px 14px 12px;
+            color: #fff;
+            background: linear-gradient(180deg, rgba(#000, 0), rgba(#000, 0.72));
+            font-size: 13px;
+            line-height: 1.45;
+            text-align: left;
+            text-shadow: 0 1px 2px rgba(#000, 0.4);
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity $animationTime $animationTimingFunc,
+                        transform $animationTime $animationTimingFunc;
+            pointer-events: none;
+        }
+
+        &:hover figcaption,
+        &:focus-within figcaption {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        &:focus-within {
+            box-shadow: 0 12px 30px rgba(#000, 0.14);
+
+            .theme-dark & {
+                box-shadow: 0 12px 32px rgba(#000, 0.38),
+                            0 0 0 1px rgba(#fff, 0.06);
+            }
+
+            >a.void-image-link[data-void-image-zoom] img[data-void-image-content] {
+                transform: scale(1.02);
+            }
+        }
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .void-gallery .void-gallery-row figure[data-void-image-item]:hover {
+        box-shadow: 0 12px 30px rgba(#000, 0.14);
+
+        .theme-dark & {
+            box-shadow: 0 12px 32px rgba(#000, 0.38),
+                        0 0 0 1px rgba(#fff, 0.06);
+        }
+
+        >a.void-image-link[data-void-image-zoom] img[data-void-image-content] {
+            transform: scale(1.02);
+        }
+    }
+}
+
+@media (hover: none) {
+    .void-gallery .void-gallery-row figure[data-void-image-item] figcaption {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media screen and (max-width: 959px) {
+    .void-gallery {
+        --void-gallery-gap: 14px;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .void-gallery-page {
+        padding: 40px 0 64px;
+    }
+
+    .void-gallery {
+        padding: 0 18px;
+
+        >h2,
+        >p,
+        >blockquote,
+        >h3,
+        >h4,
+        >h5,
+        >h6,
+        >ul,
+        >ol {
+            padding-right: 0;
+            padding-left: 0;
+        }
+
+        >h2 {
+            margin-top: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .void-gallery-row figure[data-void-image-item] figcaption {
+            padding: 44px 12px 9px;
+            font-size: 13px;
+            opacity: 1;
+            transform: none;
+        }
+
+        .void-gallery-row:not(.is-single) figure[data-void-image-item] figcaption {
+            padding: 32px 9px 7px;
+            font-size: 12px;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .void-gallery.float-up {
+        animation: none;
+    }
+
+    .void-gallery .void-gallery-row figure[data-void-image-item],
+    .void-gallery .void-gallery-row figure[data-void-image-item] figcaption,
+    .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom].lazyload-container,
+    .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
+    .void-gallery .void-gallery-row figure[data-void-image-item] img.blured-placeholder {
+        transition: none;
+    }
+
+    .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
+    .void-gallery .void-gallery-row figure[data-void-image-item]:hover >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
+    .void-gallery .void-gallery-row figure[data-void-image-item]:focus-within >a.void-image-link[data-void-image-zoom] img[data-void-image-content] {
+        transform: none;
+    }
+}

@@ -103,6 +103,21 @@
 
 </details>
 
+<details><summary>添加相册页面</summary><br>
+
+新建独立页面，自定义模板选择 `Gallery`。可使用二级标题划分年份或相册分组，标题下连续的普通 Markdown 图片会按原始比例组成自适应照片墙；文字、标题等非图片内容会自然分隔照片组。例如：
+
+```markdown
+## 2026
+
+![照片说明](https://example.com/photo-1.jpg)
+![照片说明](https://example.com/photo-2.jpg)
+```
+
+已有的 `[photos][/photos]` 内容可以直接沿用，在 Gallery 模板中会并入相同的响应式排版。每张图片继续使用主题当前的单图聚焦层并保留原图链接；不提供相册导航、缩略图、二次缩放或平移，JavaScript 不可用时会直接打开原图。页面评论区及评论开关与普通独立页面一致。
+
+</details>
+
 <details><summary>添加友情链接</summary><br>
 
 新建独立页面，然后如此书写：
