@@ -86,7 +86,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-322b12e845.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-edef062289.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-c811e71aa3.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-8843e0e51a.js'); ?>"></script>
@@ -114,7 +114,7 @@ if (isset($_POST['void_action'])) {
         isDev: true
     }
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-cd45d49f26.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-f44d809668.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
