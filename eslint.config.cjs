@@ -34,8 +34,7 @@ module.exports = [
             'assets/libs/pangu/**',
             'assets/libs/pjax/np.js',
             'assets/libs/prism/**',
-            'assets/libs/tocbot/**',
-            'assets/sw-toolbox.js'
+            'assets/libs/tocbot/**'
         ]
     },
     js.configs.recommended,

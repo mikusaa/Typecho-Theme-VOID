@@ -504,6 +504,7 @@ VOID_Ui = {
         if ($('body').hasClass('modal-open')) {
             VOID_Ui.closeModal();
         }
+        VOID_Ui.MasonryCtrler.destroy();
         $('#nav-mobile').fadeOut(200);
         TOC.close();
         if ($('.TOC').length > 0) {
@@ -512,6 +513,7 @@ VOID_Ui = {
     },
 
     MasonryCtrler: {
+        sensors: [],
         masonry: function () {
             $('#masonry').addClass('masonry').masonry({
                 itemSelector: '.masonry-item',
@@ -521,6 +523,9 @@ VOID_Ui = {
             });
         },
         init: function () {
+            $.each($('.masonry-item'), function (i, item) {
+                VOID_Ui.MasonryCtrler.watch(item.id);
+            });
             if (VOID_Ui.MasonryCtrler.check() && VOIDConfig.indexStyle == 0) {
                 $('.masonry-item').addClass('masonry-ready');
                 VOID_Ui.MasonryCtrler.masonry();
@@ -530,12 +535,43 @@ VOID_Ui = {
         check: function () {
             return $('#masonry').length && window.innerWidth >= 768;
         },
+        destroy: function () {
+            $.each(this.sensors, function (i, entry) {
+                entry.sensor.detach(entry.callback);
+            });
+            this.sensors = [];
+        },
         watch: function (id) {
             var el = document.getElementById(id);
-            new ResizeSensor(el, function () {
+            var callback;
+            var i;
+
+            for (i = 0; i < this.sensors.length; i++) {
+                if (this.sensors[i].id !== id) {
+                    continue;
+                }
+                if (this.sensors[i].element === el) {
+                    return;
+                }
+                this.sensors[i].sensor.detach(this.sensors[i].callback);
+                this.sensors.splice(i, 1);
+                break;
+            }
+
+            if (!el) {
+                return;
+            }
+
+            callback = function () {
                 if (VOID_Ui.MasonryCtrler.check() && $('#masonry').hasClass('masonry')) {
                     VOID_Ui.MasonryCtrler.masonry();
                 }
+            };
+            this.sensors.push({
+                id: id,
+                element: el,
+                callback: callback,
+                sensor: new ResizeSensor(el, callback)
             });
         }
     },

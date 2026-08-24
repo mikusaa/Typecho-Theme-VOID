@@ -152,7 +152,7 @@ $setting = $GLOBALS['VOIDSetting'];
                 }
             };
         </script>
-        <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.1/tex-svg.js'); ?>'></script>
+        <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.3/tex-svg.js'); ?>'></script>
         <?php endif; ?>
         <script src="<?php Utils::indexTheme('/assets/VOID.js'); ?>"></script>
         <?php if($setting['pjax']): ?>

@@ -132,7 +132,10 @@ gulp.task('md5', function () {
 // 无需处理的依赖资源
 gulp.task('move:libs', function () {
     return gulp.src([
+        './assets/libs/header/ResizeSensor/LICENSE',
+        './assets/libs/littlefoot/LICENSE',
         './assets/libs/mathjax/**/*',
+        './assets/libs/tocbot/LICENSE',
         './assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/**/*',
         './assets/libs/emotes/packs.json',
         './assets/libs/emotes/packs/*.json',
@@ -142,9 +145,7 @@ gulp.task('move:libs', function () {
 });
 
 gulp.task('move:assets', function () {
-    return gulp.src([
-        './assets/sw-toolbox.js',
-        './assets/VOIDCacheRule.js'])
+    return gulp.src('./assets/VOIDCacheRule.js')
         .pipe(gulp.dest('./build/assets/'));
 });
 

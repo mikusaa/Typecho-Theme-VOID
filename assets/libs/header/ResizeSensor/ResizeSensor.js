@@ -36,6 +36,13 @@
             return globalWindow.setTimeout(fn, 20);
         };
 
+    var cancelAnimationFrame = globalWindow.cancelAnimationFrame ||
+        globalWindow.mozCancelAnimationFrame ||
+        globalWindow.webkitCancelAnimationFrame ||
+        function (timer) {
+            globalWindow.clearTimeout(timer);
+        };
+
     /**
      * Iterate over each of the provided element(s).
      *
@@ -102,6 +109,9 @@
      * @constructor
      */
     var ResizeSensor = function(element, callback) {
+        //Is used when checking in reset() only for invisible elements
+        var lastAnimationFrameForInvisibleCheck = 0;
+
         /**
          *
          * @constructor
@@ -195,16 +205,19 @@
 
             var computedStyle = window.getComputedStyle(element);
             var position = computedStyle ? computedStyle.getPropertyValue('position') : null;
-            if ('absolute' !== position && 'relative' !== position && 'fixed' !== position) {
+            if ('absolute' !== position && 'relative' !== position && 'fixed' !== position && 'sticky' !== position) {
                 element.style.position = 'relative';
             }
 
-            var dirty, rafId;
+            var dirty = false;
+
+            //last request animation frame id used in onscroll event
+            var rafId = 0;
             var size = getElementSize(element);
             var lastWidth = 0;
             var lastHeight = 0;
             var initialHiddenCheck = true;
-            var lastAnimationFrame = 0;
+            lastAnimationFrameForInvisibleCheck = 0;
 
             var resetExpandShrink = function () {
                 var width = element.offsetWidth;
@@ -226,10 +239,9 @@
                     var invisible = element.offsetWidth === 0 && element.offsetHeight === 0;
                     if (invisible) {
                         // Check in next frame
-                        if (!lastAnimationFrame){
-                            lastAnimationFrame = requestAnimationFrame(function(){
-                                lastAnimationFrame = 0;
-
+                        if (!lastAnimationFrameForInvisibleCheck){
+                            lastAnimationFrameForInvisibleCheck = requestAnimationFrame(function(){
+                                lastAnimationFrameForInvisibleCheck = 0;
                                 reset();
                             });
                         }
@@ -280,8 +292,11 @@
             addEvent(expand, 'scroll', onScroll);
             addEvent(shrink, 'scroll', onScroll);
 
-            // Fix for custom Elements
-            requestAnimationFrame(reset);
+            // Fix for custom Elements and invisible elements
+            lastAnimationFrameForInvisibleCheck = requestAnimationFrame(function(){
+                lastAnimationFrameForInvisibleCheck = 0;
+                reset();
+            });
         }
 
         forEachElement(element, function(elem){
@@ -289,6 +304,11 @@
         });
 
         this.detach = function(ev) {
+            // clean up the unfinished animation frame to prevent a potential endless requestAnimationFrame of reset
+            if (lastAnimationFrameForInvisibleCheck) {
+                cancelAnimationFrame(lastAnimationFrameForInvisibleCheck);
+                lastAnimationFrameForInvisibleCheck = 0;
+            }
             ResizeSensor.detach(element, ev);
         };
 
