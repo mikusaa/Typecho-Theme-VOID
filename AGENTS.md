@@ -267,7 +267,7 @@ The following externally observable contracts must not change accidentally.
 
 ## Dependencies and Toolchain
 
-CI uses Node.js 24 LTS. Use the lockfile for normal setup and verification:
+CI uses Node.js 26. Use the lockfile for normal setup and verification:
 
 ```bash
 npm ci

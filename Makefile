@@ -1,8 +1,8 @@
 .PHONY: build dev
 default: build
 
-node_modules: package.json
-	npm install
+node_modules: package.json package-lock.json
+	npm ci
 
 clean: node_modules
 	npx gulp clean
