@@ -220,12 +220,15 @@ test('native routes replace sw-toolbox and leave unrelated requests alone', asyn
     await worker.dispatchFetch(new FakeRequest(localUrl('/usr/themes/VOID/assets/app.js')));
     await worker.dispatchFetch(new FakeRequest('https://secure.gravatar.com/avatar/example'));
     await worker.dispatchFetch(new FakeRequest('https://fonts.googleapis.com/css2?family=Roboto'));
+    await worker.dispatchFetch(new FakeRequest('https://fonts.googleapis.cn/css2?family=Roboto'));
+    await worker.dispatchFetch(new FakeRequest('https://fonts.gstatic.com/s/roboto.woff2'));
+    await worker.dispatchFetch(new FakeRequest('https://fonts.gstatic.cn/s/roboto.woff2'));
     await worker.settleFetches();
 
     assert.equal((await worker.cacheStores.get(ANIMATED_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(EMOTE_STATIC_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(STATIC_ASSETS_CACHE).keys()).length, 1);
-    assert.equal((await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys()).length, 2);
+    assert.equal((await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys()).length, 5);
 });
 
 test('animated cache hits refresh recency before strict 48-entry eviction', async () => {
@@ -453,7 +456,7 @@ test('failed responses from every cache-first route are never stored', async () 
 });
 
 test('opaque vendor responses remain cacheable', async () => {
-    const url = 'https://fonts.gstatic.com/s/font.woff2';
+    const url = 'https://fonts.gstatic.cn/s/font.woff2';
     const worker = loadWorker(() => Promise.resolve(new FakeResponse('font', 0)));
 
     const response = await worker.dispatchFetch(new FakeRequest(url));
