@@ -267,7 +267,10 @@
     if (url.origin === 'https://secure.gravatar.com' && hasPathPrefix(pathname, '/avatar/')) {
       return cacheFirst(request, staticVendorCacheName, staticMaxEntries);
     }
-    if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
+    if (url.origin === 'https://fonts.googleapis.com' ||
+        url.origin === 'https://fonts.googleapis.cn' ||
+        url.origin === 'https://fonts.gstatic.com' ||
+        url.origin === 'https://fonts.gstatic.cn') {
       return cacheFirst(request, staticVendorCacheName, staticMaxEntries);
     }
 

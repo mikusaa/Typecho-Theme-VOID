@@ -35,6 +35,7 @@
 * 升级：[依赖] 更新 MathJax 4.1.3、tocbot 4.36.8、littlefoot 4.1.4、ResizeSensor 1.2.3 及 Sass 1.103.1，并随构建包保留第三方许可文件。
 * 修复：[PJAX/瀑布流] 在内容替换时销毁 ResizeSensor，并避免重复初始化和隐藏元素的残留动画帧。
 * 重构：[Service Worker] 使用原生 Cache API 替换停止维护的 `sw-toolbox`，保留离线清单回退、失败响应过滤和各类缓存容量限制，并清理旧缓存及元数据。
+* 修复：[Service Worker] 将 `fonts.googleapis.cn` 与 `fonts.gstatic.cn` 纳入字体缓存路由，避免国内镜像资源绕过缓存。
 * 调整：[工程] CI 构建环境升级至 Node.js 26，更新 GitHub Actions 与 nightly 发布 Action，并加入表情资源、JavaScript、PHP 契约和构建校验。
 
 **🍰 2026-04-15 Version 3.5.4**
