@@ -871,7 +871,14 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
     assert.match(styles, /min-width: 0;/);
     assert.match(styles, /overflow-x: auto;/);
     assert.match(styles, /scroll-snap-type: x proximity;/);
-    assert.match(styles, /width: fit-content;/);
+    assert.match(
+        styles,
+        /figure \{\s+flex: 0 0 auto;\s+(?:\/\/[^\n]+\s+)?width: min-content;/
+    );
+    assert.doesNotMatch(
+        styles,
+        /figure \{\s+flex: 0 0 auto;\s+(?:\/\/[^\n]+\s+)?width: fit-content;/
+    );
     assert.match(styles, /width: 0;\s+min-width: 100%;\s+max-width: none;/);
     assert.doesNotMatch(styles, /width: max-content;/);
     assert.match(styles, /--void-photo-row-height: 480px;/);

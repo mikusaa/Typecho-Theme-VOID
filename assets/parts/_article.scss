@@ -415,7 +415,8 @@ article {
 
             figure {
                 flex: 0 0 auto;
-                width: fit-content;
+                // Avoid WebKit expanding portrait flex items beyond their aspect-ratio link.
+                width: min-content;
                 max-width: none!important;
                 scroll-snap-align: start;
 
