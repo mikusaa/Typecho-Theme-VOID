@@ -46,6 +46,16 @@ commentsSecurityAssertNotContains(
     $functions,
     '主题不再覆盖 Typecho 评论排序'
 );
+commentsSecurityAssertNotContains(
+    'error_reporting(',
+    $functions,
+    '主题不再全局关闭 PHP 错误报告'
+);
+commentsSecurityAssertContains(
+    'if (PHP_VERSION_ID < 80100)',
+    $functions,
+    '仅在仍需要时调用 ReflectionProperty 兼容接口'
+);
 
 commentsSecurityAssertContains(
     "\$this->header('commentReply=&description=&social=0')",
@@ -100,6 +110,11 @@ commentsSecurityAssertContains(
     'data-comment-depth="<?php echo (int)$this->levels; ?>"',
     $commentWidget,
     '评论节点暴露服务端实际深度供 Ajax 保持嵌套顺序'
+);
+commentsSecurityAssertContains(
+    "\$commentClass = '';",
+    $commentWidget,
+    '评论样式变量在所有分支中均已初始化'
 );
 
 if ($failures > 0) {

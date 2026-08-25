@@ -11,9 +11,6 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
-// 看不见错误就是没有错误
-error_reporting(0);
-
 require_once('libs/Utils.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
@@ -76,7 +73,9 @@ function VOID_refreshArchiveComputedFields($archive)
 
         if ($reflection && $reflection->hasProperty('row')) {
             $rowProperty = $reflection->getProperty('row');
-            $rowProperty->setAccessible(true);
+            if (PHP_VERSION_ID < 80100) {
+                $rowProperty->setAccessible(true);
+            }
             $row = $rowProperty->getValue($archive);
 
             if (is_array($row)) {

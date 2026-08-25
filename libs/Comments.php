@@ -168,6 +168,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         $setting = $GLOBALS['VOIDSetting'];
         
         $avatarClass = '';
+        $commentClass = '';
         if ($this->authorId) {
             if ($this->authorId == $this->ownerId) {
                 $avatarClass .= ' star';
