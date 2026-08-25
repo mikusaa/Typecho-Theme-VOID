@@ -3273,7 +3273,7 @@ var VOID = {
             $(item).attr('placeholder', '你还没有输入任何信息');
             return;
         }
-        var t = VOIDConfig.searchBase + c;
+        var t = VOIDConfig.searchBase + encodeURIComponent(c);
         if (VOIDConfig.PJAX && window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
             window.VoidPjax.visit({
                 url: t,
@@ -3402,17 +3402,23 @@ var Share = {
 
     toWeibo: function (item) {
         var content = Share.parseItem(item);
-        var url = 'http://service.weibo.com/share/share.php?appkey=&title=分享《' + content.title + '》 @' + content.weibo + '%0a%0a' + content.excerpt
-            + '&url=' + content.url
-            + '&pic=' + content.img + '&searchPic=false&style=simple';
-        window.open(url);
+        var title = '分享《' + content.title + '》 @' + content.weibo + '\n\n' + content.excerpt;
+        var url = new URL('http://service.weibo.com/share/share.php');
+        url.searchParams.set('appkey', '');
+        url.searchParams.set('title', title);
+        url.searchParams.set('url', content.url);
+        url.searchParams.set('pic', content.img);
+        url.searchParams.set('searchPic', 'false');
+        url.searchParams.set('style', 'simple');
+        window.open(url.toString());
     },
 
     toTwitter: function (item) {
         var content = Share.parseItem(item);
-        var url = 'https://twitter.com/intent/tweet?text=分享《' + content.title + '》 @' + content.twitter + '%0a%0a' + content.excerpt
-            + '%20' + content.url;
-        window.open(url);
+        var text = '分享《' + content.title + '》 @' + content.twitter + '\n\n' + content.excerpt + ' ' + content.url;
+        var url = new URL('https://twitter.com/intent/tweet');
+        url.searchParams.set('text', text);
+        window.open(url.toString());
     }
 };
 
