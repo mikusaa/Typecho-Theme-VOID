@@ -57,6 +57,11 @@ if (isset($_POST['void_action'])) {
             $banner=$this->fields->banner;
         if($this->fields->excerpt != '')
             $description = $this->fields->excerpt;
+        if($description == '') {
+            ob_start();
+            $this->excerpt(50);
+            $description = ob_get_clean();
+        }
     }else{
         $description = Helper::options()->description;
     }
@@ -65,9 +70,9 @@ if (isset($_POST['void_action'])) {
     <?php if($isContentPage): ?>
     <meta name="author" content="<?php $this->author(); ?>" />
     <?php endif; ?>
-    <meta name="description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
+    <meta name="description" content="<?php echo $description; ?>" />
     <meta property="og:title" content="<?php Contents::title($this); ?>" />
-    <meta property="og:description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
+    <meta property="og:description" content="<?php echo $description; ?>" />
     <meta property="og:site_name" content="<?php Contents::title($this); ?>" />
     <meta property="og:type" content="<?php echo $isContentPage ? 'article' : 'website'; ?>" />
     <meta property="og:url" content="<?php echo htmlspecialchars($pageUrl, ENT_QUOTES, 'UTF-8'); ?>" />
@@ -77,7 +82,7 @@ if (isset($_POST['void_action'])) {
     <meta property="article:modified_time" content="<?php echo date('c', $this->modified); ?>" />
     <?php endif; ?>
     <meta name="twitter:title" content="<?php Contents::title($this); ?>" />
-    <meta name="twitter:description" content="<?php if($description != '') echo $description; else $this->excerpt(50); ?>" />
+    <meta name="twitter:description" content="<?php echo $description; ?>" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@<?php echo $setting['twitterId']; ?>" />
     <meta name="twitter:creator" content="@<?php echo $setting['twitterId']; ?>" />

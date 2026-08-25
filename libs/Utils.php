@@ -211,7 +211,7 @@ class Utils
     /**
      * 输出建站时间（最早一篇文章的写作时间）
      * 
-     * @return array
+     * @return void
      */
     public static function getBuildTime()
     {
@@ -221,7 +221,7 @@ class Utils
             ->where('table.contents.password IS NULL')
             ->order('table.contents.created', Typecho_Db::SORT_ASC)
             ->limit(1));
-        if (count($content))
+        if (is_array($content) && isset($content['created']))
             echo date('Y-m-d\TH:i', $content['created']);
         else
             echo date('Y-m-d\TH:i');
