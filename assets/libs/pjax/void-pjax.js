@@ -317,6 +317,7 @@
         }
 
         var adoptedContainer = document.importNode(nextContainer, true);
+        safeEmit('pjax:beforeReplace', [adoptedContainer, options], options);
         currentContainer.parentNode.replaceChild(adoptedContainer, currentContainer);
 
         updateTitle(parsedDoc, adoptedContainer);

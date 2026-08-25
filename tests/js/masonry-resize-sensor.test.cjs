@@ -203,9 +203,9 @@ test('Masonry resize sensors stay idempotent and follow replaced DOM nodes', () 
     assert.equal(environment.controller.sensors[0].element, replacementElement);
 });
 
-test('Masonry init restores sensors and UI reset detaches them once', () => {
-    const environment = loadMasonryEnvironment();
-    const element = { id: 'p-2' };
+test('Masonry stays active through UI reset and explicit teardown detaches it once', () => {
+    const environment = loadMasonryEnvironment({ indexStyle: 0 });
+    const element = environment.createElement('p-2');
 
     environment.elements.push(element);
     environment.controller.init();
@@ -213,10 +213,25 @@ test('Masonry init restores sensors and UI reset detaches them once', () => {
 
     assert.equal(environment.sensorInstances.length, 1);
     assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.controller.active, true);
 
     environment.ui.reset();
     environment.ui.reset();
 
+    assert.equal(environment.masonryCalls.length, 1);
+    assert.equal(environment.sensorInstances[0].detachCount, 0);
+    assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.listenerCount('resize'), 1);
+    assert.equal(environment.controller.active, true);
+    assert.equal(environment.masonryContainer.classes.has('masonry'), true);
+    assert.equal(element.classes.has('masonry-ready'), true);
+    assert.equal(element.style.position, 'absolute');
+
+    environment.controller.destroy();
+    environment.controller.destroy();
+
+    assert.equal(environment.masonryCalls.length, 2);
+    assert.equal(environment.masonryCalls[1], 'destroy');
     assert.equal(environment.sensorInstances[0].detachCount, 1);
     assert.equal(
         environment.sensorInstances[0].detachedCallback,

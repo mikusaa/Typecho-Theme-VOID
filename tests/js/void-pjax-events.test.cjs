@@ -52,12 +52,52 @@ class FakeCustomEvent {
     }
 }
 
-function loadPjaxEnvironment() {
-    const document = new FakeEventTarget();
-    const container = new FakeEventTarget(document);
-    let jqueryTriggerCount = 0;
+function createPjaxContainer(parentNode = null) {
+    const container = new FakeEventTarget(parentNode);
+    container.querySelector = () => null;
+    container.querySelectorAll = () => [];
+    return container;
+}
 
-    document.querySelector = (selector) => selector === '#pjax-container' ? container : null;
+function createPjaxResponse(url = 'https://example.test/next') {
+    return {
+        ok: true,
+        text: () => Promise.resolve('<main id="pjax-container"></main>'),
+        url
+    };
+}
+
+function loadPjaxEnvironment(options = {}) {
+    const document = new FakeEventTarget();
+    const initialContainer = createPjaxContainer(document);
+    const nextContainer = createPjaxContainer();
+    const adoptedContainer = createPjaxContainer();
+    let currentContainer = initialContainer;
+    let jqueryTriggerCount = 0;
+    let replaceObserver = () => {};
+    let replacementCount = 0;
+
+    document.importNode = (node) => {
+        assert.equal(node, nextContainer);
+        return adoptedContainer;
+    };
+    document.querySelector = (selector) => selector === '#pjax-container' ? currentContainer : null;
+    document.replaceChild = (next, current) => {
+        assert.equal(current, currentContainer);
+        replaceObserver();
+        replacementCount += 1;
+        current.parentNode = null;
+        next.parentNode = document;
+        currentContainer = next;
+    };
+    document.title = 'Start';
+
+    function DOMParser() {}
+    DOMParser.prototype.parseFromString = () => ({
+        querySelector: () => options.invalidFragment ? null : nextContainer,
+        title: 'Next'
+    });
+
     const jQuery = (target) => ({
         on(name, listener) {
             target.addEventListener(name, (event) => listener.call(target, {
@@ -72,8 +112,9 @@ function loadPjaxEnvironment() {
         }
     });
     const window = {
+        AbortController: options.AbortController,
         CustomEvent: FakeCustomEvent,
-        DOMParser: function () {},
+        DOMParser,
         Promise,
         URL,
         clearTimeout,
@@ -89,6 +130,7 @@ function loadPjaxEnvironment() {
             href: 'https://example.test/start',
             origin: 'https://example.test'
         },
+        scrollTo() {},
         setTimeout
     };
     window.window = window;
@@ -96,6 +138,8 @@ function loadPjaxEnvironment() {
     vm.runInNewContext(
         fs.readFileSync(path.resolve(__dirname, '../../assets/libs/pjax/void-pjax.js'), 'utf8'),
         {
+            AbortController: options.AbortController,
+            DOMParser,
             document,
             Promise,
             URL,
@@ -104,9 +148,16 @@ function loadPjaxEnvironment() {
     );
 
     return {
+        adoptedContainer,
         document,
+        getCurrentContainer: () => currentContainer,
         getJqueryTriggerCount: () => jqueryTriggerCount,
+        getReplacementCount: () => replacementCount,
+        initialContainer,
         jQuery,
+        setReplaceObserver: (observer) => {
+            replaceObserver = observer;
+        },
         window
     };
 }
@@ -216,7 +267,16 @@ function loadFooterPjaxReloadHandler(context) {
 }
 
 test('native and jQuery listeners receive one complete event with event detail', async () => {
-    const { document, getJqueryTriggerCount, jQuery, window } = loadPjaxEnvironment();
+    const {
+        document,
+        getCurrentContainer,
+        getJqueryTriggerCount,
+        getReplacementCount,
+        initialContainer,
+        jQuery,
+        window
+    } = loadPjaxEnvironment();
+    let beforeReplaceCount = 0;
     let nativeCount = 0;
     let jqueryCount = 0;
     let nativeEvent;
@@ -230,6 +290,9 @@ test('native and jQuery listeners receive one complete event with event detail',
         jqueryCount += 1;
         jqueryEvent = event;
     });
+    document.addEventListener('pjax:beforeReplace', () => {
+        beforeReplaceCount += 1;
+    });
 
     await window.VoidPjax.visit({
         container: '#pjax-container',
@@ -239,12 +302,93 @@ test('native and jQuery listeners receive one complete event with event detail',
 
     assert.equal(nativeCount, 1);
     assert.equal(jqueryCount, 1);
+    assert.equal(beforeReplaceCount, 0);
+    assert.equal(getReplacementCount(), 0);
+    assert.equal(getCurrentContainer(), initialContainer);
+    assert.equal(initialContainer.parentNode, document);
     assert.equal(getJqueryTriggerCount(), 0);
     assert.equal(nativeEvent.bubbles, true);
     assert.equal(nativeEvent.cancelable, true);
     assert.equal(nativeEvent.detail.args[1], 'error');
     assert.equal(nativeEvent.detail.options.container, '#pjax-container');
     assert.equal(jqueryEvent.originalEvent, nativeEvent);
+});
+
+test('successful replacement emits one beforeReplace event while the old container is attached', async () => {
+    const {
+        adoptedContainer,
+        document,
+        getCurrentContainer,
+        getJqueryTriggerCount,
+        getReplacementCount,
+        initialContainer,
+        jQuery,
+        setReplaceObserver,
+        window
+    } = loadPjaxEnvironment();
+    const events = [];
+    let resolveFetch;
+    let jqueryEvent;
+    let nativeEvent;
+    let oldContainerAttached = false;
+
+    window.fetch = () => new Promise((resolve) => {
+        resolveFetch = resolve;
+    });
+    [
+        'pjax:start',
+        'pjax:send',
+        'pjax:beforeReplace',
+        'pjax:success',
+        'pjax:complete',
+        'pjax:end'
+    ].forEach((name) => {
+        document.addEventListener(name, () => events.push(name));
+    });
+    setReplaceObserver(() => events.push('replace'));
+    document.addEventListener('pjax:beforeReplace', (event) => {
+        nativeEvent = event;
+        oldContainerAttached = event.target === initialContainer
+            && event.target.parentNode === document
+            && getCurrentContainer() === initialContainer;
+    });
+    jQuery(document).on('pjax:beforeReplace', (event) => {
+        jqueryEvent = event;
+    });
+
+    const visit = window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/next'
+    });
+
+    assert.deepEqual(events, ['pjax:start', 'pjax:send']);
+    assert.equal(getCurrentContainer(), initialContainer);
+    assert.equal(initialContainer.parentNode, document);
+    assert.equal(getReplacementCount(), 0);
+
+    resolveFetch(createPjaxResponse());
+    const replaced = await visit;
+
+    assert.equal(replaced, true);
+    assert.deepEqual(events, [
+        'pjax:start',
+        'pjax:send',
+        'pjax:beforeReplace',
+        'replace',
+        'pjax:success',
+        'pjax:complete',
+        'pjax:end'
+    ]);
+    assert.equal(oldContainerAttached, true);
+    assert.equal(nativeEvent.detail.args[0], adoptedContainer);
+    assert.equal(nativeEvent.detail.args[1], nativeEvent.detail.options);
+    assert.equal(nativeEvent.detail.options.container, '#pjax-container');
+    assert.equal(jqueryEvent.originalEvent, nativeEvent);
+    assert.equal(getJqueryTriggerCount(), 0);
+    assert.equal(getCurrentContainer(), adoptedContainer);
+    assert.equal(getReplacementCount(), 1);
+    assert.equal(initialContainer.parentNode, null);
 });
 
 test('a superseded request emits abort before the replacement send', () => {
@@ -257,6 +401,9 @@ test('a superseded request emits abort before the replacement send', () => {
     });
     document.addEventListener('pjax:abort', (event) => {
         events.push(`abort:${event.detail.options.container}`);
+    });
+    document.addEventListener('pjax:beforeReplace', (event) => {
+        events.push(`beforeReplace:${event.detail.options.container}`);
     });
 
     window.VoidPjax.visit({
@@ -275,6 +422,124 @@ test('a superseded request emits abort before the replacement send', () => {
         'abort:#pjax-container',
         'send:#comments'
     ]);
+});
+
+test('only the current successful request emits beforeReplace', async () => {
+    const {
+        document,
+        getCurrentContainer,
+        getReplacementCount,
+        initialContainer,
+        window
+    } = loadPjaxEnvironment();
+    const resolvers = [];
+    let beforeReplaceCount = 0;
+
+    window.fetch = () => new Promise((resolve) => resolvers.push(resolve));
+    document.addEventListener('pjax:beforeReplace', () => {
+        beforeReplaceCount += 1;
+    });
+
+    const staleVisit = window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/stale'
+    });
+    const currentVisit = window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/current'
+    });
+
+    resolvers[0](createPjaxResponse('https://example.test/stale'));
+    assert.equal(await staleVisit, false);
+    assert.equal(beforeReplaceCount, 0);
+    assert.equal(getReplacementCount(), 0);
+    assert.equal(getCurrentContainer(), initialContainer);
+    assert.equal(initialContainer.parentNode, document);
+
+    resolvers[1](createPjaxResponse('https://example.test/current'));
+    assert.equal(await currentVisit, true);
+    assert.equal(beforeReplaceCount, 1);
+    assert.equal(getReplacementCount(), 1);
+});
+
+test('invalid replacement fragments do not emit beforeReplace', async () => {
+    const {
+        document,
+        getCurrentContainer,
+        getReplacementCount,
+        initialContainer,
+        window
+    } = loadPjaxEnvironment({ invalidFragment: true });
+    let beforeReplaceCount = 0;
+
+    window.fetch = () => Promise.resolve(createPjaxResponse());
+    document.addEventListener('pjax:beforeReplace', () => {
+        beforeReplaceCount += 1;
+    });
+
+    const replaced = await window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/missing-fragment'
+    });
+
+    assert.equal(replaced, false);
+    assert.equal(beforeReplaceCount, 0);
+    assert.equal(getReplacementCount(), 0);
+    assert.equal(getCurrentContainer(), initialContainer);
+    assert.equal(initialContainer.parentNode, document);
+});
+
+test('timed out requests do not emit beforeReplace', async () => {
+    class AbortController {
+        constructor() {
+            const listeners = [];
+            this.signal = {
+                addEventListener(name, listener) {
+                    if (name === 'abort') {
+                        listeners.push(listener);
+                    }
+                }
+            };
+            this.abort = () => listeners.forEach((listener) => listener());
+        }
+    }
+
+    const {
+        document,
+        getCurrentContainer,
+        getReplacementCount,
+        initialContainer,
+        window
+    } = loadPjaxEnvironment({ AbortController });
+    let beforeReplaceCount = 0;
+
+    window.fetch = (url, options) => new Promise((resolve, reject) => {
+        assert.equal(url, 'https://example.test/timeout');
+        assert.equal(typeof resolve, 'function');
+        options.signal.addEventListener('abort', () => {
+            const error = new Error('timed out');
+            error.name = 'AbortError';
+            reject(error);
+        });
+    });
+    document.addEventListener('pjax:beforeReplace', () => {
+        beforeReplaceCount += 1;
+    });
+
+    const replaced = await window.VoidPjax.visit({
+        container: '#pjax-container',
+        timeout: 1,
+        url: 'https://example.test/timeout'
+    });
+
+    assert.equal(replaced, false);
+    assert.equal(beforeReplaceCount, 0);
+    assert.equal(getReplacementCount(), 0);
+    assert.equal(getCurrentContainer(), initialContainer);
+    assert.equal(initialContainer.parentNode, document);
 });
 
 test('resolvePjaxOptions prefers native detail and supports legacy jQuery arguments', () => {
@@ -323,6 +588,7 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
 
     context.VOID.destroyEmotes = () => calls.push('destroyEmotes');
     context.VOID.beforePjax = () => calls.push('beforePjax');
+    context.VOID.beforePjaxReplace = () => calls.push('beforePjaxReplace');
     context.VOID.afterPjax = () => calls.push('afterPjax');
     context.VOID.endPjax = () => calls.push('endPjax');
     context.VOID_Gallery.init = () => calls.push('gallery');
@@ -335,6 +601,7 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
 
     context.VOID.bindPjaxLifecycle();
     handlers.get('pjax:send')(wrappedPjaxEvent({ container: '#comments' }));
+    handlers.get('pjax:beforeReplace')(wrappedPjaxEvent({ container: '#comments' }));
     handlers.get('pjax:complete')(wrappedPjaxEvent({ container: '#comments' }));
     handlers.get('pjax:end')(wrappedPjaxEvent({ container: '#comments' }));
 
@@ -352,6 +619,7 @@ test('main-container PJAX events do not run the comment lifecycle', () => {
 
     context.VOID.destroyEmotes = () => calls.push('destroyEmotes');
     context.VOID.beforePjax = () => calls.push('beforePjax');
+    context.VOID.beforePjaxReplace = () => calls.push('beforePjaxReplace');
     context.VOID.afterPjax = () => calls.push('afterPjax');
     context.VOID.endPjax = () => calls.push('endPjax');
     context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
@@ -361,10 +629,11 @@ test('main-container PJAX events do not run the comment lifecycle', () => {
 
     context.VOID.bindPjaxLifecycle();
     handlers.get('pjax:send')(wrappedPjaxEvent({ container: '#pjax-container' }));
+    handlers.get('pjax:beforeReplace')(wrappedPjaxEvent({ container: '#pjax-container' }));
     handlers.get('pjax:complete')(wrappedPjaxEvent({ container: '#pjax-container' }));
     handlers.get('pjax:end')(wrappedPjaxEvent({ container: '#pjax-container' }));
 
-    assert.deepEqual(calls, ['beforePjax', 'afterPjax', 'endPjax']);
+    assert.deepEqual(calls, ['beforePjax', 'beforePjaxReplace', 'afterPjax', 'endPjax']);
 });
 
 test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', () => {
@@ -381,6 +650,20 @@ test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', 
 
     context.VOID.beforePjax();
     assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'gallery', 'photoSets', 'emotes', 'ui']);
+});
+
+test('main before-replace teardown destroys Masonry synchronously', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID_Ui = {
+        MasonryCtrler: {
+            destroy: () => calls.push('masonry')
+        }
+    };
+
+    context.VOID.beforePjaxReplace();
+    assert.deepEqual(calls, ['masonry']);
 });
 
 test('initialization defers typography until the entering animation is visible', () => {

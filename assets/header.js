@@ -504,7 +504,6 @@ VOID_Ui = {
         if ($('body').hasClass('modal-open')) {
             VOID_Ui.closeModal();
         }
-        VOID_Ui.MasonryCtrler.destroy();
         $('#nav-mobile').fadeOut(200);
         TOC.close();
         if ($('.TOC').length > 0) {

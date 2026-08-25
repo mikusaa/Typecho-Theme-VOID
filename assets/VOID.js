@@ -3071,6 +3071,14 @@ var VOID = {
             }
         });
 
+        $(document).on('pjax:beforeReplace', function () {
+            var options = VOID.resolvePjaxOptions(arguments);
+
+            if (VOID.isMainPjaxRequest(options)) {
+                VOID.beforePjaxReplace();
+            }
+        });
+
         $(document).on('pjax:complete', function () {
             var options = VOID.resolvePjaxOptions(arguments);
 
@@ -3200,6 +3208,10 @@ var VOID = {
         VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
         VOID_Ui.reset();
+    },
+
+    beforePjaxReplace: function () {
+        VOID_Ui.MasonryCtrler.destroy();
     },
 
     // PJAX 结束后
