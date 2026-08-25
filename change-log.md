@@ -24,7 +24,7 @@
 * 调整：[页面滚动] 移除全局滚动条换肤，恢复浏览器原生样式。
 * 优化：[友链] 重绘友链卡片的明暗主题、双行标题和键盘焦点状态，并为头像加载失败补充首字母占位。
 * 优化：[后台编辑器] 为文章自定义字段面板、表单控件、行为开关和文章预览补充夜间模式，适配 DarkMode 后台主题状态。
-* 优化：[字体加载] Google Fonts 切换至 `fonts.googleapis.cn`，并为品牌字体及动态加载字体补充 `font-display: swap`，减少字体阻塞和文字闪烁。
+* 优化：[字体加载] 使用 Fontsource 将 Open Sans、思源宋体和可选的 Fira Code 固定版本随主题自托管，按字符范围加载中文字体并提供独立暖缓存，避免主题内置字体连接 Google；同时移除无实际用途的 Droid Serif 请求。
 * 优化：[图片加载] 顶部头图改为高优先级异步解码，首页与归档列表按首屏位置区分立即加载和原生懒加载。
 * 新增：[主题颜色] 后台增加独立的“跟随设备”模式，严格依据 `prefers-color-scheme` 并实时响应设备主题变化。
 * 调整：[主题颜色] 移除按时间自动切换及 `darkModeTime` 高级配置，避免与跟随设备模式产生冲突。
@@ -48,7 +48,7 @@
 * 升级：[排版] pangu 更新至 9.1.0，改进跨节点、链接、斜线、运算符及动态内容的中西文间距，由上游原生兼容缺少 `requestIdleCallback` 的 Safari，并修正页面入场动画首帧漏掉链接左侧空格的问题。
 * 修复：[PJAX/瀑布流] 在内容替换时销毁 ResizeSensor，并避免重复初始化和隐藏元素的残留动画帧。
 * 重构：[Service Worker] 使用原生 Cache API 替换停止维护的 `sw-toolbox`，保留离线清单回退、失败响应过滤和各类缓存容量限制，并清理旧缓存及元数据。
-* 修复：[Service Worker] 将 `fonts.googleapis.cn` 与 `fonts.gstatic.cn` 纳入字体缓存路由，避免国内镜像资源绕过缓存。
+* 兼容：[Service Worker] 保留 Google Fonts 域名缓存路由，供管理员配置的品牌字体和自定义页头继续使用。
 * 修复：[Service Worker] 关闭缓存时仅注销可验证为 VOID 所有的注册，避免误删同源其他应用的 Worker，并保守迁移旧版默认注册。
 * 调整：[工程] CI 构建环境升级至 Node.js 26，更新 GitHub Actions 与 nightly 发布 Action，并加入表情资源、JavaScript、PHP 契约和构建校验。
 

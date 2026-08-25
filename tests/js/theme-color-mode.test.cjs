@@ -13,6 +13,14 @@ class FakeClassList {
         return this.values.has(name);
     }
 
+    add(name) {
+        this.values.add(name);
+    }
+
+    remove(name) {
+        this.values.delete(name);
+    }
+
     toggle(name, force) {
         const enabled = force === undefined ? !this.values.has(name) : !!force;
         if (enabled) {
@@ -58,6 +66,17 @@ function loadThemeEnvironment(mode, prefersDark = false) {
     const reducedMotionQuery = new FakeMediaQuery(true);
     const html = { classList: new FakeClassList(), style: {} };
     const body = { classList: new FakeClassList() };
+    const elementsById = new Map();
+    const head = {
+        children: [],
+        appendChild(element) {
+            this.children.push(element);
+            if (element.id) {
+                elementsById.set(element.id, element);
+            }
+            return element;
+        }
+    };
     const controlAttributes = new Map();
     const control = {
         setAttribute(name, value) {
@@ -67,6 +86,13 @@ function loadThemeEnvironment(mode, prefersDark = false) {
     const document = {
         body,
         documentElement: html,
+        head,
+        createElement(tagName) {
+            return { tagName: tagName.toUpperCase() };
+        },
+        getElementById(id) {
+            return elementsById.get(id) || null;
+        },
         querySelector(selector) {
             return selector === '#toggle-night button' ? control : null;
         }
@@ -89,10 +115,21 @@ function loadThemeEnvironment(mode, prefersDark = false) {
         }
     });
 
-    function jQuery() {
+    function jQuery(target) {
+        const classList = target === 'body' ? body.classList : target && target.classList;
         const api = {
-            addClass() { return api; },
-            removeClass() { return api; },
+            addClass(name) {
+                if (classList) {
+                    classList.add(name);
+                }
+                return api;
+            },
+            removeClass(name) {
+                if (classList) {
+                    classList.remove(name);
+                }
+                return api;
+            },
             on() { return api; }
         };
         return api;
@@ -112,7 +149,12 @@ function loadThemeEnvironment(mode, prefersDark = false) {
 
     const context = {
         $: jQuery,
-        VOIDConfig: { colorScheme: mode },
+        VOIDConfig: {
+            colorScheme: mode,
+            fontStylesheets: {
+                serif: 'https://example.test/usr/themes/VOID/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css'
+            }
+        },
         console,
         document,
         jQuery,
@@ -130,6 +172,7 @@ function loadThemeEnvironment(mode, prefersDark = false) {
         context,
         controlAttributes,
         cookies,
+        head,
         html,
         switcher: context.VOID_Ui.DarkModeSwitcher
     };
@@ -200,6 +243,33 @@ test('manual cycle overrides device mode and restores live device following', ()
     assert.equal(controlAttributes.get('data-theme-state'), 'auto');
 });
 
+test('serif toggle injects the local stylesheet into head once and preserves the cookie contract', () => {
+    const environment = loadThemeEnvironment(3);
+    const item = { classList: new FakeClassList() };
+
+    environment.context.VOID_Ui.toggleSerif(item, true);
+    environment.context.VOID_Ui.toggleSerif(item, true);
+
+    assert.equal(environment.head.children.length, 1);
+    assert.deepEqual(
+        environment.head.children[0],
+        {
+            tagName: 'LINK',
+            id: 'stylesheet_noto',
+            rel: 'stylesheet',
+            href: 'https://example.test/usr/themes/VOID/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css'
+        }
+    );
+    assert.equal(environment.body.classList.contains('serif'), true);
+    assert.equal(environment.cookies.get('serif'), '1');
+
+    environment.context.VOID_Ui.toggleSerif(item, false);
+
+    assert.equal(environment.head.children.length, 1);
+    assert.equal(environment.body.classList.contains('serif'), false);
+    assert.equal(environment.cookies.get('serif'), '0');
+});
+
 test('time-based configuration and scheduling are absent from runtime sources', () => {
     const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
     const headTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/head.php'), 'utf8');
@@ -208,4 +278,16 @@ test('time-based configuration and scheduling are absent from runtime sources', 
     for (const source of [headerSource, headTemplate, advancedSample]) {
         assert.doesNotMatch(source, /darkModeTime|scheduleTimeChange|isTimeDark/);
     }
+});
+
+test('runtime font loading no longer contains Google Fonts or Droid Serif URLs', () => {
+    const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+    const headTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/head.php'), 'utf8');
+    const fontVariables = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_var.scss'), 'utf8');
+
+    for (const source of [headerSource, headTemplate]) {
+        assert.doesNotMatch(source, /fonts\.googleapis|fonts\.gstatic|Droid[+]Serif|Droid Serif/);
+    }
+    assert.match(fontVariables, /\$void-font-default:\s*'Open Sans Variable'/);
+    assert.match(fontVariables, /\$void-font-serif:\s*'Noto Serif SC Variable'/);
 });

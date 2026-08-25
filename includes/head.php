@@ -85,6 +85,9 @@ if (isset($_POST['void_action'])) {
     ob_start();
     Utils::index('/action/void?');
     $votePath = ob_get_clean();
+    ob_start();
+    Utils::indexTheme('/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css');
+    $serifFontStylesheet = ob_get_clean();
 
     $voidConfig = array(
         'PJAX' => (bool) $setting['pjax'],
@@ -105,6 +108,9 @@ if (isset($_POST['void_action'])) {
         'horizontalBg' => !empty($setting['siteBg']),
         'verticalBg' => !empty($setting['siteBgVertical']),
         'indexStyle' => (int) $setting['indexStyle'],
+        'fontStylesheets' => array(
+            'serif' => $serifFontStylesheet
+        ),
         'version' => (string) $GLOBALS['VOIDVersion'],
         'isDev' => true
     );
@@ -133,6 +139,14 @@ if (isset($_POST['void_action'])) {
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
+    <link rel="preload" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/files/open-sans-latin-wght-normal.woff2'); ?>" as="font" type="font/woff2" crossorigin="anonymous">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/wght.css'); ?>">
+    <?php if(Utils::isSerif($setting)): ?>
+        <link id="stylesheet_noto" href="<?php echo Utils::escapeHtml($serifFontStylesheet); ?>" rel="stylesheet">
+    <?php endif; ?>
+    <?php if($setting['useFiraCodeFont']): ?>
+        <link href="<?php Utils::indexTheme('/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css'); ?>" rel="stylesheet">
+    <?php endif; ?>
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle.css');?>">
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID.css');?>">
 
@@ -173,13 +187,7 @@ if (isset($_POST['void_action'])) {
     </style>
     <?php endif; ?>
 
-    <link href="https://fonts.googleapis.cn/css?family=Open+Sans:300,400,700&display=swap" rel="stylesheet">
-    <?php if(Utils::isSerif($setting)): ?>
-        <link id="stylesheet_noto" href="https://fonts.googleapis.cn/css?family=Noto+Serif+SC:300,400,700&display=swap&subset=chinese-simplified" rel="stylesheet">
-    <?php endif; ?>
-
     <?php if($setting['useFiraCodeFont']): ?>
-        <link href="https://fonts.googleapis.cn/css?family=Fira+Code&display=swap" rel="stylesheet">
         <style>.yue code, .yue tt {font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace}</style>
     <?php endif; ?>
 

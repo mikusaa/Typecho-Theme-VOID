@@ -389,16 +389,22 @@ VOID_Ui = {
     },
 
     toggleSerif: function (item, serif) {
+        var stylesheet;
+
         $('.font-indicator').removeClass('checked');
         $(item).addClass('checked');
         if (serif) {
-            if ($('#stylesheet_noto').length < 1)
-                $('body').append('<link id="stylesheet_noto" href="https://fonts.googleapis.cn/css?family=Noto+Serif+SC:400,700&amp;display=swap&amp;subset=chinese-simplified" rel="stylesheet">');
+            if (!document.getElementById('stylesheet_noto') &&
+                VOIDConfig.fontStylesheets && VOIDConfig.fontStylesheets.serif) {
+                stylesheet = document.createElement('link');
+                stylesheet.id = 'stylesheet_noto';
+                stylesheet.rel = 'stylesheet';
+                stylesheet.href = VOIDConfig.fontStylesheets.serif;
+                document.head.appendChild(stylesheet);
+            }
             $('body').addClass('serif');
             VOID_Util.setCookie('serif', '1', 2592000); // 一个月
         } else {
-            if ($('#stylesheet_droid').length < 1)
-                $('body').append('<link id="stylesheet_droid" href="https://fonts.googleapis.cn/css?family=Droid+Serif:400,700&amp;display=swap" rel="stylesheet">');
             $('body').removeClass('serif');
             VOID_Util.setCookie('serif', '0', 2592000);
         }

@@ -12,3 +12,4 @@ dev: node_modules
 
 build: node_modules
 	npx gulp build
+	npm run fonts:check

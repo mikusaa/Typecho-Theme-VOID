@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const ORIGIN = 'https://example.test';
 const ANIMATED_CACHE = 'emote-animated-native-v6';
 const EMOTE_STATIC_CACHE = 'emote-static-native-v6';
+const FONT_ASSETS_CACHE = 'font-assets-native-v1';
 const STATIC_ASSETS_CACHE = 'static-assets-native-v6';
 const STATIC_VENDOR_CACHE = 'static-vendor-native-v6';
 const WORKER_PATH = path.resolve(__dirname, '../../assets/VOIDCacheRule.js');
@@ -203,6 +204,10 @@ function animatedUrl(id) {
     return localUrl(`/usr/themes/VOID/assets/libs/emotes/bangumi/animated/${id}.gif`);
 }
 
+function fontUrl(id) {
+    return localUrl(`/usr/themes/VOID/assets/fonts/fontsource/${id}.woff2`);
+}
+
 test('native routes replace sw-toolbox and leave unrelated requests alone', async () => {
     const source = fs.readFileSync(WORKER_PATH, 'utf8');
     const worker = loadWorker((request) => Promise.resolve(new FakeResponse(request.url)));
@@ -217,6 +222,7 @@ test('native routes replace sw-toolbox and leave unrelated requests alone', asyn
     await worker.dispatchFetch(new FakeRequest(
         localUrl('/usr/themes/VOID/assets/libs/emotes/bangumi/poster/001.webp')
     ));
+    await worker.dispatchFetch(new FakeRequest(fontUrl('open-sans-latin-400-normal')));
     await worker.dispatchFetch(new FakeRequest(localUrl('/usr/themes/VOID/assets/app.js')));
     await worker.dispatchFetch(new FakeRequest('https://secure.gravatar.com/avatar/example'));
     await worker.dispatchFetch(new FakeRequest('https://fonts.googleapis.com/css2?family=Roboto'));
@@ -227,8 +233,59 @@ test('native routes replace sw-toolbox and leave unrelated requests alone', asyn
 
     assert.equal((await worker.cacheStores.get(ANIMATED_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(EMOTE_STATIC_CACHE).keys()).length, 1);
+    assert.equal((await worker.cacheStores.get(FONT_ASSETS_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(STATIC_ASSETS_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys()).length, 5);
+});
+
+test('font cache serves warm responses offline without another network request', async () => {
+    const url = fontUrl('open-sans-latin-400-normal');
+    let fetchCount = 0;
+    let offline = false;
+    const worker = loadWorker((request) => {
+        fetchCount += 1;
+        if (offline) {
+            return Promise.reject(new Error('offline'));
+        }
+        return Promise.resolve(new FakeResponse(`font:${request.url}`));
+    });
+
+    const networkResponse = await worker.dispatchFetch(new FakeRequest(url));
+    await worker.settleFetches();
+    offline = true;
+    const cachedResponse = await worker.dispatchFetch(new FakeRequest(url));
+    await worker.settleFetches();
+
+    assert.equal(networkResponse.body, `font:${url}`);
+    assert.equal(cachedResponse.body, `font:${url}`);
+    assert.equal(fetchCount, 1, 'warm font hit must not use the network');
+    assert.equal((await worker.cacheStores.get(FONT_ASSETS_CACHE).keys()).length, 1);
+});
+
+test('font cache refreshes LRU order before strict 160-entry eviction', async () => {
+    let fetchCount = 0;
+    const worker = loadWorker((request) => {
+        fetchCount += 1;
+        return Promise.resolve(new FakeResponse(request.url));
+    });
+
+    for (let id = 1; id <= 160; id++) {
+        await worker.dispatchFetch(new FakeRequest(fontUrl(String(id).padStart(3, '0'))));
+    }
+    await worker.settleFetches();
+    await worker.dispatchFetch(new FakeRequest(fontUrl('001')));
+    await worker.settleFetches();
+    await worker.dispatchFetch(new FakeRequest(fontUrl('161')));
+    await worker.settleFetches();
+
+    const keys = await worker.cacheStores.get(FONT_ASSETS_CACHE).keys();
+    const urls = keys.map((request) => request.url);
+
+    assert.equal(fetchCount, 161, 'warm font hit must not use the network');
+    assert.equal(urls.length, 160);
+    assert.ok(urls.includes(fontUrl('001')), 'recently read font must remain cached');
+    assert.ok(!urls.includes(fontUrl('002')), 'least recently used font must be evicted');
+    assert.equal(urls.at(-1), fontUrl('161'));
 });
 
 test('animated cache hits refresh recency before strict 48-entry eviction', async () => {
@@ -439,6 +496,7 @@ test('failed responses from every cache-first route are never stored', async () 
     const requests = [
         new FakeRequest(animatedUrl('001')),
         new FakeRequest(localUrl('/usr/themes/VOID/assets/libs/emotes/bangumi/poster/001.webp')),
+        new FakeRequest(fontUrl('missing')),
         new FakeRequest(localUrl('/usr/themes/VOID/assets/missing.js')),
         new FakeRequest('https://secure.gravatar.com/avatar/missing'),
         new FakeRequest('https://fonts.gstatic.com/s/font.woff2')
@@ -571,6 +629,7 @@ test('activation retires toolbox caches and metadata without deleting native cac
     await worker.cacheStores.set('static-assets-toolbox-v5', new FakeCache());
     await worker.cacheStores.set(defaultCache, new FakeCache());
     await worker.cacheStores.set(`${defaultCache}$$$inactive$$$`, new FakeCache());
+    await worker.cacheStores.set(FONT_ASSETS_CACHE, new FakeCache());
     await worker.cacheStores.set(STATIC_ASSETS_CACHE, new FakeCache());
     await worker.cacheStores.set('unrelated-cache', new FakeCache());
     await worker.dispatchLifecycle('install');
@@ -581,6 +640,7 @@ test('activation retires toolbox caches and metadata without deleting native cac
     assert.ok(!worker.cacheStores.has('static-assets-toolbox-v5'));
     assert.ok(!worker.cacheStores.has(defaultCache));
     assert.ok(!worker.cacheStores.has(`${defaultCache}$$$inactive$$$`));
+    assert.ok(worker.cacheStores.has(FONT_ASSETS_CACHE));
     assert.ok(worker.cacheStores.has(STATIC_ASSETS_CACHE));
     assert.ok(worker.cacheStores.has('unrelated-cache'));
     assert.ok(worker.deletedDatabases.includes('sw-toolbox-static-assets-toolbox-v5'));

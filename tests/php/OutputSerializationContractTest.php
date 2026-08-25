@@ -462,6 +462,19 @@ $GLOBALS['VOIDSetting'] = array(
 $headWidget = new OutputSerializationWidget('post', outputSerializationWidgetValues());
 $headHtml = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
 outputSerializationAssertNotContains('</script><script id="injected">', $headHtml, 'head 输出不允许攻击载荷创建新 script 元素');
+outputSerializationAssertContains(
+    '<link rel="preload" href="https://example.test/usr/themes/VOID/assets/fonts/fontsource/open-sans/5.3.0-r1/files/open-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin="anonymous">',
+    $headHtml,
+    'Open Sans Latin 可变字体在首屏预加载'
+);
+outputSerializationAssertContains(
+    '<link rel="stylesheet" href="https://example.test/usr/themes/VOID/assets/fonts/fontsource/open-sans/5.3.0-r1/wght.css">',
+    $headHtml,
+    'Open Sans 本地样式常驻加载'
+);
+outputSerializationAssertNotContains('<link id="stylesheet_noto"', $headHtml, '默认 Sans 模式不加载 Noto Serif SC 样式');
+outputSerializationAssertNotContains('/assets/fonts/fontsource/fira-code/', $headHtml, '默认关闭 Fira Code 时不加载其样式');
+outputSerializationAssertNotContains('fonts.googleapis', $headHtml, '主题 head 不再输出 Google Fonts 请求');
 outputSerializationAssertSame($semanticAuthor, outputSerializationMetaContent($headHtml, 'name', 'author'), 'author Meta 保留语义值');
 outputSerializationAssertSame($semanticExcerpt, outputSerializationMetaContent($headHtml, 'name', 'description'), 'description Meta 保留语义值');
 outputSerializationAssertSame($semanticCompleteTitle, outputSerializationMetaContent($headHtml, 'property', 'og:title'), 'Open Graph 标题保留语义值');
@@ -486,8 +499,42 @@ if (is_array($voidConfig)) {
     outputSerializationAssertSame('2021-01-01T00:00', $voidConfig['buildTime'], 'VOIDConfig 保留建站时间字符串');
     outputSerializationAssertSame('https://example.test/usr/themes/VOID/assets/libs/emotes/', $voidConfig['emotesBase'], 'VOIDConfig 保留表情资源地址');
     outputSerializationAssertSame('https://example.test/action/void?', $voidConfig['votePath'], 'VOIDConfig 保留投票地址');
+    outputSerializationAssertSame(
+        'https://example.test/usr/themes/VOID/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css',
+        $voidConfig['fontStylesheets']['serif'],
+        'VOIDConfig 提供动态 Serif 本地样式地址'
+    );
     outputSerializationAssertSame($GLOBALS['VOIDVersion'], $voidConfig['version'], 'VOIDConfig 保留含攻击字符的版本字符串');
 }
+
+$GLOBALS['VOIDSetting']['serifincontent'] = true;
+$serifHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertContains(
+    '<link id="stylesheet_noto" href="https://example.test/usr/themes/VOID/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css" rel="stylesheet">',
+    $serifHead,
+    '后台默认 Serif 时首屏加载 Noto Serif SC 本地样式'
+);
+
+$_COOKIE['serif'] = '1';
+$GLOBALS['VOIDSetting']['serifincontent'] = false;
+$serifCookieHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertContains('<link id="stylesheet_noto"', $serifCookieHead, '访客 Serif Cookie 在刷新后继续加载 Noto Serif SC 样式');
+
+$_COOKIE['serif'] = '0';
+$GLOBALS['VOIDSetting']['serifincontent'] = true;
+$sansCookieHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertNotContains('<link id="stylesheet_noto"', $sansCookieHead, '访客 Sans Cookie 覆盖后台 Serif 默认值');
+
+$_COOKIE = array();
+$GLOBALS['VOIDSetting']['serifincontent'] = false;
+$GLOBALS['VOIDSetting']['useFiraCodeFont'] = true;
+$firaHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertContains(
+    '<link href="https://example.test/usr/themes/VOID/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css" rel="stylesheet">',
+    $firaHead,
+    '启用 Fira Code 时加载本地样式'
+);
+outputSerializationAssertContains('font-family: "Fira Code"', $firaHead, '代码字体使用 Fontsource 字体族名');
 
 $GLOBALS['VOIDSetting'] = array('defaultBanner' => $attackBannerUrl);
 $ldjsonTemplate = dirname(__DIR__, 2) . '/includes/ldjson.php';

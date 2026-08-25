@@ -7,6 +7,9 @@ var revCollector = require('gulp-rev-collector');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var del = require('del');
+var path = require('path');
+var Transform = require('stream').Transform;
+var finished = require('stream/promises').finished;
 
 var prefixerOptions = {
     overrideBrowserslist: ['last 2 versions']
@@ -155,6 +158,41 @@ gulp.task('move:fonts', function () {
         .pipe(gulp.dest('./build/assets/fonts/'));
 });
 
+gulp.task('move:fontsource', async function () {
+    var fontsource = await import('./scripts/check-fontsource-build.mjs');
+
+    await Promise.all(fontsource.FONTSOURCE_FAMILIES.map(function (family) {
+        var packageRoot = path.resolve('./node_modules', family.packageName);
+        var sourcePatterns = family.sourceFiles.map(function (relativePath) {
+            return path.join(packageRoot, relativePath);
+        });
+        var normalizeCss = new Transform({
+            objectMode: true,
+            transform: function (file, encoding, callback) {
+                if (path.extname(file.path) === '.css') {
+                    file.contents = Buffer.from(fontsource.toWoff2OnlyCss(
+                        file.contents.toString('utf8')
+                    ));
+                }
+                callback(null, file);
+            }
+        });
+        var destination = path.join(
+            './build/assets/fonts/fontsource',
+            family.directory,
+            fontsource.FONTSOURCE_ASSET_VERSION
+        );
+        var stream = gulp.src(sourcePatterns, {
+            base: packageRoot,
+            encoding: false
+        })
+            .pipe(normalizeCss)
+            .pipe(gulp.dest(destination));
+
+        return finished(stream);
+    }));
+});
+
 gulp.task('move:root', function () {
     return gulp.src(['./LICENSE',
         './README.md',
@@ -164,7 +202,13 @@ gulp.task('move:root', function () {
         .pipe(gulp.dest('./build/'));
 });
 
-gulp.task('move', gulp.parallel('move:libs', 'move:assets', 'move:fonts', 'move:root'));
+gulp.task('move', gulp.parallel(
+    'move:libs',
+    'move:assets',
+    'move:fonts',
+    'move:fontsource',
+    'move:root'
+));
 
 gulp.task('build', gulp.series('clean', gulp.parallel(
     'pack:css:main',
