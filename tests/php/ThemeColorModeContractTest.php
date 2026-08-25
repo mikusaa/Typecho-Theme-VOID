@@ -72,7 +72,7 @@ foreach (array(null, false, true, '', 'invalid', '1foo', 1.0, 2, '2') as $mode) 
     themeColorAssertSame(0, Utils::normalizeFeedContentMode($mode), 'invalid Feed mode ' . var_export($mode, true));
 }
 
-$GLOBALS['VOIDPluginREQ'] = 1.4;
+$GLOBALS['VOIDPluginREQ'] = '1.4.0';
 Helper::$options = new ThemeColorTestOptions(array(
     'colorScheme' => '0',
     'feedContentMode' => 'invalid',

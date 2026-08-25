@@ -384,7 +384,13 @@ ArchiveContractDb::$contentRows = array(
     array('cid' => 999, 'created' => $future, 'title' => 'Future', 'content' => 'future'),
     array('cid' => 100, 'created' => $sameSecond - 60, 'title' => 'Older', 'content' => 'older'),
     array('cid' => 103, 'created' => $crossYear, 'title' => 'Cross year', 'content' => 'cross'),
-    array('cid' => 102, 'created' => $sameSecond, 'title' => 'Same high', 'content' => 'high'),
+    array(
+        'cid' => 102,
+        'created' => $sameSecond,
+        'title' => 'Same high',
+        'content' => 'high',
+        'wordCount' => '1234'
+    ),
     array(
         'cid' => 104,
         'created' => $sameSecond - 120,
@@ -465,6 +471,7 @@ contentsArchiveAssertSame(
     contentsArchiveFindPost($archives, 104)['title'],
     '密码保护文章沿用 Typecho 的隐藏标题'
 );
+contentsArchiveAssertSame(false, array_key_exists('words', $post102), '插件能力关闭时不读取归档字数');
 
 contentsArchiveAssertSame(1, ArchiveContractDb::$fetchesByTable['table.contents'], '公开文章只查询一次');
 contentsArchiveAssertSame(1, ArchiveContractDb::$fetchesByTable['table.relationships'], '全部文章分类关系只查询一次');
@@ -476,6 +483,16 @@ contentsArchiveAssertSame(
     '批量分类通过 Typecho 的 #categories 缓存注入内容组件'
 );
 contentsArchiveAssertSame(false, method_exists('Widget_Metas_Category_List', 'toArray'), '分类采集只使用 Typecho 1.2/1.3 共有接口');
+
+contentsArchiveResetCounters();
+$GLOBALS['VOIDSetting'] = array('VOIDPlugin' => true);
+$pluginArchives = Contents::archives($widget);
+contentsArchiveAssertSame(1234, contentsArchiveFindPost($pluginArchives, 102)['words'], '兼容插件启用时输出归档字数');
+contentsArchiveAssertSame(
+    false,
+    array_key_exists('words', contentsArchiveFindPost($pluginArchives, 101)),
+    '插件字段缺失时不生成未定义字数'
+);
 
 contentsArchiveResetCounters();
 $GLOBALS['VOIDSetting'] = array('VOIDPlugin' => false);

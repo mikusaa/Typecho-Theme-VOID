@@ -113,7 +113,7 @@ function themeInit($archive = null)
     VOID_refreshArchiveComputedFields($archive);
 }
 
-$GLOBALS['VOIDPluginREQ'] = 1.4;
+$GLOBALS['VOIDPluginREQ'] = '1.4.0';
 $GLOBALS['VOIDVersion'] = '3.5.4.1';
 
 /**

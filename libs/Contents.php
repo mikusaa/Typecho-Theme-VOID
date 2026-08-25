@@ -2060,6 +2060,9 @@ Class Contents
         }
 
         $supportsComputedCategoryCache = version_compare(Typecho_Common::VERSION, '1.3.0', '>=');
+        $settings = isset($GLOBALS['VOIDSetting']) && is_array($GLOBALS['VOIDSetting'])
+            ? $GLOBALS['VOIDSetting'] : array();
+        $hasVOIDPlugin = !empty($settings['VOIDPlugin']);
         $categoriesByPostId = array();
 
         if ($supportsComputedCategoryCache) {
@@ -2140,8 +2143,8 @@ Class Contents
                 'permalink' => $post->permalink,
                 'categories' => $categories);
 
-            if(Utils::isPluginAvailable('VOID')) {
-                $arr['words'] = $row['wordCount'];
+            if ($hasVOIDPlugin && array_key_exists('wordCount', $row)) {
+                $arr['words'] = (int) $row['wordCount'];
             }
             
             if($excerpt){

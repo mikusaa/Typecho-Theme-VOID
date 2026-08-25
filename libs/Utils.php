@@ -121,8 +121,10 @@ class Utils
     public static function isPluginAvailable($name) 
     {
         $plugins = Typecho_Plugin::export();
-        $plugins = $plugins['activated'];
-        return is_array($plugins) && array_key_exists($name, $plugins);
+        return is_array($plugins)
+            && isset($plugins['activated'])
+            && is_array($plugins['activated'])
+            && array_key_exists($name, $plugins['activated']);
     }
 
     /**
@@ -353,12 +355,60 @@ class Utils
      */
     public static function hasVOIDPlugin($req)
     {
-        if(self::isPluginAvailable('VOID')) {
-            $version_have = VOID_Plugin::$VERSION;
-            if($version_have >= $req) return true;
+        if (!self::isPluginAvailable('VOID')
+            || !class_exists('VOID_Plugin')
+            || !property_exists('VOID_Plugin', 'VERSION')) {
+            return false;
         }
 
-        return false;
+        try {
+            $versionProperty = new ReflectionProperty('VOID_Plugin', 'VERSION');
+        } catch (ReflectionException $error) {
+            return false;
+        }
+
+        if (!$versionProperty->isPublic() || !$versionProperty->isStatic()) {
+            return false;
+        }
+
+        try {
+            $versionValue = $versionProperty->getValue();
+        } catch (Exception $error) {
+            return false;
+        } catch (Error $error) {
+            return false;
+        }
+
+        $versionHave = self::normalizePluginVersion($versionValue);
+        $versionRequired = self::normalizePluginVersion($req);
+        return null !== $versionHave
+            && null !== $versionRequired
+            && version_compare($versionHave, $versionRequired, '>=');
+    }
+
+    /**
+     * 规范化 VOID 插件使用过的点分版本格式。
+     */
+    private static function normalizePluginVersion($version)
+    {
+        if (is_float($version)) {
+            if (is_nan($version) || is_infinite($version)) {
+                return null;
+            }
+            $version = (string) $version;
+        } elseif (is_int($version)) {
+            $version = (string) $version;
+        }
+
+        if (!is_string($version)
+            || !preg_match(
+                '/^[0-9]+(?:\.[0-9]+)+(?:-(?:dev|alpha|a|beta|b|rc|pl|p)(?:[.-]?[0-9]+)?)?$/Di',
+                $version
+            )) {
+            return null;
+        }
+
+        return $version;
     }
 
     /**
