@@ -21,12 +21,14 @@ $setting = $GLOBALS['VOIDSetting'];
 
     <div class="wrapper container <?php if($setting['indexStyle'] == 1) echo 'narrow'; else echo 'wide'; ?>">
         <section id="index-list" class="float-up">
+            <?php $hasPosts = $this->have(); ?>
             <h1 hidden class="post-title"><?php $this->archiveTitle(array(
                 'category'  =>  _t('分类 "%s" 下的文章'),
                 'search'    =>  _t('包含关键字 "%s" 的文章'),
                 'tag'       =>  _t('包含标签 "%s" 的文章'),
                 'author'    =>  _t('"%s" 发布的文章')
             ), '', '');  ?></h1>
+            <?php if($hasPosts): ?>
             <ul id="masonry">
             <?php $priorityBannerCount = 0; ?>
             <?php while($this->next()): ?>
@@ -67,8 +69,13 @@ $setting = $GLOBALS['VOIDSetting'];
                 <script>VOID_Ui.MasonryCtrler.watch("p-<?php $this->cid(); ?>");</script>
             <?php endwhile; ?>
             </ul>
+            <?php else: ?>
+                <div class="archive-empty" role="status">
+                    <p>暂时没有找到文章</p>
+                </div>
+            <?php endif; ?>
         </section>
         
-        <?php $this->pageNav('<span aria-label="上一页">←</span>', '<span aria-label="下一页">→</span>', 1, '...', 'wrapClass=pager&prevClass=prev&nextClass=next'); ?>
+        <?php if($hasPosts) $this->pageNav('<span aria-label="上一页">←</span>', '<span aria-label="下一页">→</span>', 1, '...', 'wrapClass=pager&prevClass=prev&nextClass=next'); ?>
     </div>
 </main>

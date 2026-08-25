@@ -73,6 +73,20 @@ class Utils
     }
 
     /**
+     * 判断当前归档是否为 Typecho 的 404 上下文
+     *
+     * @return bool
+     */
+    public static function isNotFoundArchive($archive)
+    {
+        return is_object($archive)
+            && method_exists($archive, 'getArchiveType')
+            && method_exists($archive, 'getArchiveSlug')
+            && $archive->getArchiveType() === 'archive'
+            && (string) $archive->getArchiveSlug() === '404';
+    }
+
+    /**
      * 使用衬线体判定
      */
     public static function isSerif($setting)

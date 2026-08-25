@@ -238,7 +238,8 @@ main{
                     border-color: $td-borderColor;
                 }
             }
-            .not-found{
+            .not-found,
+            .archive-empty{
                 height: 300px;
                 display: flex;
                 flex-direction: column;

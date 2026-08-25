@@ -43,13 +43,15 @@ if(!Utils::isPjax()){
                 $post_num = count($posts);
                 $total_words = 0;
                 $category_count = array();
+                $category_names = array();
                 foreach($posts as $post) {
                     if(isset($post['words'])) $total_words += intval($post['words']);
                     if(!empty($post['categories'])) {
                         foreach($post['categories'] as $cat) {
-                            $cat_name = htmlspecialchars($cat['name']);
-                            if(!isset($category_count[$cat_name])) $category_count[$cat_name] = 0;
-                            $category_count[$cat_name]++;
+                            $cat_mid = (int) $cat['mid'];
+                            if(!isset($category_count[$cat_mid])) $category_count[$cat_mid] = 0;
+                            $category_count[$cat_mid]++;
+                            $category_names[$cat_mid] = $cat['name'];
                         }
                     }
                 }
@@ -64,15 +66,15 @@ if(!Utils::isPjax()){
                 }
                 if(!empty($category_count)) {
                     $cat_parts = array();
-                    foreach($category_count as $cat_name => $cnt) {
-                        $cat_parts[] = $cat_name . '(' . $cnt . ')';
+                    foreach($category_count as $cat_mid => $cnt) {
+                        $cat_parts[] = $category_names[$cat_mid] . '(' . $cnt . ')';
                     }
                     $tooltip_parts[] = implode('、', $cat_parts);
                 }
                 $tooltip_text = implode('，', $tooltip_parts);
                 ?>
                 <h2>
-                    <span class="archive-year-title" data-tooltip="<?php echo htmlspecialchars($tooltip_text); ?>"><?php echo $year; ?></span>
+                    <span class="archive-year-title" data-tooltip="<?php echo htmlspecialchars($tooltip_text, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $year; ?></span>
                     <span class="num-posts"><?php echo $post_num; ?> 篇</span>
                     <a no-pjax target="_self" data-num="<?php echo $post_num; ?>" 
                         data-year="<?php echo $year; ?>" 
@@ -84,17 +86,17 @@ if(!Utils::isPjax()){
                     class="year<?php if($index > 0) echo ' shrink'; ?>" 
                     style="max-height: <?php if($index > 0) echo '0'; else echo $post_num*49; ?>px; transition-duration: <?php echo $post_num * 0.03 > 0.8 ? 0.8:$post_num * 0.03; ?>s">
                     <ul>
-                    <?php foreach($posts as $created => $post): ?>
+                    <?php foreach($posts as $post): ?>
                         <li>
                             <a class="archive-title<?php if($setting['VOIDPlugin']) echo ' show-word-count'; ?>" 
                                 data-words="<?php if($setting['VOIDPlugin']) echo $post['words']; ?>" 
-                                href="<?php echo $post['permalink']; ?>">
-                                <span class="date"><?php echo date('m-d', $created); ?></span><?php echo $post['title']; ?>
+                                href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES, 'UTF-8'); ?>">
+                                <span class="date"><?php echo $post['dateLabel']; ?></span><?php echo $post['title']; ?>
                             </a>
                             <?php if(!empty($post['categories'])): ?>
                                 <span class="archive-categories">
                                     <?php foreach($post['categories'] as $category): ?>
-                                        <a href="<?php echo $category['permalink']; ?>" class="archive-category-tag"><?php echo htmlspecialchars($category['name']); ?></a>
+                                        <a href="<?php echo htmlspecialchars($category['permalink'], ENT_QUOTES, 'UTF-8'); ?>" class="archive-category-tag"><?php echo htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?></a>
                                     <?php endforeach; ?>
                                 </span>
                             <?php endif; ?>

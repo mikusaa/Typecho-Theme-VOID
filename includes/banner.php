@@ -22,7 +22,7 @@ if($this->is('post') || $this->is('page')) {
         if(empty($banner)) echo ' no-banner';
         else echo ' loading dark';
         if($this->is('index')) echo ' index';
-        if($this->is('archive') && !$this->have()) echo ' not-found'; ?>">
+        if(Utils::isNotFoundArchive($this)) echo ' not-found'; ?>">
 
     <?php if(!empty($banner)): ?>
         <div id="banner" class="<?php if($blur) echo 'blur'; ?>">
@@ -40,7 +40,7 @@ if($this->is('post') || $this->is('page')) {
                 <?php if(!$this->is('archive')): ?>
                     <?php $this->title(); ?>
                 <?php else: ?>
-                    <?php if ($this->have()): ?>
+                    <?php if (!Utils::isNotFoundArchive($this)): ?>
                         <?php $this->archiveTitle(array(
                             'category'  =>  _t('分类 "%s" 下的文章'),
                             'search'    =>  _t('包含关键字 "%s" 的文章'),
