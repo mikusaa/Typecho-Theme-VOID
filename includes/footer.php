@@ -158,7 +158,8 @@ $setting = $GLOBALS['VOIDSetting'];
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){
-                if (options && options.container && options.container !== '#pjax-container') {
+                options = VOID.resolvePjaxOptions(arguments);
+                if (!VOID.isMainPjaxRequest(options)) {
                     return;
                 }
                 <?php echo $setting['pjaxreload']; ?>

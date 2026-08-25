@@ -177,6 +177,44 @@ function wrappedPjaxEvent(options) {
     };
 }
 
+function loadFooterPjaxReloadHandler(context) {
+    const footer = fs.readFileSync(path.resolve(__dirname, '../../includes/footer.php'), 'utf8');
+    const start = footer.indexOf("$(document).on('pjax:complete'");
+    const end = footer.indexOf("<?php if(Utils::isPluginAvailable('ExSearch'))", start);
+    const reloadContainers = [];
+    const handlers = new Map();
+    const document = {};
+    const jQuery = () => {
+        const api = {
+            on(name, listener) {
+                handlers.set(name, listener);
+                return api;
+            }
+        };
+        return api;
+    };
+
+    assert.notEqual(start, -1, 'footer PJAX complete handler should exist');
+    assert.notEqual(end, -1, 'footer PJAX complete handler should end before ExSearch');
+
+    const source = footer.slice(start, end).replace(
+        "<?php echo $setting['pjaxreload']; ?>",
+        "reloadContainers.push(options ? options.container : null);"
+    );
+
+    vm.runInNewContext(source, {
+        $: jQuery,
+        VOID: context.VOID,
+        document,
+        reloadContainers
+    });
+
+    return {
+        handler: handlers.get('pjax:complete'),
+        reloadContainers
+    };
+}
+
 test('native and jQuery listeners receive one complete event with event detail', async () => {
     const { document, getJqueryTriggerCount, jQuery, window } = loadPjaxEnvironment();
     let nativeCount = 0;
@@ -258,6 +296,25 @@ test('resolvePjaxOptions prefers native detail and supports legacy jQuery argume
     );
     assert.equal(context.VOID.resolvePjaxOptions([{}, null, legacyOptions]), legacyOptions);
     assert.equal(context.VOID.resolvePjaxOptions([]), null);
+});
+
+test('footer pjaxreload filters native and legacy comment replacements', () => {
+    const { context } = loadVoidEnvironment();
+    const { handler, reloadContainers } = loadFooterPjaxReloadHandler(context);
+
+    assert.equal(typeof handler, 'function');
+
+    handler(wrappedPjaxEvent({ container: '#comments' }));
+    handler(wrappedPjaxEvent({ container: '#pjax-container' }));
+    handler({}, null, 'success', { container: '#comments' });
+    handler({}, null, 'success', { container: '#pjax-container' });
+    handler({});
+
+    assert.deepEqual(reloadContainers, [
+        '#pjax-container',
+        '#pjax-container',
+        null
+    ]);
 });
 
 test('comment PJAX events do not run the main-container lifecycle', () => {
