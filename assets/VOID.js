@@ -3419,7 +3419,6 @@ var AjaxComment = {
     noUrl: '必须填写 URL',
     noContent: '必须填写评论内容',
     invalidMail: '邮箱地址不合法',
-    commentsOrder: 'DESC',
     commentList: '.comment-list',
     comments: '#comments .comments-title',
     commentReply: '.comment-reply',
@@ -3439,9 +3438,195 @@ var AjaxComment = {
     threadPaginationThreshold: 8,
     threadPagerWindow: 5,
     threadFocusPendingId: '',
+    antiSpamCleanup: null,
 
     isCommentPjaxRequest: function (options) {
         return !!(options && options.container === '#comments');
+    },
+
+    getCommentsOrder: function () {
+        var order = String($('#comments').attr('data-comments-order') || '').toUpperCase();
+
+        return order === 'ASC' ? 'ASC' : 'DESC';
+    },
+
+    isNewestCommentPage: function () {
+        var pagerSelector = AjaxComment.getCommentsOrder() === 'ASC'
+            ? '#comments .pager .next'
+            : '#comments .pager .prev';
+
+        return $(pagerSelector).length === 0;
+    },
+
+    insertNewestComment: function ($list, $comment) {
+        var $footer;
+
+        if (AjaxComment.getCommentsOrder() === 'DESC') {
+            $list.prepend($comment);
+            return;
+        }
+
+        $footer = $list.children('.comment-thread-footer').first();
+        if ($footer.length) {
+            $footer.before($comment);
+        } else {
+            $list.append($comment);
+        }
+    },
+
+    getCommentDepth: function ($comment) {
+        var depth = parseInt($comment.attr('data-comment-depth'), 10);
+
+        return isNaN(depth) ? 0 : depth;
+    },
+
+    installAntiSpamToken: function (form, token) {
+        var events = ['scroll', 'mousemove', 'keyup', 'touchstart'];
+        var input = document.createElement('input');
+        var listening = true;
+
+        AjaxComment.destroyAntiSpamToken();
+        if (!form) {
+            return;
+        }
+
+        input.type = 'hidden';
+        input.name = '_';
+        input.value = token;
+
+        function cleanup() {
+            if (!listening) {
+                return;
+            }
+            listening = false;
+            for (var i = 0; i < events.length; i++) {
+                window.removeEventListener(events[i], append);
+            }
+            if (AjaxComment.antiSpamCleanup === cleanup) {
+                AjaxComment.antiSpamCleanup = null;
+            }
+        }
+
+        function append() {
+            if (!document.documentElement.contains(form)) {
+                cleanup();
+                return;
+            }
+            if (!form.querySelector('input[name="_"]')) {
+                form.appendChild(input);
+            }
+            cleanup();
+        }
+
+        for (var i = 0; i < events.length; i++) {
+            window.addEventListener(events[i], append);
+        }
+        AjaxComment.antiSpamCleanup = cleanup;
+    },
+
+    destroyAntiSpamToken: function () {
+        if (typeof AjaxComment.antiSpamCleanup === 'function') {
+            AjaxComment.antiSpamCleanup();
+        }
+        AjaxComment.antiSpamCleanup = null;
+    },
+
+    getDirectChild: function (root, node) {
+        if (!node || !node.parentNode) {
+            return null;
+        }
+        if (node.parentNode === root) {
+            return node;
+        }
+        return AjaxComment.getDirectChild(root, node.parentNode);
+    },
+
+    moveReplyForm: function (commentId, coid, trigger) {
+        var comment = document.getElementById(commentId);
+        var response = document.querySelector(AjaxComment.respond);
+        var form;
+        var input;
+        var holder;
+        var child;
+        var cancel;
+        var textarea;
+
+        if (!comment || !response) {
+            return true;
+        }
+
+        form = response.tagName === 'FORM' ? response : response.querySelector('form');
+        if (!form) {
+            return true;
+        }
+
+        input = form.querySelector('input[name="parent"]');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'parent';
+            input.id = 'comment-parent';
+            form.appendChild(input);
+        }
+        input.value = coid;
+
+        holder = document.getElementById('void-comment-form-place-holder');
+        if (!holder) {
+            holder = document.createElement('div');
+            holder.id = 'void-comment-form-place-holder';
+            response.parentNode.insertBefore(holder, response);
+        }
+
+        child = AjaxComment.getDirectChild(comment, trigger);
+        if (child) {
+            comment.insertBefore(response, child.nextSibling);
+        } else {
+            comment.appendChild(response);
+        }
+
+        cancel = document.getElementById('cancel-comment-reply-link');
+        if (cancel) {
+            cancel.style.display = '';
+        }
+
+        textarea = response.querySelector('textarea[name="text"]');
+        if (textarea) {
+            textarea.focus();
+        }
+        return false;
+    },
+
+    restoreReplyForm: function () {
+        var response = document.querySelector(AjaxComment.respond);
+        var holder = document.getElementById('void-comment-form-place-holder');
+        var input = response ? response.querySelector('input[name="parent"]') : null;
+        var cancel = document.getElementById('cancel-comment-reply-link');
+
+        if (input && input.parentNode) {
+            input.parentNode.removeChild(input);
+        }
+        if (response && holder && holder.parentNode) {
+            holder.parentNode.insertBefore(response, holder);
+        }
+        if (cancel) {
+            cancel.style.display = 'none';
+        }
+        return false;
+    },
+
+    ensureTypechoCommentFacade: function () {
+        if (window.TypechoComment) {
+            return;
+        }
+
+        window.TypechoComment = {
+            reply: function (commentId, coid, trigger) {
+                return AjaxComment.moveReplyForm(commentId, coid, trigger);
+            },
+            cancelReply: function () {
+                return AjaxComment.restoreReplyForm();
+            }
+        };
     },
 
     setCommentPageLoading: function (isLoading) {
@@ -3719,13 +3904,15 @@ var AjaxComment = {
             return AjaxComment.cancelActiveReply();
         }
 
-        TypechoComment.reply(nextCommentId, coid, trigger);
+        if (AjaxComment.moveReplyForm(nextCommentId, nextCoid, trigger)) {
+            return true;
+        }
         AjaxComment.activateReplyTrigger($trigger, nextCommentId, nextCoid);
         return false;
     },
 
     cancelActiveReply: function () {
-        TypechoComment.cancelReply();
+        AjaxComment.restoreReplyForm();
         AjaxComment.resetReplyTriggerState();
         return false;
     },
@@ -3808,6 +3995,60 @@ var AjaxComment = {
         });
 
         return $list;
+    },
+
+    insertReplyComment: function ($comment) {
+        var parentCoid = String($comment.attr('data-comment-parent') || '');
+        var $parent = parentCoid ? $('#comment-' + parentCoid) : $();
+        var $root;
+        var $children;
+        var $list;
+        var $cursor;
+        var $next;
+        var parentDepth;
+
+        if (!$parent.length) {
+            return false;
+        }
+
+        $root = $parent.hasClass('comment-parent') ? $parent : $parent.closest('.comment-parent');
+        if (!$root.length) {
+            return false;
+        }
+
+        $children = $root.children('.comment-children');
+        if (!$children.length) {
+            $children = $('<div class="comment-children comment-thread-panel" data-thread-expanded="false"></div>');
+            $list = $('<div class="comment-list comment-thread-list"></div>');
+            $children.append($list);
+            $root.append($children);
+        } else {
+            $list = AjaxComment.ensureThreadPanel($children);
+        }
+
+        if (!$list.length) {
+            return false;
+        }
+
+        if ($parent.hasClass('comment-parent')) {
+            AjaxComment.insertNewestComment($list, $comment);
+            return true;
+        }
+
+        if (AjaxComment.getCommentsOrder() === 'DESC') {
+            $parent.after($comment);
+            return true;
+        }
+
+        parentDepth = AjaxComment.getCommentDepth($parent);
+        $cursor = $parent;
+        $next = $cursor.next('.comment-body');
+        while ($next.length && AjaxComment.getCommentDepth($next) > parentDepth) {
+            $cursor = $next;
+            $next = $cursor.next('.comment-body');
+        }
+        $cursor.after($comment);
+        return true;
     },
 
     buildThreadPages: function (currentPage, totalPages) {
@@ -4042,6 +4283,7 @@ var AjaxComment = {
     },
 
     init: function () {
+        AjaxComment.ensureTypechoCommentFacade();
         AjaxComment.bindPager();
         AjaxComment.bindHashChange();
         AjaxComment.bindClick();
@@ -4113,17 +4355,22 @@ var AjaxComment = {
                                 return a - b;
                             }).pop();
 
-                            if ($('.pager .prev').length && AjaxComment.parentID == '') {
+                            if (!AjaxComment.isNewestCommentPage() && AjaxComment.parentID == '') {
                                 // 在分页对文章发表评论，无法取得最新评论内容
-                                VOID.alert('评论成功！请回到评论第一页查看。');
+                                VOID.alert(AjaxComment.getCommentsOrder() === 'ASC'
+                                    ? '评论成功！请前往评论最后一页查看。'
+                                    : '评论成功！请回到评论第一页查看。');
                                 AjaxComment.newID = '';
                                 AjaxComment.parentID = '';
                                 AjaxComment.finish();
                                 return false;
                             }
 
-                            var newCommentType = AjaxComment.parentID == '' ? 'comment-parent' : 'comment-child';
-                            var newCommentData = '<div id="comment-' + AjaxComment.newID + '" style="opacity:0" class="comment-body ' + newCommentType + '">' + $(data).find('#comment-' + AjaxComment.newID).html() + '</div>';
+                            var $newComment = $(data).find('#comment-' + AjaxComment.newID).first();
+                            if (!$newComment.length) {
+                                throw new Error('New comment is missing from the response');
+                            }
+                            $newComment.css('opacity', 0);
 
                             // 当页面无评论，先添加一个评论容器
                             if ($(AjaxComment.commentList).length <= 0) {
@@ -4132,27 +4379,15 @@ var AjaxComment = {
                             }
 
                             if (AjaxComment.parentID == '') {
-                                // 无父 id，直接对文章评论，插入到第一个 comment-list 头部
-                                $('#comments>.comment-list').prepend(newCommentData);
+                                // 无父 id，按后台评论顺序插入顶层评论
+                                AjaxComment.insertNewestComment($('#comments > .comment-list').first(), $newComment);
                                 VOID.alert('评论成功！');
                                 AjaxComment.finish();
                                 AjaxComment.newID = '';
                                 return false;
                             } else {
-                                if ($('#' + AjaxComment.parentID).hasClass('comment-parent')) {
-                                    // 父评论是母评论
-                                    if ($('#' + AjaxComment.parentID + ' > .comment-children').length > 0) {
-                                        // 父评论已有子评论，插入到子评论列表头部
-                                        $('#' + AjaxComment.parentID + ' > .comment-children > .comment-list').prepend(newCommentData);
-                                    }
-                                    else {
-                                        // 父评论没有子评论，新建一层包裹
-                                        newCommentData = '<div class="comment-children"><div class="comment-list">' + newCommentData + '</div></div>';
-                                        $('#' + AjaxComment.parentID).append(newCommentData);
-                                    }
-                                } else {
-                                    // 父评论是子评论，与父评论平级，并放在后面
-                                    $('#' + AjaxComment.parentID).after(newCommentData);
+                                if (!AjaxComment.insertReplyComment($newComment)) {
+                                    throw new Error('Comment parent is missing from the current page');
                                 }
                                 VOID.alert('评论成功！');
                                 AjaxComment.finish();

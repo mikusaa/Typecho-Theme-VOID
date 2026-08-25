@@ -182,7 +182,10 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             }
         }
 ?>
-<div id="<?php $this->theId(); ?>" class="comment-body<?php
+<div id="<?php $this->theId(); ?>"
+    data-comment-parent="<?php echo (int)$this->parent; ?>"
+    data-comment-depth="<?php echo (int)$this->levels; ?>"
+    class="comment-body<?php
     if ($this->levels > 0) {
         echo ' comment-child';
         $this->levelsAlt(' comment-level-odd', ' comment-level-even');
@@ -433,6 +436,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         /** 评论排序 */
         if ('DESC' == $this->options->commentsOrder) {
             $this->stack = array_reverse($this->stack, true);
+            $this->_threadedComments = array_map('array_reverse', $this->_threadedComments);
         }
         
         /** 评论总数 */

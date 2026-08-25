@@ -105,9 +105,6 @@ VOID_registerContentsHook('excerptEx_999', array('Contents', 'excerptEx_999'));
 function themeInit($archive = null)
 {
     $options = Helper::options();
-    $options->commentsAntiSpam = false;
-    $options->commentsMaxNestingLevels = 999;
-    $options->commentsOrder = 'DESC';
 
     if (Contents::shouldTruncateFeed($archive)) {
         // 仅覆盖当前 Feed 请求，让核心始终使用主题截断后的 content。

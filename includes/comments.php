@@ -15,6 +15,14 @@ if ($commentsRequireUrl === null) {
     $commentsRequireUrl = Helper::options()->commentsRequireURL;
 }
 $commentsRequireUrl = !empty($commentsRequireUrl);
+$commentsOrder = strtoupper((string)Helper::options()->commentsOrder) === 'ASC' ? 'ASC' : 'DESC';
+$commentSecurityTokenExpression = null;
+if (!empty(Helper::options()->commentsAntiSpam)) {
+    Typecho_Widget::widget('Widget_Security')->to($commentSecurity);
+    $commentSecurityTokenExpression = Typecho_Common::shuffleScriptVar(
+        $commentSecurity->getToken($this->request->getRequestUrl())
+    );
+}
 $parameter = array(
     'parentId'      => $this->hidden ? 0 : $this->cid,
     // 对齐 Typecho 1.3：传递当前 Archive Widget，保证 path/permalink 等字段可用
@@ -28,10 +36,9 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
 ?>
 
 <div class="comments-container">
-    <section id="comments" class="container float-up">
+    <section id="comments" class="container float-up" data-comments-order="<?php echo $commentsOrder; ?>">
         <!--评论框-->
         <?php if($this->allow('comment')): ?>
-            <?php $this->header('commentReply=1&description=0&keywords=0&generator=0&template=0&pingback=0&xmlrpc=0&wlw=0&rss2=0&rss1=0&antiSpam=0&atom&social=0'); ?>
             <div id="<?php $this->respondId(); ?>" class="respond">
                 <div class="cancel-comment-reply" role=button>
                     <?php $comments->cancelReply(); ?>
@@ -82,6 +89,22 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
                         <button id="comment-submit-button" type="submit" class="submit btn btn-normal">提交评论</button>
                     </p>
                 </form>
+                <?php if ($commentSecurityTokenExpression !== null): ?>
+                <script>
+                (function() {
+                    if (document.readyState === 'loading'
+                        || typeof AjaxComment === 'undefined'
+                        || typeof AjaxComment.installAntiSpamToken !== 'function') {
+                        return;
+                    }
+                    var token = <?php echo $commentSecurityTokenExpression; ?>
+                    AjaxComment.installAntiSpamToken(
+                        document.getElementById('comment-form'),
+                        token
+                    );
+                })();
+                </script>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         

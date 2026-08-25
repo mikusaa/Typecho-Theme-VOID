@@ -2,7 +2,7 @@
   "scripts": {
     "lint": "eslint gulpfile.js assets/VOID.js assets/VOIDCacheRule.js assets/check_update.js assets/editor.js assets/header.js assets/libs/emotes/emote-picker.js assets/libs/pjax/void-pjax.js",
     "test": "npm run emotes:check && node --test tests/js/*.test.cjs",
-    "test:php": "php tests/php/ContentsEmoteContractTest.php && php tests/php/ContentsEmoteProductionContractTest.php && php tests/php/ContentsImageContractTest.php && php tests/php/ContentsFeedContractTest.php && php tests/php/ContentsArchiveContractTest.php && php tests/php/ArchiveTemplateContractTest.php && php tests/php/GalleryTemplateContractTest.php && php tests/php/RewardDialogContractTest.php && php tests/php/ThemeColorModeContractTest.php",
+    "test:php": "php tests/php/ContentsEmoteContractTest.php && php tests/php/ContentsEmoteProductionContractTest.php && php tests/php/ContentsImageContractTest.php && php tests/php/ContentsFeedContractTest.php && php tests/php/ContentsArchiveContractTest.php && php tests/php/ArchiveTemplateContractTest.php && php tests/php/GalleryTemplateContractTest.php && php tests/php/RewardDialogContractTest.php && php tests/php/ThemeColorModeContractTest.php && php tests/php/CommentsSecurityContractTest.php",
     "emotes:build": "node scripts/build-emotes.mjs",
     "emotes:check": "node scripts/build-emotes.mjs --check",
     "emotes:import": "node scripts/build-emotes.mjs --import"
