@@ -68,6 +68,12 @@
 
 启用该功能时，主题生成的正文开头会优先于 Typecho 的“聚合全文输出”设置和文章中的 `<!--more-->` 分隔符。截取内容始终来自文章正文，不使用“文章摘要”自定义字段。
 
+### 内置字体
+
+主题使用 [Fontsource](https://fontsource.org/) 将 Open Sans、Noto Serif SC 和可选的 Fira Code 随发布包提供，默认不会为了这些内置字体连接 Google Fonts。管理员配置的站点标题字体或自定义 `<head>` 仍可主动引用第三方资源。
+
+字体文件分别遵循各自的 SIL Open Font License 1.1；发布包在对应字体目录中附带许可证和上游元数据。Service Worker 只会按访问过的字符范围缓存字体资源，不会预缓存完整中文字体，也不提供页面本身的冷启动离线能力。
+
 开发版主题可以在这里获取：[开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
 
 ### 安装插件
@@ -297,7 +303,7 @@ gulp build
 
 ### 开源项目
 
-[JQuery](https://github.com/jquery/jquery) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
+[JQuery](https://github.com/jquery/jquery) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [Fontsource](https://fontsource.org/) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
 
 ### 其他
 

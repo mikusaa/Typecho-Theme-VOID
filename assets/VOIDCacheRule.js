@@ -9,9 +9,11 @@
   var staticAssetsCacheName = 'static-assets' + cacheVersion;
   var emoteStaticCacheName = 'emote-static' + cacheVersion;
   var emoteAnimatedCacheName = 'emote-animated' + cacheVersion;
+  var fontAssetsCacheName = 'font-assets-native-v1';
   var staticMaxEntries = 200;
   var emoteStaticMaxEntries = 140;
   var emoteAnimatedMaxEntries = 48;
+  var fontAssetsMaxEntries = 160;
   var cacheMutationQueues = {};
   var cacheEntryMutationQueues = {};
   var cacheEntryRecency = {};
@@ -155,7 +157,7 @@
     markCacheEntryUsed(cacheName, request);
     return caches.open(cacheName).then(function (cache) {
       return queueCacheEntryMutation(cacheName, request, function () {
-        // Persist animated LRU order across Service Worker restarts.
+        // Persist LRU order across Service Worker restarts.
         return cache.delete(request).then(function () {
           return cache.put(request, responseForCache);
         });
@@ -258,6 +260,9 @@
       }
       if (hasPathPrefix(pathname, '/usr/themes/VOID/assets/libs/emotes/bangumi/poster/')) {
         return cacheFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
+      }
+      if (hasPathPrefix(pathname, '/usr/themes/VOID/assets/fonts/fontsource/')) {
+        return cacheFirst(request, fontAssetsCacheName, fontAssetsMaxEntries, true);
       }
       if (hasPathPrefix(pathname, '/usr/')) {
         return cacheFirst(request, staticAssetsCacheName, staticMaxEntries);

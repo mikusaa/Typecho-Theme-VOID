@@ -1,0 +1,27 @@
+{
+  "id": "noto-serif-sc",
+  "family": "Noto Serif SC",
+  "subsets": [
+    "chinese-simplified",
+    "cyrillic",
+    "latin",
+    "latin-ext",
+    "vietnamese"
+  ],
+  "weights": [200, 300, 400, 500, 600, 700, 800, 900],
+  "styles": ["normal"],
+  "defSubset": "latin",
+  "variable": {
+    "wght": {"default": "400", "min": "200", "max": "900", "step": "1"}
+  },
+  "lastModified": "2026-01-07",
+  "version": "v35",
+  "category": "serif",
+  "license": {
+    "type": "OFL-1.1",
+    "url": "http://scripts.sil.org/OFL",
+    "attribution": "Google Inc."
+  },
+  "source": "https://github.com/google/fonts",
+  "type": "google"
+}
