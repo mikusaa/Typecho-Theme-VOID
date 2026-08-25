@@ -11,9 +11,6 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
-// 看不见错误就是没有错误
-error_reporting(0);
-
 require_once('libs/Utils.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
@@ -76,7 +73,9 @@ function VOID_refreshArchiveComputedFields($archive)
 
         if ($reflection && $reflection->hasProperty('row')) {
             $rowProperty = $reflection->getProperty('row');
-            $rowProperty->setAccessible(true);
+            if (PHP_VERSION_ID < 80100) {
+                $rowProperty->setAccessible(true);
+            }
             $row = $rowProperty->getValue($archive);
 
             if (is_array($row)) {
@@ -105,9 +104,6 @@ VOID_registerContentsHook('excerptEx_999', array('Contents', 'excerptEx_999'));
 function themeInit($archive = null)
 {
     $options = Helper::options();
-    $options->commentsAntiSpam = false;
-    $options->commentsMaxNestingLevels = 999;
-    $options->commentsOrder = 'DESC';
 
     if (Contents::shouldTruncateFeed($archive)) {
         // 仅覆盖当前 Feed 请求，让核心始终使用主题截断后的 content。
@@ -117,7 +113,7 @@ function themeInit($archive = null)
     VOID_refreshArchiveComputedFields($archive);
 }
 
-$GLOBALS['VOIDPluginREQ'] = 1.4;
+$GLOBALS['VOIDPluginREQ'] = '1.4.0';
 $GLOBALS['VOIDVersion'] = '3.5.4.1';
 
 /**
@@ -147,8 +143,8 @@ function themeConfig($form)
     }
 
     echo '<p id="void-check-update" class="notice">正在检查更新……</p>';
-    echo '<script>var VOIDVersion='.json_encode($GLOBALS['VOIDVersion']).'</script>';
-    echo '<script src="'.Helper::options()->themeUrl.'/assets/check_update-52b614862d.js"></script>';
+    echo '<script>var VOIDVersion=' . Utils::encodeJsonForHtml($GLOBALS['VOIDVersion']) . '</script>';
+    echo '<script src="' . Utils::escapeHtml(Helper::options()->themeUrl . '/assets/check_update-9fc641bc91.js') . '"></script>';
 
     $defaultBanner = new Typecho_Widget_Helper_Form_Element_Text('defaultBanner', null, '', '首页顶部大图', '可以填写随机图 API。');
     $form->addInput($defaultBanner);

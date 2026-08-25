@@ -11,6 +11,13 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $setting = $GLOBALS['VOIDSetting'];
 $rewardUrl = Utils::getSafeRewardUrl(isset($setting['reward']) ? $setting['reward'] : '');
 $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUOTES, 'UTF-8');
+$socialUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+$socialTitle = Contents::titleText($this);
+$socialExcerpt = Utils::decodeHtmlText($this->fields->excerpt);
+$socialImage = (string) $this->fields->banner;
+$socialAuthor = Utils::decodeHtmlText(Utils::captureOutput($this, 'author'));
+$socialTwitter = $setting['twitterId'] !== '' ? $setting['twitterId'] : $socialAuthor;
+$socialWeibo = $setting['weiboId'] !== '' ? $setting['weiboId'] : $socialAuthor;
 ?>
 
 <main id="pjax-container">
@@ -38,19 +45,21 @@ $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUO
                     <?php $tags = Contents::getTags($this->cid); if (count($tags) > 0) { 
                         echo '<section class="tags">';
                         foreach ($tags as $tag) {
-                            echo '<a href="'.$tag['permalink'].'" rel="tag" class="tag-item">'.$tag['name'].'</a>';
+                            echo '<a href="' . Utils::escapeHtml($tag['permalink'])
+                                . '" rel="tag" class="tag-item">'
+                                . Utils::escapeHtml(Utils::decodeHtmlText($tag['name'])) . '</a>';
                         }
                         echo '</section>';
                     } ?>
 
                     <div class="social-button" 
-                        data-url="<?php $this->permalink(); ?>"
-                        data-title="<?php Contents::title($this); ?>" 
-                        data-excerpt="<?php $this->fields->excerpt(); ?>"
-                        data-img="<?php $this->fields->banner(); ?>" 
-                        data-twitter="<?php if($setting['twitterId']!='') echo $setting['twitterId']; else $this->author(); ?>"
-                        data-weibo="<?php if($setting['weiboId']!='') echo $setting['weiboId']; else $this->author(); ?>"
-                        <?php if($this->fields->banner != '') echo 'data-image="'.$this->fields->banner.'"';?>>
+                        data-url="<?php echo Utils::escapeHtml($socialUrl); ?>"
+                        data-title="<?php echo Utils::escapeHtml($socialTitle); ?>"
+                        data-excerpt="<?php echo Utils::escapeHtml($socialExcerpt); ?>"
+                        data-img="<?php echo Utils::escapeHtml($socialImage); ?>"
+                        data-twitter="<?php echo Utils::escapeHtml($socialTwitter); ?>"
+                        data-weibo="<?php echo Utils::escapeHtml($socialWeibo); ?>"
+                        <?php if($socialImage !== '') echo 'data-image="' . Utils::escapeHtml($socialImage) . '"'; ?>>
                         <?php if(null !== $rewardUrl):?>
                             <a
                                 class="btn btn-normal btn-highlight"
@@ -79,11 +88,11 @@ $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUO
                                 aria-label="为文章点赞" 
                                 id="social" 
                                 href="javascript:void(0);" onclick="VOID_Vote.vote(this);" 
-                                data-item-id="<?php echo $this->cid;?>" 
+                                data-item-id="<?php echo (int) $this->cid;?>"
                                 data-type="up"
                                 data-table="content"
                                 class="btn btn-normal post-like vote-button"
-                            >ENJOY <span class="value"><?php echo $this->likes; ?></span>
+                            >ENJOY <span class="value"><?php echo (int) $this->likes; ?></span>
                             </a>
                         <?php endif; ?>
                         
@@ -112,9 +121,13 @@ $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUO
                 <?php if(!$this->is('page')): ?>
                 <div class="post-pager"><?php $prev = Contents::thePrev($this); ?>
                     <?php if($prev): ?>
+                        <?php
+                            $prevPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($prev, 'permalink'));
+                            $prevTitle = Utils::decodeHtmlText(Utils::captureOutput($prev, 'title'));
+                        ?>
                         <div class="prev">
-                            <a href="<?php $prev->permalink(); ?>"><h2><?php $prev->title(); ?></h2></a>
-                            <?php echo $prev->fields->excerpt != '' ? "<p>{$prev->fields->excerpt}</p>" : ''; ?>
+                            <a href="<?php echo Utils::escapeHtml($prevPermalink); ?>"><h2><?php echo Utils::escapeHtml($prevTitle); ?></h2></a>
+                            <?php echo $prev->fields->excerpt != '' ? '<p>' . Utils::escapeHtml(Utils::decodeHtmlText($prev->fields->excerpt)) . '</p>' : ''; ?>
                         </div>
                     <?php else: ?>
                         <div class="prev">
@@ -123,9 +136,13 @@ $rewardUrlHtml = null === $rewardUrl ? '' : htmlspecialchars($rewardUrl, ENT_QUO
                     <?php endif; ?>
                     <?php $next = Contents::theNext($this); ?>
                     <?php if($next): ?>
+                        <?php
+                            $nextPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($next, 'permalink'));
+                            $nextTitle = Utils::decodeHtmlText(Utils::captureOutput($next, 'title'));
+                        ?>
                         <div class="next">
-                            <a href="<?php $next->permalink(); ?>"><h2><?php $next->title(); ?></h2></a>
-                            <?php echo $next->fields->excerpt != '' ? "<p>{$next->fields->excerpt}</p>" : ''; ?>
+                            <a href="<?php echo Utils::escapeHtml($nextPermalink); ?>"><h2><?php echo Utils::escapeHtml($nextTitle); ?></h2></a>
+                            <?php echo $next->fields->excerpt != '' ? '<p>' . Utils::escapeHtml(Utils::decodeHtmlText($next->fields->excerpt)) . '</p>' : ''; ?>
                         </div>
                     <?php else: ?>
                         <div class="next">

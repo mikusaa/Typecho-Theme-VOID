@@ -15,7 +15,7 @@ if($this->is('post') || $this->is('page')) {
 }
 ?>
 
-<body fontsize="<?php echo Utils::getTextSize($setting); ?>" class="<?php 
+<body fontsize="<?php echo (int) Utils::getTextSize($setting); ?>" class="<?php
         $themeOverride = isset($_COOKIE['void_theme_override']) ? $_COOKIE['void_theme_override'] : null;
         if ($themeOverride === 'dark' || ($themeOverride !== 'light' && $setting['colorScheme'] == 2)) {
             echo 'theme-dark';
@@ -49,13 +49,13 @@ if($this->is('post') || $this->is('page')) {
         document.body.classList.toggle('theme-dark', document.documentElement.classList.contains('theme-dark'));
     </script>
     
-    <header class="header-mode-<?php echo $setting['headerMode']; ?> <?php if(empty($banner)) echo 'force-dark no-banner'; ?>">
+    <header class="header-mode-<?php echo (int) $setting['headerMode']; ?> <?php if(empty($banner)) echo 'force-dark no-banner'; ?>">
         <div class="container wider">
             <nav>
                 <a role=button aria-label="展开导航" class="toggle" target="_self" href="javascript:void(0);" onclick="VOID_Ui.toggleNav(this);">
                     <span></span>
                 </a>
-                <a class="brand" href="<?php Utils::index(''); ?>"><?php if($setting['name']) echo $setting['name']; else echo $this->options->title; ?></a>
+                <a class="brand" href="<?php Utils::index(''); ?>"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($setting['name'] ? $setting['name'] : $this->options->title)); ?></a>
                 <a href="<?php Utils::index(''); ?>">首页</a>
                 <?php $this->widget('Widget_Contents_Page_List')->parse('<a href="{permalink}">{title}</a>'); ?>
                 <span class="dropdown">分类
@@ -64,13 +64,13 @@ if($this->is('post') || $this->is('page')) {
                     </ul>
                 </span>
                 <?php if($setting['nav']){ foreach ($setting['nav'] as $listItem): ?>
-                <span class="dropdown"><?php echo htmlspecialchars($listItem['name'], ENT_QUOTES, 'UTF-8'); ?>
+                <span class="dropdown"><?php echo Utils::escapeHtml($listItem['name']); ?>
                     <ul>
                         <?php foreach ($listItem['items'] as $item) {
                             $target = '_blank';
-                            if(isset($item['target'])) $target = htmlspecialchars($item['target'], ENT_QUOTES, 'UTF-8');
-                            $link = htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8');
-                            $title = htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                            if(isset($item['target'])) $target = Utils::escapeHtml($item['target']);
+                            $link = Utils::escapeHtml($item['link']);
+                            $title = Utils::escapeHtml(Utils::decodeHtmlText($item['title']));
                             echo "<li><a target=\"{$target}\" href=\"{$link}\">{$title}</a></li>";
                         }?>
                     </ul>
@@ -109,13 +109,13 @@ if($this->is('post') || $this->is('page')) {
             </nav>
         </section>
         <?php if($setting['nav']){ foreach ($setting['nav'] as $listItem): ?>
-        <section data-title="<?php echo htmlspecialchars($listItem['name'], ENT_QUOTES, 'UTF-8'); ?>">
+        <section data-title="<?php echo Utils::escapeHtml($listItem['name']); ?>">
             <nav>
                 <?php foreach ($listItem['items'] as $item) {
                     $target = '_blank';
-                    if(isset($item['target'])) $target = htmlspecialchars($item['target'], ENT_QUOTES, 'UTF-8');
-                    $link = htmlspecialchars($item['link'], ENT_QUOTES, 'UTF-8');
-                    $title = htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
+                    if(isset($item['target'])) $target = Utils::escapeHtml($item['target']);
+                    $link = Utils::escapeHtml($item['link']);
+                    $title = Utils::escapeHtml(Utils::decodeHtmlText($item['title']));
                     echo "<a target=\"{$target}\" href=\"{$link}\">{$title}</a>";
                 }?>
             </nav>

@@ -11,6 +11,69 @@
 class Utils
 {
     /**
+     * 捕获 Typecho 输出方法的结果，并保留其插件钩子
+     *
+     * @return string
+     */
+    public static function captureOutput($target, $method, $arguments = array())
+    {
+        ob_start();
+        try {
+            call_user_func_array(array($target, $method), $arguments);
+            return ob_get_clean();
+        } catch (Throwable $throwable) {
+            ob_end_clean();
+            throw $throwable;
+        }
+    }
+
+    /**
+     * 将 Typecho 已编码的标题等值还原为语义纯文本
+     *
+     * @return string
+     */
+    public static function decodeHtmlText($value)
+    {
+        return html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * 还原已编码的 HTML 实体，不改变 URL 等结构化值
+     *
+     * @return string
+     */
+    public static function decodeHtmlEntities($value)
+    {
+        return html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * 编码 HTML 文本或双引号属性值
+     *
+     * @return string
+     */
+    public static function escapeHtml($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * 将结构化数据安全嵌入 HTML script 元素
+     *
+     * @return string
+     */
+    public static function encodeJsonForHtml($value, $fallback = 'null')
+    {
+        $json = json_encode(
+            $value,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+            | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
+
+        return false === $json ? $fallback : $json;
+    }
+
+    /**
      * 输出相对首页路由，本方法会自适应伪静态
      * 
      * @return void
@@ -58,8 +121,10 @@ class Utils
     public static function isPluginAvailable($name) 
     {
         $plugins = Typecho_Plugin::export();
-        $plugins = $plugins['activated'];
-        return is_array($plugins) && array_key_exists($name, $plugins);
+        return is_array($plugins)
+            && isset($plugins['activated'])
+            && is_array($plugins['activated'])
+            && array_key_exists($name, $plugins['activated']);
     }
 
     /**
@@ -70,6 +135,20 @@ class Utils
     public static function isPjax()
     {
         return array_key_exists('HTTP_X_PJAX', $_SERVER) && $_SERVER['HTTP_X_PJAX'];
+    }
+
+    /**
+     * 判断当前归档是否为 Typecho 的 404 上下文
+     *
+     * @return bool
+     */
+    public static function isNotFoundArchive($archive)
+    {
+        return is_object($archive)
+            && method_exists($archive, 'getArchiveType')
+            && method_exists($archive, 'getArchiveSlug')
+            && $archive->getArchiveType() === 'archive'
+            && (string) $archive->getArchiveSlug() === '404';
     }
 
     /**
@@ -90,11 +169,24 @@ class Utils
      * 1: 14px, 2: 16px, 3: 18px, 4: 20px, 5: 22px
      */
     public static function getTextSize($setting) {
-        if(isset($_COOKIE['textsize'])) {
-            return $_COOKIE['textsize'];
-        } else {
-            return $setting['defaultFontSize'];
+        $default = isset($setting['defaultFontSize']) ? $setting['defaultFontSize'] : 3;
+        $value = isset($_COOKIE['textsize']) ? $_COOKIE['textsize'] : $default;
+
+        if (is_int($value) && $value >= 1 && $value <= 5) {
+            return $value;
         }
+        if (is_string($value) && preg_match('/^[1-5]$/D', $value)) {
+            return (int) $value;
+        }
+
+        if (is_int($default) && $default >= 1 && $default <= 5) {
+            return $default;
+        }
+        if (is_string($default) && preg_match('/^[1-5]$/D', $default)) {
+            return (int) $default;
+        }
+
+        return 3;
     }
 
     /**
@@ -138,26 +230,31 @@ class Utils
      */
     public static function addButton()
     {
-        echo '<script src="';
+        ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker-7fedd5df0e.js');
-        echo '"></script>';
+        $emotePickerUrl = ob_get_clean();
+        echo '<script src="' . self::escapeHtml($emotePickerUrl) . '"></script>';
 
         ob_start();
         self::indexTheme('/assets/libs/emotes/');
         $emotesBaseUrl = ob_get_clean();
-        echo '<script>window.VOIDEmotesConfig={baseUrl:' . json_encode($emotesBaseUrl) . '};</script>';
+        echo '<script>window.VOIDEmotesConfig={baseUrl:'
+            . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
-        echo '<script src="';
+        ob_start();
         self::indexTheme('/assets/editor-2366119a0f.js');
-        echo '"></script>';
+        $editorUrl = ob_get_clean();
+        echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
-        echo '<link rel="stylesheet" href="';
+        ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker-00a566ee43.css');
-        echo '" />';
+        $emotePickerStyleUrl = ob_get_clean();
+        echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
-        echo '<link rel="stylesheet" href="';
+        ob_start();
         self::indexTheme('/assets/editor-admin-c1556b5c9d.css');
-        echo '" />';
+        $editorStyleUrl = ob_get_clean();
+        echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }
 
     /**
@@ -197,7 +294,7 @@ class Utils
     /**
      * 输出建站时间（最早一篇文章的写作时间）
      * 
-     * @return array
+     * @return void
      */
     public static function getBuildTime()
     {
@@ -207,7 +304,7 @@ class Utils
             ->where('table.contents.password IS NULL')
             ->order('table.contents.created', Typecho_Db::SORT_ASC)
             ->limit(1));
-        if (count($content))
+        if (is_array($content) && isset($content['created']))
             echo date('Y-m-d\TH:i', $content['created']);
         else
             echo date('Y-m-d\TH:i');
@@ -258,12 +355,60 @@ class Utils
      */
     public static function hasVOIDPlugin($req)
     {
-        if(self::isPluginAvailable('VOID')) {
-            $version_have = VOID_Plugin::$VERSION;
-            if($version_have >= $req) return true;
+        if (!self::isPluginAvailable('VOID')
+            || !class_exists('VOID_Plugin')
+            || !property_exists('VOID_Plugin', 'VERSION')) {
+            return false;
         }
 
-        return false;
+        try {
+            $versionProperty = new ReflectionProperty('VOID_Plugin', 'VERSION');
+        } catch (ReflectionException $error) {
+            return false;
+        }
+
+        if (!$versionProperty->isPublic() || !$versionProperty->isStatic()) {
+            return false;
+        }
+
+        try {
+            $versionValue = $versionProperty->getValue();
+        } catch (Exception $error) {
+            return false;
+        } catch (Error $error) {
+            return false;
+        }
+
+        $versionHave = self::normalizePluginVersion($versionValue);
+        $versionRequired = self::normalizePluginVersion($req);
+        return null !== $versionHave
+            && null !== $versionRequired
+            && version_compare($versionHave, $versionRequired, '>=');
+    }
+
+    /**
+     * 规范化 VOID 插件使用过的点分版本格式。
+     */
+    private static function normalizePluginVersion($version)
+    {
+        if (is_float($version)) {
+            if (is_nan($version) || is_infinite($version)) {
+                return null;
+            }
+            $version = (string) $version;
+        } elseif (is_int($version)) {
+            $version = (string) $version;
+        }
+
+        if (!is_string($version)
+            || !preg_match(
+                '/^[0-9]+(?:\.[0-9]+)+(?:-(?:dev|alpha|a|beta|b|rc|pl|p)(?:[.-]?[0-9]+)?)?$/Di',
+                $version
+            )) {
+            return null;
+        }
+
+        return $version;
     }
 
     /**

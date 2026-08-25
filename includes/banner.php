@@ -22,11 +22,11 @@ if($this->is('post') || $this->is('page')) {
         if(empty($banner)) echo ' no-banner';
         else echo ' loading dark';
         if($this->is('index')) echo ' index';
-        if($this->is('archive') && !$this->have()) echo ' not-found'; ?>">
+        if(Utils::isNotFoundArchive($this)) echo ' not-found'; ?>">
 
     <?php if(!empty($banner)): ?>
         <div id="banner" class="<?php if($blur) echo 'blur'; ?>">
-            <img src="<?php echo $banner; ?>" alt="" fetchpriority="high" decoding="async">
+            <img src="<?php echo Utils::escapeHtml($banner); ?>" alt="" fetchpriority="high" decoding="async">
         </div>
         <script>$('body>header').removeClass('force-dark').removeClass('no-banner');</script>
     <?php else: ?>
@@ -38,15 +38,16 @@ if($this->is('post') || $this->is('page')) {
         <div class="banner-title">
             <h1 class="post-title">
                 <?php if(!$this->is('archive')): ?>
-                    <?php $this->title(); ?>
+                    <?php echo Utils::escapeHtml(Utils::decodeHtmlText(Utils::captureOutput($this, 'title'))); ?>
                 <?php else: ?>
-                    <?php if ($this->have()): ?>
-                        <?php $this->archiveTitle(array(
+                    <?php if (!Utils::isNotFoundArchive($this)): ?>
+                        <?php ob_start(); $this->archiveTitle(array(
                             'category'  =>  _t('分类 "%s" 下的文章'),
                             'search'    =>  _t('包含关键字 "%s" 的文章'),
                             'tag'       =>  _t('包含标签 "%s" 的文章'),
                             'author'    =>  _t('"%s" 发布的文章')
-                        ), '', '');  ?>
+                        ), '', ''); $archiveTitle = ob_get_clean();
+                        echo Utils::escapeHtml(Utils::decodeHtmlText($archiveTitle)); ?>
                     <?php else: ?>
                         <span class="glitch">0</span>
                     <?php endif; ?>
@@ -58,15 +59,19 @@ if($this->is('post') || $this->is('page')) {
                         echo Utils::getCatNum()." 分类 × ".Utils::getPostNum()." 文章 × ".Utils::getTagNum()." 标签";
                         if($setting['VOIDPlugin']) echo ' × <span id="totalWordCount"></span> 字';
                     } else{ ?>
-                        <span><a href="<?php $this->author->permalink(); ?>"><?php $this->author(); ?></a></span>&nbsp;•&nbsp;
+                        <?php
+                            $authorPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($this->author, 'permalink'));
+                            $authorName = Utils::decodeHtmlText(Utils::captureOutput($this, 'author'));
+                        ?>
+                        <span><a href="<?php echo Utils::escapeHtml($authorPermalink); ?>"><?php echo Utils::escapeHtml($authorName); ?></a></span>&nbsp;•&nbsp;
                         <time datetime="<?php echo date('c', $this->created); ?>"><?php echo date('Y-m-d', $this->created); ?></time>
                         &nbsp;•&nbsp;<a no-pjax target="_self" href="javascript:void(0);" onclick="VOID_Ui.scrollToWithHeader('#comments')"><?php $this->commentsNum(); ?>&nbsp;评论</a>
-                        <?php if($setting['VOIDPlugin']) echo '&nbsp;•&nbsp;<span>'.$this->viewsNum.'&nbsp;阅读</span>'; ?>
+                        <?php if($setting['VOIDPlugin']) echo '&nbsp;•&nbsp;<span>'.(int) $this->viewsNum.'&nbsp;阅读</span>'; ?>
                         <?php if($this->user->hasLogin()): ?>
                             <?php if($this->is('post')): ?>
-                            &nbsp;•&nbsp;<a target="_blank" href="<?php echo $this->options->adminUrl.'write-post.php?cid='.$this->cid;?>">编辑</a>
+                            &nbsp;•&nbsp;<a target="_blank" href="<?php echo Utils::escapeHtml($this->options->adminUrl . 'write-post.php?cid=' . (int) $this->cid); ?>">编辑</a>
                             <?php else: ?>
-                            &nbsp;•&nbsp;<a target="_blank" href="<?php echo $this->options->adminUrl.'write-page.php?cid='.$this->cid;?>">编辑</a>
+                            &nbsp;•&nbsp;<a target="_blank" href="<?php echo Utils::escapeHtml($this->options->adminUrl . 'write-page.php?cid=' . (int) $this->cid); ?>">编辑</a>
                             <?php endif;?>
                         <?php endif;?>
                     <?php } ?>
@@ -81,7 +86,7 @@ if($this->is('post') || $this->is('page')) {
             if($setting['indexBannerSubtitle']!='') $subtitle = $setting['indexBannerSubtitle'];
         ?>
         <div class="banner-title index<?php if(!empty($banner)) echo ' force-normal'; ?>">
-            <h1 class="post-title"><span class="brand"><span><?php echo $title; ?></span></span><br><span class="subtitle"><?php echo $subtitle; ?></span></h1>
+            <h1 class="post-title"><span class="brand"><span><?php echo Utils::escapeHtml(Utils::decodeHtmlText($title)); ?></span></span><br><span class="subtitle"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($subtitle)); ?></span></h1>
         </div>
     <?php endif; ?>
 </div>

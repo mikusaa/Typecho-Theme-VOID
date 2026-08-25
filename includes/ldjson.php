@@ -9,101 +9,125 @@
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $setting = $GLOBALS['VOIDSetting'];
-?>
+$siteName = Utils::decodeHtmlText(Utils::captureOutput(Helper::options(), 'title'));
+ob_start();
+Utils::index('/');
+$homeUrl = ob_get_clean();
 
-<?php if ($this->is('post')): ?>
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "publisher": {
-        "@type": "Organization",
-        "name": "<?php Helper::options()->title() ?>",
-        "logo": {
-            "@type": "ImageObject",
-            "url": "<?php Utils::gravatar($this->author->mail, 200); ?>"
-        }
-    },
-    "author": {
-        "@type": "Person",
-        "name": "<?php $this->author->screenName(); ?>",
-        "image": {
-            "@type": "ImageObject",
-            "url": "<?php Utils::gravatar($this->author->mail, 400); ?>",
-            "width": 400,
-            "height": 400
-        },
-        "url": "<?php $this->author->permalink(); ?>"
-    },
-    "headline": "<?php Contents::title($this); ?>",
-    "url": "<?php $this->permalink(); ?>",
-    "datePublished": "<?php echo date('c', $this->created); ?>",
-    "dateModified": "<?php echo date('c', $this->modified); ?>",
-    "image": {
-        "@type": "ImageObject",
-        <?php $banner = $this->fields->banner; if(!$banner) $banner = $setting['defaultBanner']; ?>
-        "url": "<?php echo $banner; ?>"
-    },
-    "description": "<?php echo $this->fields->excerpt; ?>",
-    "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "<?php Utils::index("/"); ?>"
+$publisher = array(
+    '@type' => 'Organization',
+    'name' => $siteName
+);
+$isContentPage = $this->have() && ($this->is('post') || $this->is('page'));
+$contentAuthor = $isContentPage ? $this->author : null;
+$hasAuthor = is_object($contentAuthor);
+if ($hasAuthor && !empty($contentAuthor->mail)) {
+    ob_start();
+    Utils::gravatar($contentAuthor->mail, 200);
+    $publisher['logo'] = array(
+        '@type' => 'ImageObject',
+        'url' => Utils::decodeHtmlEntities(ob_get_clean())
+    );
+}
+
+$structuredData = null;
+if ($this->is('post') && $hasAuthor) {
+    $canonicalUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+    $author = array(
+        '@type' => 'Person',
+        'name' => Utils::decodeHtmlText(Utils::captureOutput($contentAuthor, 'screenName'))
+    );
+    if (!empty($contentAuthor->mail)) {
+        ob_start();
+        Utils::gravatar($contentAuthor->mail, 400);
+        $author['image'] = array(
+            '@type' => 'ImageObject',
+            'url' => Utils::decodeHtmlEntities(ob_get_clean()),
+            'width' => 400,
+            'height' => 400
+        );
     }
-}
-</script>
-<?php elseif ($this->is('page')): ?>
-<script type="application/ld+json">
-{
-    "@context": "http://schema.org",
-    "@type": "WebPage",
-    "name": "<?php Contents::title($this); ?>",
-    "description": "<?php echo $this->fields->excerpt; ?>",
-    "publisher": {
-        "@type": "Organization",
-        "name": "<?php Helper::options()->title() ?>",
-        "logo": {
-            "@type": "ImageObject",
-            "url": "<?php Utils::gravatar($this->author->mail, 200); ?>"
-        }
+    $authorUrl = Utils::decodeHtmlEntities(Utils::captureOutput($contentAuthor, 'permalink'));
+    if ($authorUrl !== '') {
+        $author['url'] = $authorUrl;
     }
-}
-</script>
-<?php elseif ($this->is('index')): ?>
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "publisher": {
-        "@type": "Organization",
-        "name": "<?php Helper::options()->title() ?>",
-        "logo": {
-            "@type": "ImageObject",
-            "url": "<?php Utils::gravatar($this->author->mail, 200); ?>"
-        }
-    },
-    "url": "<?php Utils::index("/"); ?>",
-    "image": {
-        "@type": "ImageObject",
-        "url": "<?php echo $setting['defaultBanner'] ?>"
-    },
-    "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "<?php Utils::index("/"); ?>"
-    },
-    "description": "<?php echo Helper::options()->description; ?>"
-}
-</script>
-<?php elseif ($this->is('archive')): ?>
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "Series",
-    "url": "<?php Utils::index(htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8')); ?>",
-    "name": "<?php Contents::title($this); ?>",
-    "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "<?php Utils::index("/"); ?>"
+
+    $structuredData = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'Article',
+        'publisher' => $publisher,
+        'author' => $author,
+        'headline' => Utils::decodeHtmlText(Utils::captureOutput($this, 'title')),
+        'url' => $canonicalUrl,
+        'datePublished' => date('c', $this->created),
+        'dateModified' => date('c', $this->modified),
+        'mainEntityOfPage' => array(
+            '@type' => 'WebPage',
+            '@id' => $canonicalUrl
+        )
+    );
+    $banner = !empty($this->fields->banner) ? $this->fields->banner : $setting['defaultBanner'];
+    if (!empty($banner)) {
+        $structuredData['image'] = array('@type' => 'ImageObject', 'url' => (string) $banner);
     }
+    $description = Utils::decodeHtmlText($this->fields->excerpt);
+    if ($description !== '') {
+        $structuredData['description'] = $description;
+    }
+} elseif ($this->is('page') && $hasAuthor) {
+    $canonicalUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+    $structuredData = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'WebPage',
+        'name' => Utils::decodeHtmlText(Utils::captureOutput($this, 'title')),
+        'url' => $canonicalUrl,
+        'publisher' => $publisher,
+        'mainEntityOfPage' => array(
+            '@type' => 'WebPage',
+            '@id' => $canonicalUrl
+        )
+    );
+    $description = Utils::decodeHtmlText($this->fields->excerpt);
+    if ($description !== '') {
+        $structuredData['description'] = $description;
+    }
+} elseif ($this->is('index')) {
+    $structuredData = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        'publisher' => $publisher,
+        'url' => $homeUrl,
+        'mainEntityOfPage' => array(
+            '@type' => 'WebPage',
+            '@id' => $homeUrl
+        )
+    );
+    if (!empty($setting['defaultBanner'])) {
+        $structuredData['image'] = array(
+            '@type' => 'ImageObject',
+            'url' => (string) $setting['defaultBanner']
+        );
+    }
+    $description = Utils::decodeHtmlText(Helper::options()->description);
+    if ($description !== '') {
+        $structuredData['description'] = $description;
+    }
+} elseif ($this->is('archive')) {
+    $archiveUrl = (string) $this->getArchiveUrl();
+    $structuredData = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'Series',
+        'url' => $archiveUrl,
+        'name' => Contents::titleText($this),
+        'mainEntityOfPage' => array(
+            '@type' => 'WebPage',
+            '@id' => $archiveUrl
+        )
+    );
 }
-</script>
+
+$structuredJson = null === $structuredData ? '' : Utils::encodeJsonForHtml($structuredData, '');
+?>
+<?php if ($structuredJson !== ''): ?>
+<script type="application/ld+json"><?php echo $structuredJson; ?></script>
 <?php endif; ?>

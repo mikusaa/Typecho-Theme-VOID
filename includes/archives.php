@@ -21,28 +21,36 @@ $setting = $GLOBALS['VOIDSetting'];
 
     <div class="wrapper container <?php if($setting['indexStyle'] == 1) echo 'narrow'; else echo 'wide'; ?>">
         <section id="index-list" class="float-up">
+            <?php $hasPosts = $this->have(); ?>
             <h1 hidden class="post-title"><?php $this->archiveTitle(array(
                 'category'  =>  _t('分类 "%s" 下的文章'),
                 'search'    =>  _t('包含关键字 "%s" 的文章'),
                 'tag'       =>  _t('包含标签 "%s" 的文章'),
                 'author'    =>  _t('"%s" 发布的文章')
             ), '', '');  ?></h1>
+            <?php if($hasPosts): ?>
             <ul id="masonry">
             <?php $priorityBannerCount = 0; ?>
             <?php while($this->next()): ?>
-                <?php $bannerAsCover = $this->fields->bannerascover; if($this->fields->banner == '') $bannerAsCover='0'; ?>
-                <li id="p-<?php $this->cid(); ?>"  class="masonry-item style-<?php echo $bannerAsCover; ?>">
-                    <a href="<?php $this->permalink(); ?>">    
+                <?php
+                    $postId = (int) Utils::captureOutput($this, 'cid');
+                    $postPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+                    $postTitle = Utils::decodeHtmlText(Utils::captureOutput($this, 'title'));
+                    $bannerAsCover = (string) $this->fields->bannerascover;
+                    if($this->fields->banner == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
+                ?>
+                <li id="p-<?php echo $postId; ?>"  class="masonry-item style-<?php echo $bannerAsCover; ?>">
+                    <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                         <article class="yue">
                             <?php if($this->fields->banner != ''): ?>
                                 <div class="banner">
                                     <?php $priorityBannerCount++; ?>
                                     <?php if ($priorityBannerCount == 1): ?>
-                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="eager" fetchpriority="high" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" fetchpriority="high" decoding="async">
                                     <?php elseif ($priorityBannerCount == 2): ?>
-                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="eager" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" decoding="async">
                                     <?php else: ?>
-                                        <img src="<?php echo $this->fields->banner;?>" alt="" loading="lazy" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
@@ -50,25 +58,30 @@ $setting = $GLOBALS['VOIDSetting'];
                                 <div class="post-meta-index">
                                     <time datetime="<?php echo date('c', $this->created); ?>"><?php echo date('M d, Y', $this->created); ?></time>
                                     <?php if($setting['VOIDPlugin']): ?>
-                                        <span class="word-count">+ <?php echo $this->wordCount; ?> 字</span>
+                                        <span class="word-count">+ <?php echo (int) $this->wordCount; ?> 字</span>
                                     <?php endif; ?>
                                 </div>
 
-                                <h1 class="title"><?php $this->title(); ?></h1>
+                                <h1 class="title"><?php echo Utils::escapeHtml($postTitle); ?></h1>
                                 <?php if($this->fields->excerpt != ''): ?> 
-                                    <p class="headline single"><?php echo $this->fields->excerpt; ?></p>
+                                    <p class="headline single"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($this->fields->excerpt)); ?></p>
                                 <?php else: ?>
-                                    <p class="excerpt"><?php if(Utils::isMobile()) $this->excerpt(60); else $this->excerpt(100); ?><?php if($this->is('index')) echo " | <a class=\"full-link\" href=\"{$this->permalink}\">阅读全文</a>"; ?></p>
+                                    <p class="excerpt"><?php if(Utils::isMobile()) $this->excerpt(60); else $this->excerpt(100); ?><?php if($this->is('index')) echo ' | <a class="full-link" href="' . Utils::escapeHtml($postPermalink) . '">阅读全文</a>'; ?></p>
                                 <?php endif; ?>
                             </div>
                         </article>
                     </a>
                 </li>
-                <script>VOID_Ui.MasonryCtrler.watch("p-<?php $this->cid(); ?>");</script>
+                <script>VOID_Ui.MasonryCtrler.watch("p-<?php echo $postId; ?>");</script>
             <?php endwhile; ?>
             </ul>
+            <?php else: ?>
+                <div class="archive-empty" role="status">
+                    <p>暂时没有找到文章</p>
+                </div>
+            <?php endif; ?>
         </section>
         
-        <?php $this->pageNav('<span aria-label="上一页">←</span>', '<span aria-label="下一页">→</span>', 1, '...', 'wrapClass=pager&prevClass=prev&nextClass=next'); ?>
+        <?php if($hasPosts) $this->pageNav('<span aria-label="上一页">←</span>', '<span aria-label="下一页">→</span>', 1, '...', 'wrapClass=pager&prevClass=prev&nextClass=next'); ?>
     </div>
 </main>

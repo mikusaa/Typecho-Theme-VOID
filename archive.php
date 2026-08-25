@@ -13,10 +13,10 @@ if(!Utils::isPjax()){
     $this->need('includes/header.php');
 }
 
-if($this->have()){
-    $this->need('includes/archives.php');
-}else{
+if(Utils::isNotFoundArchive($this)){
     $this->need('includes/404.php');
+}else{
+    $this->need('includes/archives.php');
 }
 
 if(!Utils::isPjax()){

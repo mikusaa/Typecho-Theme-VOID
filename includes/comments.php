@@ -15,6 +15,14 @@ if ($commentsRequireUrl === null) {
     $commentsRequireUrl = Helper::options()->commentsRequireURL;
 }
 $commentsRequireUrl = !empty($commentsRequireUrl);
+$commentsOrder = strtoupper((string)Helper::options()->commentsOrder) === 'ASC' ? 'ASC' : 'DESC';
+$commentSecurityTokenExpression = null;
+if (!empty(Helper::options()->commentsAntiSpam)) {
+    Typecho_Widget::widget('Widget_Security')->to($commentSecurity);
+    $commentSecurityTokenExpression = Typecho_Common::shuffleScriptVar(
+        $commentSecurity->getToken($this->request->getRequestUrl())
+    );
+}
 $parameter = array(
     'parentId'      => $this->hidden ? 0 : $this->cid,
     // 对齐 Typecho 1.3：传递当前 Archive Widget，保证 path/permalink 等字段可用
@@ -28,26 +36,33 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
 ?>
 
 <div class="comments-container">
-    <section id="comments" class="container float-up">
+    <section id="comments" class="container float-up" data-comments-order="<?php echo $commentsOrder; ?>">
         <!--评论框-->
         <?php if($this->allow('comment')): ?>
-            <?php $this->header('commentReply=1&description=0&keywords=0&generator=0&template=0&pingback=0&xmlrpc=0&wlw=0&rss2=0&rss1=0&antiSpam=0&atom&social=0'); ?>
             <div id="<?php $this->respondId(); ?>" class="respond">
                 <div class="cancel-comment-reply" role=button>
                     <?php $comments->cancelReply(); ?>
                 </div>
                 <h3 id="response" class="widget-title text-left">添加新评论</h3>
                 <?php if(!empty($setting['commentNotification'])): ?>
-                    <p class="comment-notification notice"><?php echo $setting['commentNotification']; ?></p>
+                    <p class="comment-notification notice"><?php echo Utils::escapeHtml($setting['commentNotification']); ?></p>
                 <?php endif; ?>
-                <form method="post" action="<?php $this->commentUrl() ?>" id="comment-form">
+                <?php $commentUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'commentUrl')); ?>
+                <form method="post" action="<?php echo Utils::escapeHtml($commentUrl); ?>" id="comment-form">
                     <?php if($this->user->hasLogin()): ?>
-                    <p id="logged-in" 
-                        data-name="<?php $this->user->screenName(); ?>" 
-                        data-url="<?php $this->user->url(); ?>" 
-                        data-email="<?php $this->user->mail(); ?>" ><?php _e('登录身份: '); ?>
-                        <a href="<?php $this->options->profileUrl(); ?>"><?php $this->user->screenName(); ?></a>
-                        . <a no-pjax href="<?php $this->options->logoutUrl(); ?>" title="Logout"><?php _e('退出'); ?> &raquo;</a>
+                    <?php
+                        $userName = Utils::decodeHtmlText(Utils::captureOutput($this->user, 'screenName'));
+                        $userUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this->user, 'url'));
+                        $userMail = Utils::decodeHtmlText(Utils::captureOutput($this->user, 'mail'));
+                        $profileUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this->options, 'profileUrl'));
+                        $logoutUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this->options, 'logoutUrl'));
+                    ?>
+                    <p id="logged-in"
+                        data-name="<?php echo Utils::escapeHtml($userName); ?>"
+                        data-url="<?php echo Utils::escapeHtml($userUrl); ?>"
+                        data-email="<?php echo Utils::escapeHtml($userMail); ?>" ><?php _e('登录身份: '); ?>
+                        <a href="<?php echo Utils::escapeHtml($profileUrl); ?>"><?php echo Utils::escapeHtml($userName); ?></a>
+                        . <a no-pjax href="<?php echo Utils::escapeHtml($logoutUrl); ?>" title="Logout"><?php _e('退出'); ?> &raquo;</a>
                     </p>
                     <?php else: ?>
                         <div class="comment-info-input">
@@ -82,6 +97,22 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
                         <button id="comment-submit-button" type="submit" class="submit btn btn-normal">提交评论</button>
                     </p>
                 </form>
+                <?php if ($commentSecurityTokenExpression !== null): ?>
+                <script>
+                (function() {
+                    if (document.readyState === 'loading'
+                        || typeof AjaxComment === 'undefined'
+                        || typeof AjaxComment.installAntiSpamToken !== 'function') {
+                        return;
+                    }
+                    var token = <?php echo $commentSecurityTokenExpression; ?>
+                    AjaxComment.installAntiSpamToken(
+                        document.getElementById('comment-form'),
+                        token
+                    );
+                })();
+                </script>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         
