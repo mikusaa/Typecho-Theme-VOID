@@ -512,8 +512,52 @@ VOID_Ui = {
         }
     },
 
+    loadBackgroundImage: function (element, url) {
+        if (!element || typeof url !== 'string' || url === '') {
+            return null;
+        }
+
+        var image = new Image();
+        var settled = false;
+        var finish = function (success) {
+            var source;
+
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            image.onload = null;
+            image.onerror = null;
+
+            if (!success || element.isConnected === false) {
+                return;
+            }
+
+            source = String(image.currentSrc || image.src || url);
+            element.style.backgroundImage = 'url(' + JSON.stringify(source) + ')';
+            element.classList.add('loaded');
+        };
+
+        image.onload = function () {
+            finish(true);
+        };
+        image.onerror = function () {
+            finish(false);
+        };
+        image.src = url;
+
+        if (image.complete) {
+            finish(image.naturalWidth > 0);
+        }
+
+        return image;
+    },
+
     MasonryCtrler: {
         sensors: [],
+        active: false,
+        resizeHandler: null,
         masonry: function () {
             $('#masonry').addClass('masonry').masonry({
                 itemSelector: '.masonry-item',
@@ -522,24 +566,73 @@ VOID_Ui = {
                 transitionDuration: 0
             });
         },
+        enable: function () {
+            if (this.active || !this.check() || VOIDConfig.indexStyle != 0) {
+                return;
+            }
+
+            $('.masonry-item').addClass('masonry-ready');
+            this.masonry();
+            this.active = true;
+        },
+        disable: function () {
+            var $masonry = $('#masonry');
+
+            if (this.active && $masonry.length) {
+                $masonry.masonry('destroy');
+            }
+
+            $masonry.removeClass('masonry');
+            $('.masonry-item').removeClass('masonry-ready');
+            this.active = false;
+        },
+        sync: function () {
+            if (this.check() && VOIDConfig.indexStyle == 0) {
+                this.enable();
+            } else {
+                this.disable();
+            }
+        },
+        bindResize: function () {
+            if (this.resizeHandler) {
+                return;
+            }
+
+            this.resizeHandler = function () {
+                VOID_Ui.MasonryCtrler.sync();
+            };
+            window.addEventListener('resize', this.resizeHandler);
+        },
+        unbindResize: function () {
+            if (!this.resizeHandler) {
+                return;
+            }
+
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        },
         init: function () {
             $.each($('.masonry-item'), function (i, item) {
                 VOID_Ui.MasonryCtrler.watch(item.id);
             });
-            if (VOID_Ui.MasonryCtrler.check() && VOIDConfig.indexStyle == 0) {
-                $('.masonry-item').addClass('masonry-ready');
-                VOID_Ui.MasonryCtrler.masonry();
+            if ($('#masonry').length > 0 && VOIDConfig.indexStyle == 0) {
+                this.bindResize();
+            } else {
+                this.unbindResize();
             }
+            this.sync();
             $('.masonry-item').addClass('done');
         },
         check: function () {
-            return $('#masonry').length && window.innerWidth >= 768;
+            return $('#masonry').length > 0 && window.innerWidth >= 768;
         },
         destroy: function () {
+            this.disable();
             $.each(this.sensors, function (i, entry) {
                 entry.sensor.detach(entry.callback);
             });
             this.sensors = [];
+            this.unbindResize();
         },
         watch: function (id) {
             var el = document.getElementById(id);
@@ -563,7 +656,7 @@ VOID_Ui = {
             }
 
             callback = function () {
-                if (VOID_Ui.MasonryCtrler.check() && $('#masonry').hasClass('masonry')) {
+                if (VOID_Ui.MasonryCtrler.active && VOID_Ui.MasonryCtrler.check()) {
                     VOID_Ui.MasonryCtrler.masonry();
                 }
             };

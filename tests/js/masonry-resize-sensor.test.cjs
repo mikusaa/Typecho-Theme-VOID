@@ -4,9 +4,35 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function loadMasonryEnvironment() {
+function loadMasonryEnvironment(options = {}) {
     const elements = [];
+    const masonryCalls = [];
     const sensorInstances = [];
+    const windowListeners = new Map();
+    const masonryContainer = createElement('masonry');
+
+    function createElement(id) {
+        const classes = new Set();
+        return {
+            id,
+            classes,
+            isConnected: true,
+            style: {},
+            classList: {
+                add(className) { classes.add(className); },
+                contains(className) { return classes.has(className); },
+                remove(className) { classes.delete(className); }
+            }
+        };
+    }
+
+    function getClasses(element) {
+        if (!element.classes) {
+            element.classes = new Set();
+        }
+        return element.classes;
+    }
+
     const document = {
         body: {},
         documentElement: {},
@@ -19,19 +45,44 @@ function loadMasonryEnvironment() {
     };
 
     function jQuery(selector) {
-        const items = selector === '.masonry-item' ? elements.slice() : [];
+        let items = [];
+        if (selector === '.masonry-item') {
+            items = elements.slice();
+        } else if (selector === '#masonry' && options.masonryContainer !== false) {
+            items = [masonryContainer];
+        }
+
         const api = {
             items,
             length: items.length,
-            addClass() { return api; },
+            addClass(className) {
+                items.forEach((item) => getClasses(item).add(className));
+                return api;
+            },
             css() { return api; },
             fadeOut() { return api; },
             has() { return api; },
-            hasClass() { return false; },
+            hasClass(className) {
+                return items.length > 0 && getClasses(items[0]).has(className);
+            },
             hide() { return api; },
-            masonry() { return api; },
+            masonry(argument) {
+                masonryCalls.push(argument);
+                if (argument === 'destroy') {
+                    masonryContainer.style = {};
+                    elements.forEach((item) => { item.style = {}; });
+                } else {
+                    masonryContainer.style.height = '320px';
+                    masonryContainer.style.position = 'relative';
+                    elements.forEach((item) => { item.style.position = 'absolute'; });
+                }
+                return api;
+            },
             on() { return api; },
-            removeClass() { return api; }
+            removeClass(className) {
+                items.forEach((item) => getClasses(item).delete(className));
+                return api;
+            }
         };
         return api;
     }
@@ -55,17 +106,48 @@ function loadMasonryEnvironment() {
         sensorInstances.push(this);
     }
 
+    function Image() {
+        this.complete = false;
+        this.currentSrc = '';
+        this.naturalWidth = 0;
+        Object.defineProperty(this, 'src', {
+            get: () => this.source,
+            set: (value) => {
+                this.source = value;
+                if (options.imageState === 'loaded') {
+                    this.complete = true;
+                    this.naturalWidth = 1200;
+                } else if (options.imageState === 'failed') {
+                    this.complete = true;
+                    this.naturalWidth = 0;
+                }
+            }
+        });
+    }
+
     const window = {
+        addEventListener(type, listener) {
+            if (!windowListeners.has(type)) {
+                windowListeners.set(type, new Set());
+            }
+            windowListeners.get(type).add(listener);
+        },
         clearTimeout() {},
-        innerWidth: 1024,
+        innerWidth: options.innerWidth || 1024,
+        removeEventListener(type, listener) {
+            if (windowListeners.has(type)) {
+                windowListeners.get(type).delete(listener);
+            }
+        },
         setTimeout() {}
     };
     window.window = window;
 
     const context = {
         $: jQuery,
+        Image,
         ResizeSensor,
-        VOIDConfig: { indexStyle: 1 },
+        VOIDConfig: { indexStyle: options.indexStyle === undefined ? 1 : options.indexStyle },
         console,
         document,
         jQuery,
@@ -79,9 +161,20 @@ function loadMasonryEnvironment() {
 
     return {
         controller: context.VOID_Ui.MasonryCtrler,
+        createElement,
+        dispatchWindowEvent(type) {
+            const listeners = windowListeners.get(type) || [];
+            Array.from(listeners).forEach((listener) => listener());
+        },
         elements,
+        listenerCount(type) {
+            return windowListeners.has(type) ? windowListeners.get(type).size : 0;
+        },
+        masonryCalls,
+        masonryContainer,
         sensorInstances,
-        ui: context.VOID_Ui
+        ui: context.VOID_Ui,
+        window
     };
 }
 
@@ -130,6 +223,138 @@ test('Masonry init restores sensors and UI reset detaches them once', () => {
         environment.sensorInstances[0].callback
     );
     assert.equal(environment.controller.sensors.length, 0);
+    assert.equal(environment.listenerCount('resize'), 0);
+});
+
+test('Masonry follows both directions across the mobile breakpoint', () => {
+    const environment = loadMasonryEnvironment({ indexStyle: 0, innerWidth: 767 });
+    const element = environment.createElement('p-3');
+
+    environment.elements.push(element);
+    environment.controller.init();
+
+    assert.equal(environment.masonryCalls.length, 0);
+    assert.equal(environment.listenerCount('resize'), 1);
+    assert.equal(element.classes.has('masonry-ready'), false);
+
+    environment.window.innerWidth = 768;
+    environment.dispatchWindowEvent('resize');
+    environment.dispatchWindowEvent('resize');
+
+    assert.equal(environment.masonryCalls.length, 1);
+    assert.equal(environment.masonryCalls[0].itemSelector, '.masonry-item');
+    assert.equal(environment.controller.active, true);
+    assert.equal(environment.masonryContainer.classes.has('masonry'), true);
+    assert.equal(element.classes.has('masonry-ready'), true);
+    assert.equal(element.style.position, 'absolute');
+
+    environment.window.innerWidth = 767;
+    environment.dispatchWindowEvent('resize');
+
+    assert.equal(environment.masonryCalls.length, 2);
+    assert.equal(environment.masonryCalls[1], 'destroy');
+    assert.equal(environment.controller.active, false);
+    assert.equal(environment.masonryContainer.classes.has('masonry'), false);
+    assert.equal(element.classes.has('masonry-ready'), false);
+    assert.equal(element.style.position, undefined);
+
+    environment.window.innerWidth = 768;
+    environment.dispatchWindowEvent('resize');
+
+    assert.equal(environment.masonryCalls.length, 3);
+    assert.equal(environment.masonryCalls[2].itemSelector, '.masonry-item');
+    assert.equal(environment.controller.active, true);
+});
+
+test('Masonry teardown destroys layout and global listeners once', () => {
+    const environment = loadMasonryEnvironment({ indexStyle: 0 });
+    const element = environment.createElement('p-4');
+    const replacementElement = environment.createElement('p-4');
+
+    environment.elements.push(element);
+    environment.controller.init();
+    environment.controller.destroy();
+    environment.controller.destroy();
+
+    assert.deepEqual(environment.masonryCalls.map((argument) => (
+        typeof argument === 'string' ? argument : 'init'
+    )), ['init', 'destroy']);
+    assert.equal(environment.listenerCount('resize'), 0);
+    assert.equal(environment.sensorInstances[0].detachCount, 1);
+    assert.equal(environment.controller.active, false);
+
+    environment.elements[0] = replacementElement;
+    environment.controller.init();
+
+    assert.deepEqual(environment.masonryCalls.map((argument) => (
+        typeof argument === 'string' ? argument : 'init'
+    )), ['init', 'destroy', 'init']);
+    assert.equal(environment.listenerCount('resize'), 1);
+    assert.equal(environment.sensorInstances.length, 2);
+    assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.controller.sensors[0].element, replacementElement);
+    assert.equal(environment.controller.active, true);
+});
+
+test('large background waits for success and ignores failed or stale loads', () => {
+    const environment = loadMasonryEnvironment();
+    const background = environment.createElement('bg');
+    const image = environment.ui.loadBackgroundImage(background, 'https://example.test/banner.jpg');
+    const onload = image.onload;
+
+    assert.equal(background.style.backgroundImage, undefined);
+    assert.equal(background.classes.has('loaded'), false);
+
+    onload();
+
+    assert.equal(background.style.backgroundImage, 'url("https://example.test/banner.jpg")');
+    assert.equal(background.classes.has('loaded'), true);
+    assert.equal(image.onload, null);
+    assert.equal(image.onerror, null);
+
+    const failedBackground = environment.createElement('failed-bg');
+    const failedImage = environment.ui.loadBackgroundImage(failedBackground, 'https://example.test/missing.jpg');
+    failedImage.onerror();
+
+    assert.equal(failedBackground.style.backgroundImage, undefined);
+    assert.equal(failedBackground.classes.has('loaded'), false);
+
+    const staleBackground = environment.createElement('stale-bg');
+    const staleImage = environment.ui.loadBackgroundImage(staleBackground, 'https://example.test/stale.jpg');
+    staleBackground.isConnected = false;
+    staleImage.onload();
+
+    assert.equal(staleBackground.style.backgroundImage, undefined);
+    assert.equal(staleBackground.classes.has('loaded'), false);
+});
+
+test('large background handles cached success and cached failure immediately', () => {
+    const loadedEnvironment = loadMasonryEnvironment({ imageState: 'loaded' });
+    const loadedBackground = loadedEnvironment.createElement('cached-bg');
+
+    loadedEnvironment.ui.loadBackgroundImage(loadedBackground, 'https://example.test/cached.jpg');
+
+    assert.equal(loadedBackground.style.backgroundImage, 'url("https://example.test/cached.jpg")');
+    assert.equal(loadedBackground.classes.has('loaded'), true);
+
+    const failedEnvironment = loadMasonryEnvironment({ imageState: 'failed' });
+    const failedBackground = failedEnvironment.createElement('cached-failed-bg');
+
+    failedEnvironment.ui.loadBackgroundImage(failedBackground, 'https://example.test/cached-missing.jpg');
+
+    assert.equal(failedBackground.style.backgroundImage, undefined);
+    assert.equal(failedBackground.classes.has('loaded'), false);
+});
+
+test('large background template serializes its URL and uses the shared loader', () => {
+    const template = fs.readFileSync(
+        path.resolve(__dirname, '../../includes/main-large.php'),
+        'utf8'
+    );
+
+    assert.match(template, /VOID_Ui\.loadBackgroundImage\(/);
+    assert.match(template, /json_encode\([\s\S]*JSON_HEX_TAG[\s\S]*JSON_HEX_QUOT/);
+    assert.doesNotMatch(template, /if\s*\(\s*!img_bg\.complete/);
 });
 
 test('ResizeSensor detach cancels an invisible-element animation frame', () => {

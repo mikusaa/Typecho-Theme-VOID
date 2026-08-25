@@ -38,22 +38,10 @@ $setting = $GLOBALS['VOIDSetting'];
         </div>
         <script>
             (function(){
-                var applyBg = function (url) {
-                    document.getElementById('bg').style.backgroundImage = 'url(' + url + ')';
-                    document.getElementById('bg').classList.add('loaded');
-                }
-                var img_bg = new Image();
-                var img_bg_url = "<?php echo $this->fields->banner; ?>";
-                if(!img_bg.complete) {
-                    img_bg.onload = function() {
-                        applyBg(img_bg_url);
-                    };
-                    img_bg.src = img_bg_url;
-                }
-                else {
-                    img_bg.src = img_bg_url;
-                    applyBg(img_bg_url);
-                }
+                VOID_Ui.loadBackgroundImage(
+                    document.getElementById('bg'),
+                    <?php echo json_encode((string) $this->fields->banner, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+                );
             })();
         </script>
     </div>
