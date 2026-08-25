@@ -31,7 +31,12 @@ if(!Utils::isPjax()){
             <?php $this->widget('Widget_Metas_Tag_Cloud', 'sort=count&ignoreZeroCount=1&desc=1&limit=50')->to($tags); ?>
             <?php if($tags->have()): ?>
             <?php while ($tags->next()): ?>
-                <a href="<?php $tags->permalink(); ?>" rel="tag" class="tag-item" title="<?php $tags->count(); ?> 个话题"><?php $tags->name(); ?></a>
+                <?php
+                    $tagPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($tags, 'permalink'));
+                    $tagCount = (int) Utils::captureOutput($tags, 'count');
+                    $tagName = Utils::decodeHtmlText(Utils::captureOutput($tags, 'name'));
+                ?>
+                <a href="<?php echo Utils::escapeHtml($tagPermalink); ?>" rel="tag" class="tag-item" title="<?php echo $tagCount; ?> 个话题"><?php echo Utils::escapeHtml($tagName); ?></a>
             <?php endwhile; ?>
             <?php else: ?>
                 <?php echo('还没有标签哦～'); ?>
@@ -74,29 +79,29 @@ if(!Utils::isPjax()){
                 $tooltip_text = implode('，', $tooltip_parts);
                 ?>
                 <h2>
-                    <span class="archive-year-title" data-tooltip="<?php echo htmlspecialchars($tooltip_text, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $year; ?></span>
+                    <span class="archive-year-title" data-tooltip="<?php echo Utils::escapeHtml($tooltip_text); ?>"><?php echo (int) $year; ?></span>
                     <span class="num-posts"><?php echo $post_num; ?> 篇</span>
-                    <a no-pjax target="_self" data-num="<?php echo $post_num; ?>" 
-                        data-year="<?php echo $year; ?>" 
-                        class="toggle-archive" href="javascript:void(0);" 
+                    <a no-pjax target="_self" data-num="<?php echo $post_num; ?>"
+                        data-year="<?php echo (int) $year; ?>"
+                        class="toggle-archive" href="javascript:void(0);"
                         onclick="VOID_Ui.toggleArchive(this); return false;"><?php if($index > 0) echo '+'; else echo '-'; ?>
                     </a>
                 </h2>
-                <section id="year-<?php echo $year; ?>" 
-                    class="year<?php if($index > 0) echo ' shrink'; ?>" 
+                <section id="year-<?php echo (int) $year; ?>"
+                    class="year<?php if($index > 0) echo ' shrink'; ?>"
                     style="max-height: <?php if($index > 0) echo '0'; else echo $post_num*49; ?>px; transition-duration: <?php echo $post_num * 0.03 > 0.8 ? 0.8:$post_num * 0.03; ?>s">
                     <ul>
                     <?php foreach($posts as $post): ?>
                         <li>
-                            <a class="archive-title<?php if($setting['VOIDPlugin']) echo ' show-word-count'; ?>" 
-                                data-words="<?php if($setting['VOIDPlugin']) echo $post['words']; ?>" 
-                                href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES, 'UTF-8'); ?>">
-                                <span class="date"><?php echo $post['dateLabel']; ?></span><?php echo $post['title']; ?>
+                            <a class="archive-title<?php if($setting['VOIDPlugin']) echo ' show-word-count'; ?>"
+                                data-words="<?php if($setting['VOIDPlugin'] && isset($post['words'])) echo (int) $post['words']; ?>"
+                                href="<?php echo Utils::escapeHtml($post['permalink']); ?>">
+                                <span class="date"><?php echo Utils::escapeHtml($post['dateLabel']); ?></span><?php echo Utils::escapeHtml(Utils::decodeHtmlText($post['title'])); ?>
                             </a>
                             <?php if(!empty($post['categories'])): ?>
                                 <span class="archive-categories">
                                     <?php foreach($post['categories'] as $category): ?>
-                                        <a href="<?php echo htmlspecialchars($category['permalink'], ENT_QUOTES, 'UTF-8'); ?>" class="archive-category-tag"><?php echo htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?></a>
+                                        <a href="<?php echo Utils::escapeHtml($category['permalink']); ?>" class="archive-category-tag"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($category['name'])); ?></a>
                                     <?php endforeach; ?>
                                 </span>
                             <?php endif; ?>

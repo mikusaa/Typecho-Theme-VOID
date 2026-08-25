@@ -3241,9 +3241,12 @@ var VOID = {
     },
 
     alert: function (content, time) {
-        var errTemplate = '<div class="msg" id="msg{id}">{Text}</div>';
         var id = new Date().getTime();
-        $('body').prepend(errTemplate.replace('{Text}', content).replace('{id}', id));
+        var message = document.createElement('div');
+        message.className = 'msg';
+        message.id = 'msg' + id;
+        message.textContent = content == null ? '' : String(content);
+        document.body.insertBefore(message, document.body.firstChild);
         $.each($('.msg'), function (i, item) {
             if ($(item).attr('id') != 'msg' + id) {
                 $(item).css('top', $(item).offset().top - $(document).scrollTop() + $('.msg#msg' + id).outerHeight() + 20 + 'px');

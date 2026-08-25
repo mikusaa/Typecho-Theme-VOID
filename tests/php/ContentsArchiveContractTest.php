@@ -35,6 +35,23 @@ class Helper
 
 class Utils
 {
+    public static function captureOutput($target, $method, $arguments = array())
+    {
+        ob_start();
+        call_user_func_array(array($target, $method), $arguments);
+        return ob_get_clean();
+    }
+
+    public static function decodeHtmlText($value)
+    {
+        return html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    public static function escapeHtml($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
     public static function isPluginAvailable($name)
     {
         return false;

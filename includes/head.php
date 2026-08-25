@@ -50,7 +50,7 @@ if (isset($_POST['void_action'])) {
     $description = '';
     $isContentPage = $this->have() && ($this->is('post') || $this->is('page'));
     $pageUrl = $isContentPage
-        ? $this->permalink
+        ? Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'))
         : rtrim($this->options->rootUrl, '/') . '/' . ltrim($this->request->getRequestUri(), '/');
     if($isContentPage){
         if($this->fields->banner != '')
@@ -65,28 +65,71 @@ if (isset($_POST['void_action'])) {
     }else{
         $description = Helper::options()->description;
     }
+    $pageTitle = Contents::titleText($this);
+    $siteTitle = Utils::decodeHtmlText(Utils::captureOutput($this->options, 'title'));
+    $authorName = $isContentPage ? Utils::decodeHtmlText(Utils::captureOutput($this, 'author')) : '';
+    $description = Utils::decodeHtmlText($description);
+
+    ob_start();
+    Utils::index('/search/');
+    $searchBase = ob_get_clean();
+    ob_start();
+    Utils::index('/');
+    $homeUrl = ob_get_clean();
+    ob_start();
+    Utils::getBuildTime();
+    $buildTime = ob_get_clean();
+    ob_start();
+    Utils::indexTheme('/assets/libs/emotes/');
+    $emotesBase = ob_get_clean();
+    ob_start();
+    Utils::index('/action/void?');
+    $votePath = ob_get_clean();
+
+    $voidConfig = array(
+        'PJAX' => (bool) $setting['pjax'],
+        'searchBase' => $searchBase,
+        'home' => $homeUrl,
+        'buildTime' => $buildTime,
+        'enableMath' => (bool) $setting['enableMath'],
+        'lazyload' => (bool) $setting['lazyload'],
+        'colorScheme' => (int) $setting['colorScheme'],
+        'headerMode' => (int) $setting['headerMode'],
+        'browserLevelLoadingLazy' => (bool) $setting['browserLevelLoadingLazy'],
+        'emotesBase' => $emotesBase,
+        'VOIDPlugin' => (bool) $setting['VOIDPlugin'],
+        'votePath' => $votePath,
+        'lightBg' => '',
+        'darkBg' => '',
+        'lineNumbers' => (bool) $setting['lineNumbers'],
+        'horizontalBg' => !empty($setting['siteBg']),
+        'verticalBg' => !empty($setting['siteBgVertical']),
+        'indexStyle' => (int) $setting['indexStyle'],
+        'version' => (string) $GLOBALS['VOIDVersion'],
+        'isDev' => true
+    );
     ?>
-    <title><?php Contents::title($this); ?></title>
+    <title><?php echo Utils::escapeHtml($pageTitle); ?></title>
     <?php if($isContentPage): ?>
-    <meta name="author" content="<?php $this->author(); ?>" />
+    <meta name="author" content="<?php echo Utils::escapeHtml($authorName); ?>" />
     <?php endif; ?>
-    <meta name="description" content="<?php echo $description; ?>" />
-    <meta property="og:title" content="<?php Contents::title($this); ?>" />
-    <meta property="og:description" content="<?php echo $description; ?>" />
-    <meta property="og:site_name" content="<?php Contents::title($this); ?>" />
+    <meta name="description" content="<?php echo Utils::escapeHtml($description); ?>" />
+    <meta property="og:title" content="<?php echo Utils::escapeHtml($pageTitle); ?>" />
+    <meta property="og:description" content="<?php echo Utils::escapeHtml($description); ?>" />
+    <meta property="og:site_name" content="<?php echo Utils::escapeHtml($siteTitle); ?>" />
     <meta property="og:type" content="<?php echo $isContentPage ? 'article' : 'website'; ?>" />
-    <meta property="og:url" content="<?php echo htmlspecialchars($pageUrl, ENT_QUOTES, 'UTF-8'); ?>" />
-    <meta property="og:image" content="<?php echo $banner; ?>" />
+    <meta property="og:url" content="<?php echo Utils::escapeHtml($pageUrl); ?>" />
+    <meta property="og:image" content="<?php echo Utils::escapeHtml($banner); ?>" />
     <?php if($isContentPage): ?>
     <meta property="article:published_time" content="<?php echo date('c', $this->created); ?>" />
     <meta property="article:modified_time" content="<?php echo date('c', $this->modified); ?>" />
     <?php endif; ?>
-    <meta name="twitter:title" content="<?php Contents::title($this); ?>" />
-    <meta name="twitter:description" content="<?php echo $description; ?>" />
+    <meta name="twitter:title" content="<?php echo Utils::escapeHtml($pageTitle); ?>" />
+    <meta name="twitter:description" content="<?php echo Utils::escapeHtml($description); ?>" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@<?php echo $setting['twitterId']; ?>" />
-    <meta name="twitter:creator" content="@<?php echo $setting['twitterId']; ?>" />
-    <meta name="twitter:image" content="<?php echo $banner; ?>" />
+    <meta name="twitter:site" content="<?php echo Utils::escapeHtml('@' . $setting['twitterId']); ?>" />
+    <meta name="twitter:creator" content="<?php echo Utils::escapeHtml('@' . $setting['twitterId']); ?>" />
+    <meta name="twitter:image" content="<?php echo Utils::escapeHtml($banner); ?>" />
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->
@@ -96,28 +139,7 @@ if (isset($_POST['void_action'])) {
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header.js'); ?>"></script>
     <script>
-    VOIDConfig = {
-        PJAX : <?php echo $setting['pjax'] ? 'true' : 'false'; ?>,
-        searchBase : "<?php Utils::index("/search/"); ?>",
-        home: "<?php Utils::index("/"); ?>",
-        buildTime : "<?php Utils::getBuildTime(); ?>",
-        enableMath : <?php echo $setting['enableMath'] ? 'true' : 'false'; ?>,
-        lazyload : <?php echo $setting['lazyload'] ? 'true' : 'false'; ?>,
-        colorScheme:  <?php echo $setting['colorScheme']; ?>,
-        headerMode: <?php echo $setting['headerMode']; ?>,
-        browserLevelLoadingLazy: <?php echo $setting['browserLevelLoadingLazy'] ? 'true' : 'false'; ?>,
-        emotesBase: <?php ob_start(); Utils::indexTheme('/assets/libs/emotes/'); echo json_encode(ob_get_clean()); ?>,
-        VOIDPlugin: <?php echo $setting['VOIDPlugin'] ? 'true' : 'false'; ?>,
-        votePath: "<?php Utils::index('/action/void?'); ?>",
-        lightBg: "",
-        darkBg: "",
-        lineNumbers: <?php echo $setting['lineNumbers'] ? 'true' : 'false'; ?>,
-        horizontalBg: <?php echo empty($setting['siteBg']) ? 'false' : 'true'; ?>,
-        verticalBg: <?php echo empty($setting['siteBgVertical']) ? 'false' : 'true'; ?>,
-        indexStyle: <?php echo $setting['indexStyle']; ?>,
-        version: <?php echo json_encode($GLOBALS['VOIDVersion']); ?>,
-        isDev: true
-    }
+    window.VOIDConfig = <?php echo Utils::encodeJsonForHtml($voidConfig, '{}'); ?>;
     </script>
     <script src="<?php Utils::indexTheme('/assets/header.js'); ?>"></script>
     

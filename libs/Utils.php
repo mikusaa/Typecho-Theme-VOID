@@ -11,6 +11,69 @@
 class Utils
 {
     /**
+     * 捕获 Typecho 输出方法的结果，并保留其插件钩子
+     *
+     * @return string
+     */
+    public static function captureOutput($target, $method, $arguments = array())
+    {
+        ob_start();
+        try {
+            call_user_func_array(array($target, $method), $arguments);
+            return ob_get_clean();
+        } catch (Throwable $throwable) {
+            ob_end_clean();
+            throw $throwable;
+        }
+    }
+
+    /**
+     * 将 Typecho 已编码的标题等值还原为语义纯文本
+     *
+     * @return string
+     */
+    public static function decodeHtmlText($value)
+    {
+        return html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * 还原已编码的 HTML 实体，不改变 URL 等结构化值
+     *
+     * @return string
+     */
+    public static function decodeHtmlEntities($value)
+    {
+        return html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * 编码 HTML 文本或双引号属性值
+     *
+     * @return string
+     */
+    public static function escapeHtml($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * 将结构化数据安全嵌入 HTML script 元素
+     *
+     * @return string
+     */
+    public static function encodeJsonForHtml($value, $fallback = 'null')
+    {
+        $json = json_encode(
+            $value,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+            | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
+
+        return false === $json ? $fallback : $json;
+    }
+
+    /**
      * 输出相对首页路由，本方法会自适应伪静态
      * 
      * @return void
@@ -104,11 +167,24 @@ class Utils
      * 1: 14px, 2: 16px, 3: 18px, 4: 20px, 5: 22px
      */
     public static function getTextSize($setting) {
-        if(isset($_COOKIE['textsize'])) {
-            return $_COOKIE['textsize'];
-        } else {
-            return $setting['defaultFontSize'];
+        $default = isset($setting['defaultFontSize']) ? $setting['defaultFontSize'] : 3;
+        $value = isset($_COOKIE['textsize']) ? $_COOKIE['textsize'] : $default;
+
+        if (is_int($value) && $value >= 1 && $value <= 5) {
+            return $value;
         }
+        if (is_string($value) && preg_match('/^[1-5]$/D', $value)) {
+            return (int) $value;
+        }
+
+        if (is_int($default) && $default >= 1 && $default <= 5) {
+            return $default;
+        }
+        if (is_string($default) && preg_match('/^[1-5]$/D', $default)) {
+            return (int) $default;
+        }
+
+        return 3;
     }
 
     /**
@@ -152,26 +228,31 @@ class Utils
      */
     public static function addButton()
     {
-        echo '<script src="';
+        ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker.js');
-        echo '"></script>';
+        $emotePickerUrl = ob_get_clean();
+        echo '<script src="' . self::escapeHtml($emotePickerUrl) . '"></script>';
 
         ob_start();
         self::indexTheme('/assets/libs/emotes/');
         $emotesBaseUrl = ob_get_clean();
-        echo '<script>window.VOIDEmotesConfig={baseUrl:' . json_encode($emotesBaseUrl) . '};</script>';
+        echo '<script>window.VOIDEmotesConfig={baseUrl:'
+            . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
-        echo '<script src="';
+        ob_start();
         self::indexTheme('/assets/editor.js');
-        echo '"></script>';
+        $editorUrl = ob_get_clean();
+        echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
-        echo '<link rel="stylesheet" href="';
+        ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker.css');
-        echo '" />';
+        $emotePickerStyleUrl = ob_get_clean();
+        echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
-        echo '<link rel="stylesheet" href="';
+        ob_start();
         self::indexTheme('/assets/editor-admin.css');
-        echo '" />';
+        $editorStyleUrl = ob_get_clean();
+        echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }
 
     /**

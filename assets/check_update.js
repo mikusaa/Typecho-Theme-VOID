@@ -31,6 +31,28 @@ function compareVOIDVersions(left, right) {
     return 0;
 }
 
+function clearVOIDUpdateMessage(container) {
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
+}
+
+function appendVOIDUpdateLink(container, label, value, openInNewTab) {
+    var link = document.createElement('a');
+    link.href = String(value);
+    if (link.protocol !== 'https:' && link.protocol !== 'http:') {
+        container.appendChild(document.createTextNode(label));
+        return;
+    }
+
+    if (openInNewTab) {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+    }
+    link.textContent = label;
+    container.appendChild(link);
+}
+
 if (document.getElementById('void-check-update')) {
     var container = document.getElementById('void-check-update');
     var ajax = new XMLHttpRequest();
@@ -40,14 +62,15 @@ if (document.getElementById('void-check-update')) {
         if (ajax.readyState == 4 && ajax.status == 200) {
             var obj = JSON.parse(ajax.responseText);
             var newest = obj.tag_name;
+            clearVOIDUpdateMessage(container);
             if (compareVOIDVersions(newest, VOIDVersion) > 0) {
-                container.innerHTML =
-                    '发现新主题版本：' + obj.name +
-                    '。下载地址：<a href="' + obj.assets[0].browser_download_url + '">点击下载</a>' +
-                    '<br>您目前的版本：VOID ' + String(VOIDVersion) + '。' + 
-                    '<a target="_blank" href="' + obj.html_url + '">👉查看新版亮点</a>';
+                container.appendChild(document.createTextNode('发现新主题版本：' + String(obj.name) + '。下载地址：'));
+                appendVOIDUpdateLink(container, '点击下载', obj.assets[0].browser_download_url);
+                container.appendChild(document.createElement('br'));
+                container.appendChild(document.createTextNode('您目前的版本：VOID ' + String(VOIDVersion) + '。'));
+                appendVOIDUpdateLink(container, '👉查看新版亮点', obj.html_url, true);
             } else {
-                container.innerHTML = '您目前使用的是最新版主题。';
+                container.textContent = '您目前使用的是最新版主题。';
             }
         }
     };

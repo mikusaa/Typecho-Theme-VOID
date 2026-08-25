@@ -13,7 +13,7 @@ $setting = $GLOBALS['VOIDSetting'];
         <footer>
             <div class="container wide">
                 <section>
-                    <p>© <?php echo date('Y '); ?> <span class="brand"><?php echo $this->options->title; ?></span></p>
+                    <p>© <?php echo date('Y '); ?> <span class="brand"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($this->options->title)); ?></span></p>
                     <p>感谢陪伴：<span id="uptime"></span></p>
                 </section>
                 <section>
@@ -71,19 +71,25 @@ $setting = $GLOBALS['VOIDSetting'];
                 <a class="link" title="RSS" target="_blank" href="<?php $this->options->feedUrl(); ?>"><i class="voidicon-rss"></i></a>
                 <?php
                     foreach ($setting['link'] as $link) {
-                        echo "<a class=\"link\" title=\"{$link['name']}\" target=\"{$link['target']}\" href=\"{$link['href']}\"><i class=\"voidicon-{$link['icon']}\"></i></a>";
+                        $name = Utils::escapeHtml($link['name']);
+                        $target = Utils::escapeHtml($link['target']);
+                        $href = Utils::escapeHtml($link['href']);
+                        $icon = Utils::escapeHtml($link['icon']);
+                        echo "<a class=\"link\" title=\"{$name}\" target=\"{$target}\" href=\"{$href}\"><i class=\"voidicon-{$icon}\"></i></a>";
                     }
                 ?>
             </section>
             <section id="login-panel" <?php if($this->user->hasLogin()) echo 'class="force-show"'; ?>>
                 <?php if(!$this->user->hasLogin()): ?>
-                    <form action="<?php $this->options->loginAction()?>" id="loggin-form" method="post" name="login" role="form">
+                    <?php $loginAction = Utils::decodeHtmlEntities(Utils::captureOutput($this->options, 'loginAction')); ?>
+                    <form action="<?php echo Utils::escapeHtml($loginAction); ?>" id="loggin-form" method="post" name="login" role="form">
                         <div id="loggin-inputs">
                             <input type="text" name="name" autocomplete="username" placeholder="请输入用户名" required/>
                             <input type="password" name="password" autocomplete="current-password" placeholder="请输入密码" required/>
                             <input type="hidden" name="referer" value="<?php 
                                 if($this->have() && ($this->is('post') || $this->is('page'))) {
-                                    $this->permalink();
+                                    $referer = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+                                    echo Utils::escapeHtml($referer);
                                 } else {
                                     $referer = rtrim($this->options->rootUrl, '/') . '/'
                                         . ltrim($this->request->getRequestUri(), '/');

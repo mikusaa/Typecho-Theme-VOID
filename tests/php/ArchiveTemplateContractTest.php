@@ -160,7 +160,7 @@ $bannerTemplate = dirname(__DIR__, 2) . '/includes/banner.php';
 $emptySearchBanner = $emptySearch->render($bannerTemplate);
 archiveTemplateAssertNotContains(' not-found', $emptySearchBanner, '零结果搜索 Banner 不使用 404 外观');
 archiveTemplateAssertContains(
-    '包含关键字 "nothing-here" 的文章',
+    '包含关键字 &quot;nothing-here&quot; 的文章',
     $emptySearchBanner,
     '零结果搜索 Banner 保留搜索词和归档标题'
 );
@@ -168,7 +168,7 @@ archiveTemplateAssertNotContains('<span class="glitch">0</span>', $emptySearchBa
 
 $category404Banner = $categoryNamed404->render($bannerTemplate);
 archiveTemplateAssertNotContains(' not-found', $category404Banner, '404 分类 Banner 不使用 404 外观');
-archiveTemplateAssertContains('分类 "404" 下的文章', $category404Banner, '404 分类 Banner 保留合法分类标题');
+archiveTemplateAssertContains('分类 &quot;404&quot; 下的文章', $category404Banner, '404 分类 Banner 保留合法分类标题');
 
 $notFoundBanner = $notFound->render($bannerTemplate);
 archiveTemplateAssertContains(' not-found', $notFoundBanner, '真实 404 Banner 保留故障页外观');

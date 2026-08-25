@@ -69,19 +69,36 @@ Class Contents
     }
 
     /**
-     * 输出完备的标题
-     * 
-     * @return void
+     * 获取完备标题的语义纯文本
+     *
+     * @return string
      */
-    public static function title(Widget_Archive $archive)
+    public static function titleText(Widget_Archive $archive)
     {
+        ob_start();
         $archive->archiveTitle(array(
             'category'  =>  '分类 %s 下的文章',
             'search'    =>  '包含关键字 %s 的文章',
             'tag'       =>  '标签 %s 下的文章',
             'author'    =>  '%s 发布的文章'
         ), '', ' - ');
+        $archiveTitle = ob_get_clean();
+
+        ob_start();
         Helper::options()->title();
+        $siteTitle = ob_get_clean();
+
+        return Utils::decodeHtmlText($archiveTitle . $siteTitle);
+    }
+
+    /**
+     * 输出完备的标题
+     *
+     * @return void
+     */
+    public static function title(Widget_Archive $archive)
+    {
+        echo Utils::escapeHtml(self::titleText($archive));
     }
 
     /**

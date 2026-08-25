@@ -81,6 +81,11 @@ class EmptySiteOptions
     {
         echo 'https://example.test/usr/themes/VOID' . $path;
     }
+
+    public function title()
+    {
+        echo $this->values['title'];
+    }
 }
 
 class Helper
@@ -95,6 +100,11 @@ class Helper
 
 class Contents
 {
+    public static function titleText($archive)
+    {
+        return 'Empty site contract';
+    }
+
     public static function title($archive)
     {
         echo 'Empty site contract';
@@ -126,6 +136,7 @@ class EmptySiteHeadWidget
     public $created = 1609459200;
     public $excerptCalls = 0;
     public $fields;
+    public $author;
     public $modified = 1609459200;
     public $options;
     public $permalink = 'https://example.test/post.html';
@@ -139,6 +150,7 @@ class EmptySiteHeadWidget
         $this->archiveType = $archiveType;
         $this->hasContent = $hasContent;
         $this->throwOnExcerpt = $throwOnExcerpt;
+        $this->author = (object) array('screenName' => 'author');
         $this->fields = (object) array('banner' => '', 'excerpt' => '');
         $this->options = Helper::options();
         $this->request = new EmptySiteRequest('/' . $archiveType . '/');
@@ -170,6 +182,11 @@ class EmptySiteHeadWidget
     public function is($type)
     {
         return $type === $this->archiveType;
+    }
+
+    public function permalink()
+    {
+        echo $this->permalink;
     }
 
     public function render($path)
@@ -262,7 +279,8 @@ $headTemplate = dirname(__DIR__, 2) . '/includes/head.php';
 Helper::$options = new EmptySiteOptions(array(
     'description' => '',
     'loginAction' => 'https://example.test/action/login',
-    'rootUrl' => 'https://example.test'
+    'rootUrl' => 'https://example.test',
+    'title' => 'Empty site'
 ));
 Typecho_Db::$row = null;
 
@@ -274,13 +292,14 @@ foreach (array('index', 'search', 'category', 'archive', '404') as $archiveType)
     emptySiteAssertContains('<meta name="description" content="" />', $rendered, $archiveType . ' 保留空站点描述');
     emptySiteAssertContains('<meta property="og:description" content="" />', $rendered, $archiveType . ' 保留空 OG 描述');
     emptySiteAssertContains('<meta name="twitter:description" content="" />', $rendered, $archiveType . ' 保留空 Twitter 描述');
-    emptySiteAssertContains('buildTime : "', $rendered, $archiveType . ' 仍能生成完整前端配置');
+    emptySiteAssertContains('"buildTime":"', $rendered, $archiveType . ' 仍能生成完整前端配置');
 }
 
 Helper::$options = new EmptySiteOptions(array(
     'description' => 'site description',
     'loginAction' => 'https://example.test/action/login',
-    'rootUrl' => 'https://example.test'
+    'rootUrl' => 'https://example.test',
+    'title' => 'Empty site'
 ));
 $archiveWithDescription = new EmptySiteHeadWidget('search', false, true);
 $descriptionHead = $archiveWithDescription->render($headTemplate);
