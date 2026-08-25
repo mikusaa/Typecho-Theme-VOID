@@ -113,7 +113,9 @@ function loadPjaxEnvironment() {
 
 function loadVoidEnvironment() {
     const handlers = new Map();
+    const animationFrames = new Map();
     const document = {};
+    let nextAnimationFrameId = 1;
     const jQuery = () => {
         const api = {
             on(name, listener) {
@@ -130,7 +132,15 @@ function loadVoidEnvironment() {
     jQuery.trim = (value) => String(value).trim();
 
     const window = {
+        cancelAnimationFrame(id) {
+            animationFrames.delete(id);
+        },
         clearTimeout() {},
+        requestAnimationFrame(callback) {
+            const id = nextAnimationFrameId++;
+            animationFrames.set(id, callback);
+            return id;
+        },
         setInterval() {},
         setTimeout() {}
     };
@@ -148,7 +158,15 @@ function loadVoidEnvironment() {
         context
     );
 
-    return { context, handlers };
+    return {
+        context,
+        flushAnimationFrame() {
+            const callbacks = Array.from(animationFrames.values());
+            animationFrames.clear();
+            callbacks.forEach((callback) => callback());
+        },
+        handlers
+    };
 }
 
 function wrappedPjaxEvent(options) {
@@ -306,6 +324,135 @@ test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', 
 
     context.VOID.beforePjax();
     assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'gallery', 'photoSets', 'emotes', 'ui']);
+});
+
+test('initialization defers typography until the entering animation is visible', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID_Ui = {
+        DarkModeSwitcher: { checkColorScheme() {} },
+        MasonryCtrler: { init() {} },
+        checkHeader() {},
+        checkScrollTop() {},
+        headroom() {},
+        lazyload() {}
+    };
+    context.VOID_Content.parseBoardThumbs = () => {};
+    context.VOID_Gallery.init = () => {};
+    context.VOID_PhotoSets.init = () => {};
+    context.VOID_ImageZoom.init = () => {};
+    context.VOID_RewardDialog.init = () => {};
+    context.VOID_Content.countWords = () => {};
+    context.VOID_Content.parseDetails = () => {};
+    context.VOID_Content.parseTOC = () => {};
+    context.VOID_Content.highlight = () => {};
+    context.VOID_Content.parseUrl = () => {};
+    context.VOID.scheduleTypography = () => calls.push('typography');
+    context.VOID.safeRunPangu = () => calls.push('pangu');
+    context.VOID_Content.bigfoot = () => calls.push('littlefoot');
+    context.VOID_Content.math = () => calls.push('math');
+    context.VOID_Content.hyphenate = () => calls.push('hyphenate');
+    context.VOID_Vote.reload = () => {};
+    context.VOID.initEmotes = () => {};
+    context.AjaxComment.init = () => {};
+
+    context.VOID.init();
+
+    assert.deepEqual(calls, ['typography']);
+});
+
+test('typography readiness follows the opacity of entering content', () => {
+    const { context } = loadVoidEnvironment();
+    const enteringContent = {};
+    let opacity = '0';
+
+    context.document.querySelectorAll = (selector) => {
+        assert.equal(selector, '.float-up');
+        return [enteringContent];
+    };
+    context.window.getComputedStyle = (node) => {
+        assert.equal(node, enteringContent);
+        return { opacity };
+    };
+
+    assert.equal(context.VOID.isTypographyReady(), false);
+    opacity = '0.01';
+    assert.equal(context.VOID.isTypographyReady(), true);
+});
+
+test('typography waits for the entering animation and drops stale work', () => {
+    const { context, flushAnimationFrame } = loadVoidEnvironment();
+    const calls = [];
+    let typographyReady = false;
+
+    context.VOID.safeRunPangu = () => calls.push('pangu');
+    context.VOID_Content.bigfoot = () => calls.push('littlefoot');
+    context.VOID_Content.math = () => calls.push('math');
+    context.VOID_Content.hyphenate = () => calls.push('hyphenate');
+    context.VOID.isTypographyReady = () => typographyReady;
+
+    context.NProgress = { done() {} };
+    context.VOID_Gallery.init = () => {};
+    context.VOID_PhotoSets.init = () => {};
+    context.VOID_ImageZoom.init = () => {};
+    context.VOID_RewardDialog.init = () => {};
+    context.VOID_Ui = {
+        MasonryCtrler: { init() {} },
+        checkScrollTop() {},
+        lazyload() {}
+    };
+    context.VOID_Content.parseBoardThumbs = () => {};
+    context.VOID_Content.countWords = () => {};
+    context.VOID_Content.parseDetails = () => {};
+    context.VOID_Content.parseTOC = () => {};
+    context.VOID_Content.parseUrl = () => {};
+    context.VOID_Content.highlight = () => {};
+    context.loadClipboard = () => {};
+    context.VOID_Vote.reload = () => {};
+    context.VOID.initEmotes = () => {};
+    context.AjaxComment.init = () => {};
+
+    context.VOID.afterPjax();
+    assert.deepEqual(calls, []);
+
+    flushAnimationFrame();
+    assert.deepEqual(calls, []);
+
+    flushAnimationFrame();
+    assert.deepEqual(calls, []);
+
+    typographyReady = true;
+    flushAnimationFrame();
+    assert.deepEqual(calls, ['pangu', 'littlefoot', 'math', 'hyphenate']);
+
+    calls.length = 0;
+    context.VOID.scheduleTypography();
+    flushAnimationFrame();
+    context.VOID.cancelScheduledTypography();
+    flushAnimationFrame();
+    assert.deepEqual(calls, []);
+});
+
+test('typography uses a two-frame timeout fallback without requestAnimationFrame', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+    let fallbackDelay = null;
+
+    context.window.requestAnimationFrame = undefined;
+    context.window.setTimeout = (callback, delay) => {
+        fallbackDelay = delay;
+        callback();
+    };
+    context.VOID.safeRunPangu = () => calls.push('pangu');
+    context.VOID_Content.bigfoot = () => calls.push('littlefoot');
+    context.VOID_Content.math = () => calls.push('math');
+    context.VOID_Content.hyphenate = () => calls.push('hyphenate');
+
+    context.VOID.scheduleTypography();
+
+    assert.equal(fallbackDelay, 34);
+    assert.deepEqual(calls, ['pangu', 'littlefoot', 'math', 'hyphenate']);
 });
 
 test('only an aborted main request restores the main-container lifecycle', () => {

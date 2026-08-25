@@ -135,6 +135,7 @@ gulp.task('move:libs', function () {
         './assets/libs/header/ResizeSensor/LICENSE',
         './assets/libs/littlefoot/LICENSE',
         './assets/libs/mathjax/**/*',
+        './assets/libs/pangu/LICENSE',
         './assets/libs/tocbot/LICENSE',
         './assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/**/*',
         './assets/libs/emotes/packs.json',

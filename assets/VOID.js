@@ -4,30 +4,6 @@
 // Author: 熊猫小A
 // Link: https://blog.imalan.cn/archives/247/
 
-(function (window) {
-    if (typeof window.requestIdleCallback !== 'function') {
-        window.requestIdleCallback = function (callback, options) {
-            var start = Date.now();
-            var timeout = options && typeof options.timeout === 'number' ? options.timeout : 0;
-
-            return window.setTimeout(function () {
-                callback({
-                    didTimeout: timeout > 0 && (Date.now() - start) >= timeout,
-                    timeRemaining: function () {
-                        return Math.max(0, 50 - (Date.now() - start));
-                    }
-                });
-            }, 1);
-        };
-    }
-
-    if (typeof window.cancelIdleCallback !== 'function') {
-        window.cancelIdleCallback = function (id) {
-            window.clearTimeout(id);
-        };
-    }
-})(window);
-
 console.log(' %c Theme VOID %c https://blog.imalan.cn/archives/247/ ', 'color: #fadfa3; background: #23b7e5; padding:5px;', 'background: #1c2b36; padding:5px;');
 
 var VOID_Content = {
@@ -2988,6 +2964,7 @@ var VOID = {
     pjaxLifecycleBound: false,
     emotePicker: null,
     emoteContentObserver: null,
+    typographyGeneration: 0,
 
     safeRunPangu: function () {
         try {
@@ -2995,6 +2972,63 @@ var VOID = {
         } catch (err) {
             console.error('Pangu init failed:', err);
         }
+    },
+
+    cancelScheduledTypography: function () {
+        this.typographyGeneration += 1;
+    },
+
+    isTypographyReady: function () {
+        if (typeof document.querySelectorAll !== 'function'
+            || typeof window.getComputedStyle !== 'function') {
+            return true;
+        }
+
+        var enteringContent = document.querySelectorAll('.float-up');
+        for (var index = 0; index < enteringContent.length; index++) {
+            if (parseFloat(window.getComputedStyle(enteringContent[index]).opacity) === 0) {
+                return false;
+            }
+        }
+
+        return true;
+    },
+
+    scheduleTypography: function () {
+        var generation = ++this.typographyGeneration;
+        var visibilityChecksRemaining = 120;
+        var scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                window.setTimeout(callback, 34);
+            };
+        var run = function () {
+            if (generation !== VOID.typographyGeneration) {
+                return;
+            }
+
+            VOID.safeRunPangu();
+            VOID_Content.bigfoot();
+            VOID_Content.math();
+            VOID_Content.hyphenate();
+        };
+        var runWhenVisible = function () {
+            if (generation !== VOID.typographyGeneration) {
+                return;
+            }
+
+            if (VOID.isTypographyReady() || visibilityChecksRemaining <= 0) {
+                run();
+                return;
+            }
+
+            visibilityChecksRemaining -= 1;
+            scheduleFrame(runWhenVisible);
+        };
+
+        scheduleFrame(function () {
+            scheduleFrame(runWhenVisible);
+        });
     },
 
     resolvePjaxOptions: function (args) {
@@ -3092,10 +3126,7 @@ var VOID = {
         VOID_Content.parseTOC();
         VOID_Content.highlight();
         VOID_Content.parseUrl();
-        VOID.safeRunPangu();
-        VOID_Content.bigfoot();
-        VOID_Content.math();
-        VOID_Content.hyphenate();
+        VOID.scheduleTypography();
 
         VOID_Vote.reload();
         VOID.initEmotes();
@@ -3161,6 +3192,7 @@ var VOID = {
 
     // PJAX 开始前
     beforePjax: function () {
+        VOID.cancelScheduledTypography();
         NProgress.start();
         VOID_RewardDialog.destroy();
         VOID_ImageZoom.destroy();
@@ -3194,10 +3226,7 @@ var VOID = {
         VOID_Content.parseTOC();
         VOID_Content.parseUrl();
         VOID_Content.highlight();
-        VOID_Content.math();
-        VOID_Content.hyphenate();
-        VOID.safeRunPangu();
-        VOID_Content.bigfoot();
+        VOID.scheduleTypography();
         loadClipboard();
 
         VOID_Vote.reload();

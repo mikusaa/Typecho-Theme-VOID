@@ -55,6 +55,8 @@ test('vendored release files match the pinned official npm artifacts', () => {
         'assets/libs/mathjax/4.1.3/sre/require.mjs': '399cff836df7d7cfa42bc5459d69e334074b50a9473b42bd8beac21108ac0536',
         'assets/libs/mathjax/4.1.3/sre/speech-worker.js': '80bd663f2d48505291dcc256728a4fe3be1be4b73d3675b905bd51b1c431745b',
         'assets/libs/mathjax/4.1.3/tex-svg.js': '23c036deccc0f2374834a47e4032e452419f3ac027bf17e17c104e2746b19f4c',
+        'assets/libs/pangu/LICENSE': 'eeccd5776471b1e421a3b647c616722db5439e38a62f07bf378d8de476979c9d',
+        'assets/libs/pangu/pangu.js': 'e3cecd88763276e3e758ea9b66e2546d358a915c47be36dab352562ba3bc1bd3',
         'assets/libs/tocbot/LICENSE': 'f4415c75dae0e1fcc887baa3a3d5cc0f9db463305be7cc3a0bbe382f155faa4b',
         'assets/libs/tocbot/tocbot.min.js': 'd40d0ac62013e692bc18358b968815c91339211cf6df1da77dee2bd3db34b7fa'
     };
@@ -71,6 +73,7 @@ test('vendored licenses are included in the distributable build', () => {
         './assets/libs/header/ResizeSensor/LICENSE',
         './assets/libs/littlefoot/LICENSE',
         './assets/libs/mathjax/**/*',
+        './assets/libs/pangu/LICENSE',
         './assets/libs/tocbot/LICENSE'
     ]) {
         assert.ok(gulpfile.includes(`'${licensePath}'`), licensePath);
@@ -114,6 +117,13 @@ test('runtime references and browser bundles expose the expected APIs', () => {
     };
     vm.runInNewContext(read('assets/libs/littlefoot/littlefoot.js'), littlefootContext);
     assert.equal(typeof littlefootContext.littlefoot.littlefoot, 'function');
+
+    const panguContext = {};
+    vm.runInNewContext(read('assets/libs/pangu/pangu.js'), panguContext);
+    assert.equal(panguContext.pangu.version, '9.1.0');
+    assert.equal(typeof panguContext.pangu.spacingNode, 'function');
+    assert.equal(typeof panguContext.pangu.spacingText, 'function');
+    assert.equal(typeof panguContext.pangu.BrowserPangu, 'function');
 
     const tocbotDocument = { body: {}, querySelector() {} };
     const tocbotWindow = {

@@ -33,6 +33,7 @@
 * 修复：[评论/表情] 恢复遗漏的米哈游“崩坏3_点赞”表情，并保持现有短码与条目编号稳定。
 * 修复：[PJAX] 生命周期事件统一由原生 `CustomEvent` 派发，避免 jQuery 环境重复触发，并保留事件参数兼容。
 * 升级：[依赖] 更新 MathJax 4.1.3、tocbot 4.36.8、littlefoot 4.1.4、ResizeSensor 1.2.3 及 Sass 1.103.1，并随构建包保留第三方许可文件。
+* 升级：[排版] pangu 更新至 9.1.0，改进跨节点、链接、斜线、运算符及动态内容的中西文间距，由上游原生兼容缺少 `requestIdleCallback` 的 Safari，并修正页面入场动画首帧漏掉链接左侧空格的问题。
 * 修复：[PJAX/瀑布流] 在内容替换时销毁 ResizeSensor，并避免重复初始化和隐藏元素的残留动画帧。
 * 重构：[Service Worker] 使用原生 Cache API 替换停止维护的 `sw-toolbox`，保留离线清单回退、失败响应过滤和各类缓存容量限制，并清理旧缓存及元数据。
 * 修复：[Service Worker] 将 `fonts.googleapis.cn` 与 `fonts.gstatic.cn` 纳入字体缓存路由，避免国内镜像资源绕过缓存。
