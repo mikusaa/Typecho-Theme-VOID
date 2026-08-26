@@ -181,7 +181,13 @@ function themeConfig($form)
     $form->addInput($reward);
     $serifincontent = new Typecho_Widget_Helper_Form_Element_Radio('serifincontent', array('0' => '不启用', '1' => '启用'), '0', '文章内容使用衬线体', '是否对文章内容启用衬线体（思源宋体）。字体由主题本地提供。');
     $form->addInput($serifincontent);
-    $lazyload = new Typecho_Widget_Helper_Form_Element_Radio('lazyload', array('1' => '启用', '0' => '不启用'), '1', '图片懒加载', '是否启用图片懒加载。');
+    $lazyload = new Typecho_Widget_Helper_Form_Element_Radio(
+        'lazyload',
+        array('1' => '启用', '0' => '不启用'),
+        '1',
+        '内容图片懒加载',
+        '启用后，普通正文图片与友链缩略图使用浏览器原生懒加载，Gallery 使用分批脚本加载；头图、首页与归档封面、表情由主题自动安排加载优先级。'
+    );
     $form->addInput($lazyload);
     $enableMath = new Typecho_Widget_Helper_Form_Element_Radio('enableMath', array('0' => '不启用', '1' => '启用'), '0', '启用数学公式解析', '是否启用数学公式解析（MathJax 4）。启用后会额外加载约 1~3M 的资源。');
     $form->addInput($enableMath);

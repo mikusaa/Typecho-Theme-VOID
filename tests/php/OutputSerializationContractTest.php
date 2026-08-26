@@ -440,7 +440,6 @@ $_POST = array();
 $GLOBALS['VOIDVersion'] = '版本 ' . $attackPayload;
 $GLOBALS['VOIDSetting'] = array(
     'brandFont' => array(),
-    'browserLevelLoadingLazy' => false,
     'colorScheme' => 3,
     'desktopBannerHeight' => '',
     'enableMath' => false,
@@ -494,6 +493,8 @@ if (is_array($voidConfig)) {
     outputSerializationAssertSame(false, $voidConfig['enableMath'], 'VOIDConfig 保留 false 布尔值');
     outputSerializationAssertSame(3, $voidConfig['colorScheme'], 'VOIDConfig 保留整数值');
     outputSerializationAssertSame(2, $voidConfig['headerMode'], 'VOIDConfig 保留 headerMode 整数值');
+    outputSerializationAssertSame(true, $voidConfig['lazyload'], 'VOIDConfig 保留唯一公开懒加载开关');
+    outputSerializationAssertSame(false, array_key_exists('browserLevelLoadingLazy', $voidConfig), 'VOIDConfig 不再输出已退役的懒加载模式');
     outputSerializationAssertSame('https://example.test/search/', $voidConfig['searchBase'], 'VOIDConfig 保留搜索根地址');
     outputSerializationAssertSame('https://example.test/', $voidConfig['home'], 'VOIDConfig 保留首页地址');
     outputSerializationAssertSame('2021-01-01T00:00', $voidConfig['buildTime'], 'VOIDConfig 保留建站时间字符串');

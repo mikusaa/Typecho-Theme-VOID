@@ -22,6 +22,7 @@ function createItem(attributes, options = {}) {
 function loadLazyload(items, isVisible) {
     const preloadImages = [];
     const requestLog = [];
+    const scrollListeners = new Set();
     const document = {
         body: { scrollTop: 0 },
         documentElement: { clientHeight: 800, scrollTop: 0 }
@@ -50,8 +51,8 @@ function loadLazyload(items, isVisible) {
 
     function jQuery(target) {
         if (typeof target === 'string') {
-            if (target === 'img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)') {
-                return items;
+            if (target === '[data-void-gallery] img.lazyload:not(.loaded):not(.error)') {
+                return items.filter((item) => !item.classes.has('loaded') && !item.classes.has('error'));
             }
             return { length: 0 };
         }
@@ -93,9 +94,17 @@ function loadLazyload(items, isVisible) {
         return 1;
     };
     const window = {
-        addEventListener() {},
+        addEventListener(name, listener) {
+            if (name === 'scroll') {
+                scrollListeners.add(listener);
+            }
+        },
         clearTimeout() {},
-        removeEventListener() {},
+        removeEventListener(name, listener) {
+            if (name === 'scroll') {
+                scrollListeners.delete(listener);
+            }
+        },
         setTimeout: runImmediately
     };
     window.window = window;
@@ -116,10 +125,9 @@ function loadLazyload(items, isVisible) {
         fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8'),
         context
     );
-    context.VOID_Lazyload.inViewport = isVisible;
-    context.VOID_Lazyload.removeEventListener = () => {};
+    context.VOID_GalleryLazyload.inViewport = isVisible;
 
-    return { context, preloadImages, requestLog };
+    return { context, preloadImages, requestLog, scrollListeners };
 }
 
 test('an eager Gallery image starts outside the viewport with propagated priority', () => {
@@ -130,8 +138,8 @@ test('an eager Gallery image starts outside the viewport with propagated priorit
     });
     const fixture = loadLazyload([item], () => false);
 
-    fixture.context.VOID_Lazyload.callback();
-    fixture.context.VOID_Lazyload.callback();
+    fixture.context.VOID_GalleryLazyload.callback();
+    fixture.context.VOID_GalleryLazyload.callback();
 
     assert.deepEqual(fixture.requestLog, [{
         priority: 'high',
@@ -156,15 +164,15 @@ test('an eager image waits while a hidden ancestor conceals it', () => {
     }, { hiddenAncestor: true });
     const fixture = loadLazyload([item], () => false);
 
-    fixture.context.VOID_Lazyload.callback();
+    fixture.context.VOID_GalleryLazyload.callback();
 
     assert.deepEqual(fixture.requestLog, []);
     assert.equal(fixture.preloadImages.length, 0);
-    assert.equal(fixture.context.VOID_Lazyload.finish(), true);
+    assert.equal(fixture.context.VOID_GalleryLazyload.finish(), true);
 
     item.hiddenAncestor = false;
-    assert.equal(fixture.context.VOID_Lazyload.finish(), false);
-    fixture.context.VOID_Lazyload.callback();
+    assert.equal(fixture.context.VOID_GalleryLazyload.finish(), false);
+    fixture.context.VOID_GalleryLazyload.callback();
 
     assert.deepEqual(fixture.requestLog, [{
         priority: 'high',
@@ -176,12 +184,12 @@ test('an eager image waits while a hidden ancestor conceals it', () => {
     ]);
 });
 
-test('ordinary lazy images keep viewport gating and default request priority', () => {
+test('visible Gallery images keep viewport gating and default request priority', () => {
     const outside = createItem({ 'data-src': 'https://example.test/outside.jpg' });
     const visible = createItem({ 'data-src': 'https://example.test/visible.jpg' });
     const fixture = loadLazyload([outside, visible], (item) => item === visible);
 
-    fixture.context.VOID_Lazyload.callback();
+    fixture.context.VOID_GalleryLazyload.callback();
 
     assert.deepEqual(fixture.requestLog, [{
         priority: null,
@@ -190,4 +198,14 @@ test('ordinary lazy images keep viewport gating and default request priority', (
     assert.deepEqual(fixture.preloadImages[0].operations, [
         'src:https://example.test/visible.jpg'
     ]);
+});
+
+test('Gallery lazy-load initialization retains only one scroll listener', () => {
+    const outside = createItem({ 'data-src': 'https://example.test/outside.jpg' });
+    const fixture = loadLazyload([outside], () => false);
+
+    fixture.context.VOID_GalleryLazyload.init();
+    fixture.context.VOID_GalleryLazyload.init();
+
+    assert.equal(fixture.scrollListeners.size, 1);
 });

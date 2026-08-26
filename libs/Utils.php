@@ -549,7 +549,7 @@ class Utils
             'pjax' => false,
             'pjaxreload' => '',
             'indexStyle' => 0,
-            'lazyload' => false,
+            'lazyload' => true,
             'indexBannerTitle' => '',
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
@@ -596,8 +596,7 @@ class Utils
             'parseFigcaption' => true,
             'link' => array(),
             'commentFoldThreshold' => array(5, 1.5),
-            'commentNotification' => '',
-            'browserLevelLoadingLazy' => false
+            'commentNotification' => ''
         );
 
         if(!empty($options->advance)){
@@ -614,7 +613,8 @@ class Utils
             $advanceSetting['darkModeTime'],
             $advanceSetting['followSystemColorScheme'],
             $advanceSetting['bluredLazyload'],
-            $advanceSetting['CDNType']
+            $advanceSetting['CDNType'],
+            $advanceSetting['browserLevelLoadingLazy']
         );
 
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
@@ -624,6 +624,7 @@ class Utils
         $output = array_merge($themeSetting, $advanceSetting);
         // 公开设置不允许被自由格式的高级设置同名键覆盖。
         $output['feedContentMode'] = $themeSetting['feedContentMode'];
+        $output['lazyload'] = $themeSetting['lazyload'];
         $output['VOIDPlugin'] = self::hasVOIDPlugin($GLOBALS['VOIDPluginREQ']);
 
         return $output;

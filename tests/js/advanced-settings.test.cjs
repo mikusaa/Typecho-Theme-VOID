@@ -13,6 +13,7 @@ test('advanced setting sample is valid JSON without retired keys', () => {
     assert.equal(sample === null, false);
     assert.equal(Object.prototype.hasOwnProperty.call(sample, 'bluredLazyload'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(sample, 'CDNType'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(sample, 'browserLevelLoadingLazy'), false);
     assert.equal(sample.twitterId, '');
     assert.equal(sample.weiboId, '');
 });
@@ -39,4 +40,18 @@ test('runtime sources no longer contain the blurred placeholder contract', () =>
         const source = fs.readFileSync(path.join(repositoryRoot, relativePath), 'utf8');
         assert.doesNotMatch(source, /blured-placeholder|remove-after|genBluredPlaceholderSrc/);
     }
+});
+
+test('native lazy loading no longer depends on theme visibility JavaScript', () => {
+    const headTemplate = fs.readFileSync(path.join(repositoryRoot, 'includes/head.php'), 'utf8');
+    const headerScript = fs.readFileSync(path.join(repositoryRoot, 'assets/header.js'), 'utf8');
+    const contentScript = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.js'), 'utf8');
+    const styles = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.scss'), 'utf8');
+
+    for (const source of [headTemplate, headerScript, contentScript, styles]) {
+        assert.doesNotMatch(source, /browserLevelLoadingLazy|browserlevel-lazy|VOID_BrowserLoadingLazy|VOID_Lazyload/);
+    }
+    assert.match(headerScript, /\[data-void-gallery\] img\.lazyload/);
+    assert.match(styles, /\[data-void-gallery\] img\.lazyload/);
+    assert.doesNotMatch(styles, /(?:^|\n)img\.lazyload\s*\{/);
 });

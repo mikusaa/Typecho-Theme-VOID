@@ -77,14 +77,14 @@ VOID_Util = {
     }
 };
 
-VOID_Lazyload = {
+VOID_GalleryLazyload = {
     eventHandler: null,
 
     finish: function () {
         var pending = false;
 
-        $.each($('img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)'), function (i, item) {
-            if (!VOID_Lazyload.isHidden(item)) {
+        $.each($('[data-void-gallery] img.lazyload:not(.loaded):not(.error)'), function (i, item) {
+            if (!VOID_GalleryLazyload.isHidden(item)) {
                 pending = true;
             }
         });
@@ -92,14 +92,14 @@ VOID_Lazyload = {
     },
 
     addEventListener: function () {
-        if (!VOID_Lazyload.finish()) {
-            window.addEventListener('scroll',VOID_Lazyload.eventHandler);
+        if (!VOID_GalleryLazyload.finish()) {
+            window.addEventListener('scroll',VOID_GalleryLazyload.eventHandler);
         }
     },
 
     removeEventListener: function () {
-        if (VOID_Lazyload.finish())
-            window.removeEventListener('scroll', VOID_Lazyload.eventHandler);
+        if (VOID_GalleryLazyload.finish())
+            window.removeEventListener('scroll', VOID_GalleryLazyload.eventHandler);
     },
 
     isHidden: function (item) {
@@ -110,7 +110,7 @@ VOID_Lazyload = {
         var viewPortHeight = document.documentElement.clientHeight; //可见区域高度
         var scrollTop = document.documentElement.scrollTop || document.body.scrollTop; //滚动条距离顶部高度
         var offset = 300; // 提前 200 px 加载
-        if (VOID_Lazyload.isHidden(item)) {
+        if (VOID_GalleryLazyload.isHidden(item)) {
             return false;
         }
         return $(item).offset().top - offset < viewPortHeight + scrollTop 
@@ -118,15 +118,15 @@ VOID_Lazyload = {
     },
 
     callback: function () {
-        $.each($('img.lazyload:not(.browserlevel-lazy):not(.loaded):not(.error)'), function (i, item) {
-            if (VOID_Lazyload.isHidden(item)) {
+        $.each($('[data-void-gallery] img.lazyload:not(.loaded):not(.error)'), function (i, item) {
+            if (VOID_GalleryLazyload.isHidden(item)) {
                 return;
             }
             if (item.__voidLazyLoading) {
                 return;
             }
             var eager = item.getAttribute && item.getAttribute('loading') === 'eager';
-            if (eager || VOID_Lazyload.inViewport(item)) {
+            if (eager || VOID_GalleryLazyload.inViewport(item)) {
                 var img = new Image();
                 var fetchPriority = item.getAttribute && item.getAttribute('fetchpriority');
                 item.__voidLazyLoading = true;
@@ -138,49 +138,26 @@ VOID_Lazyload = {
                     $(item).attr('src', $(item).attr('data-src'));
                     $(item).addClass('loaded');
                     $(item).parent().addClass('loaded');
-                    VOID_Lazyload.removeEventListener();
+                    VOID_GalleryLazyload.removeEventListener();
                 };
                 img.onerror = function () {
                     item.__voidLazyLoading = false;
                     $(item).addClass('error');
                     $(item).parent().addClass('error');
-                    VOID_Lazyload.removeEventListener();
+                    VOID_GalleryLazyload.removeEventListener();
                 };
                 img.src = $(item).attr('data-src');
             }
         });
-        VOID_Lazyload.removeEventListener();
+        VOID_GalleryLazyload.removeEventListener();
     },
 
     init: function () {
-        window.removeEventListener('scroll', VOID_Lazyload.eventHandler);
-        if (VOID_Lazyload.eventHandler == null)
-            VOID_Lazyload.eventHandler = VOID_Util.throttle(VOID_Lazyload.callback, 200, 500);
-        VOID_Lazyload.callback();
-        VOID_Lazyload.addEventListener();
-    }
-};
-
-VOID_BrowserLoadingLazy = {
-    loadedCallback: function (item) {
-        $(item).addClass('loaded');
-        $(item).parent().addClass('loaded');
-    },
-
-    init: function () {
-        $.each($('img.lazyload.browserlevel-lazy:not(.loaded):not(.error)'), function (i, item) {
-            if (item.complete && item.naturalWidth !== 0) {
-                VOID_BrowserLoadingLazy.loadedCallback(item);
-            } else {
-                item.onload = function () {
-                    VOID_BrowserLoadingLazy.loadedCallback(item);
-                };
-                item.onerror = function () {
-                    $(item).addClass('error');
-                    $(item).parent().addClass('error');
-                };
-            }
-        });
+        window.removeEventListener('scroll', VOID_GalleryLazyload.eventHandler);
+        if (VOID_GalleryLazyload.eventHandler == null)
+            VOID_GalleryLazyload.eventHandler = VOID_Util.throttle(VOID_GalleryLazyload.callback, 200, 500);
+        VOID_GalleryLazyload.callback();
+        VOID_GalleryLazyload.addEventListener();
     }
 };
 
@@ -449,8 +426,7 @@ VOID_Ui = {
     },
 
     lazyload: function () {
-        VOID_Lazyload.init();
-        VOID_BrowserLoadingLazy.init();
+        VOID_GalleryLazyload.init();
     },
 
     headroom: function () {

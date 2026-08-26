@@ -256,7 +256,6 @@ $_COOKIE = array();
 $GLOBALS['VOIDVersion'] = 'test';
 $GLOBALS['VOIDSetting'] = array(
     'brandFont' => array(),
-    'browserLevelLoadingLazy' => false,
     'colorScheme' => 3,
     'desktopBannerHeight' => '',
     'enableMath' => false,

@@ -1465,23 +1465,18 @@ Class Contents
                 . $dimensionAttributes . ' decoding="async">' . $figcaption . '</figure>';
         }
 
-        $lazyload = Helper::options()->lazyload == '1';
-        $browserLazyload = $lazyload
-            && !self::$imageGalleryMode
-            && !empty($setting['browserLevelLoadingLazy']);
+        $lazyload = !empty($setting['lazyload']);
+        $scriptLazyload = $lazyload && self::$imageGalleryMode;
         $imageClass = '';
         $imageSrc = $escapedSrc;
         $lazyAttributes = '';
 
-        if ($lazyload) {
-            $imageClass = $browserLazyload ? 'lazyload browserlevel-lazy' : 'lazyload';
+        if ($scriptLazyload) {
+            $imageClass = 'lazyload';
             $lazyAttributes = ' data-src="' . $escapedSrc . '"';
-
-            if ($browserLazyload) {
-                $lazyAttributes .= ' loading="lazy"';
-            } else {
-                $imageSrc = '';
-            }
+            $imageSrc = '';
+        } elseif ($lazyload) {
+            $lazyAttributes = ' loading="lazy"';
         }
 
         $classAttribute = $imageClass === '' ? '' : ' class="' . $imageClass . '"';
@@ -1489,7 +1484,7 @@ Class Contents
             . ' alt="' . $escapedAlt . '"' . $lazyAttributes . ' src="' . $imageSrc . '" decoding="async">';
 
         return '<figure data-void-image-item' . $figureAttributes . '><a class="void-image-link'
-            . ($lazyload ? ' lazyload-container' : '')
+            . ($scriptLazyload ? ' lazyload-container' : '')
             . '" data-void-image-zoom no-pjax href="' . $escapedSrc . '">' . $image . '</a>'
             . $figcaption . '</figure>';
     }

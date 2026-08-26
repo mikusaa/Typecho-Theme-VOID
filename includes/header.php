@@ -38,9 +38,6 @@ if($this->is('post') || $this->is('page')) {
         if ($setting['indexStyle'] == 1) { // 强制不显示
             echo ' single-col';
         }
-        if(Helper::options()->lazyload == '1') {
-            echo ' lazyload-img';
-        }
     ?>">
     <script>
         document.body.classList.toggle('theme-dark', document.documentElement.classList.contains('theme-dark'));

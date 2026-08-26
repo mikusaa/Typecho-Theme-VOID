@@ -134,17 +134,9 @@ var VOID_Content = {
             });
 
             if (VOIDConfig.lazyload) {
-                if (VOIDConfig.browserLevelLoadingLazy) {
-                    image.className = 'lazyload browserlevel-lazy';
-                    image.setAttribute('src', thumb);
-                    image.setAttribute('loading', 'lazy');
-                } else {
-                    image.className = 'lazyload';
-                    image.setAttribute('data-src', thumb);
-                }
-            } else {
-                image.setAttribute('src', thumb);
+                image.setAttribute('loading', 'lazy');
             }
+            image.setAttribute('src', thumb);
 
             item.appendChild(image);
         }

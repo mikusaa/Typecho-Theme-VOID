@@ -81,7 +81,9 @@ Helper::$options = new ThemeColorTestOptions(array(
         'followSystemColorScheme' => true,
         'bluredLazyload' => true,
         'CDNType' => array('cdn.example' => 'UPYUN'),
+        'browserLevelLoadingLazy' => false,
         'headerMode' => 2,
+        'lazyload' => false,
         'feedContentMode' => 1
     ))
 ));
@@ -92,8 +94,21 @@ themeColorAssertSame(false, array_key_exists('darkModeTime', $settings), 'darkMo
 themeColorAssertSame(false, array_key_exists('followSystemColorScheme', $settings), 'legacy device flag is filtered from runtime settings');
 themeColorAssertSame(false, array_key_exists('bluredLazyload', $settings), 'retired blurred lazy-load flag is filtered from runtime settings');
 themeColorAssertSame(false, array_key_exists('CDNType', $settings), 'retired CDN mapping is filtered from runtime settings');
+themeColorAssertSame(false, array_key_exists('browserLevelLoadingLazy', $settings), 'retired browser lazy-load selector is filtered from runtime settings');
 themeColorAssertSame(2, $settings['headerMode'], 'unrelated advanced settings remain available');
 themeColorAssertSame(0, $settings['feedContentMode'], 'invalid public Feed mode falls back without advance override');
+themeColorAssertSame(true, $settings['lazyload'], 'missing public lazy-load setting defaults on and ignores advance override');
+
+Helper::$options = new ThemeColorTestOptions(array(
+    'lazyload' => '0',
+    'advance' => json_encode(array(
+        'browserLevelLoadingLazy' => true,
+        'lazyload' => true
+    ))
+));
+$settings = Utils::getVOIDSettings();
+themeColorAssertSame(false, array_key_exists('browserLevelLoadingLazy', $settings), 'retired true browser lazy-load selector is also filtered');
+themeColorAssertSame(false, $settings['lazyload'], 'public disabled lazy-load setting cannot be overridden by advance JSON');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} theme color contract test(s) failed.\n");

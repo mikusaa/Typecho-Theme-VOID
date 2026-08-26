@@ -153,7 +153,7 @@ function loadVoid(card, config) {
 
 test('friend cards render native lazy images and initialize only once', () => {
     const card = createCard();
-    const content = loadVoid(card, { browserLevelLoadingLazy: true, lazyload: true });
+    const content = loadVoid(card, { lazyload: true });
 
     content.parseBoardThumbs();
     content.parseBoardThumbs();
@@ -162,20 +162,22 @@ test('friend cards render native lazy images and initialize only once', () => {
     assert.equal(card.thumb.getAttribute('data-fallback'), 'V');
     assert.equal(image.getAttribute('src'), 'https://example.test/avatar.png');
     assert.equal(image.getAttribute('loading'), 'lazy');
+    assert.equal(image.getAttribute('data-src'), null);
+    assert.equal(image.className, '');
     assert.equal(image.getAttribute('alt'), '');
     assert.equal(card.thumb.children.filter((child) => child.tagName === 'IMG').length, 1);
     assert.equal(card.title.querySelector('.board-title-text').textContent, 'Velas电波站');
 });
 
-test('friend cards preserve custom lazy loading and expose image failures', () => {
+test('native lazy friend cards expose image failures', () => {
     const card = createCard('秋枫微凉');
-    const content = loadVoid(card, { browserLevelLoadingLazy: false, lazyload: true });
+    const content = loadVoid(card, { lazyload: true });
 
     content.parseBoardThumbs();
 
     const image = card.thumb.querySelector('img');
-    assert.equal(image.getAttribute('src'), null);
-    assert.equal(image.getAttribute('data-src'), 'https://example.test/avatar.png');
+    assert.equal(image.getAttribute('src'), 'https://example.test/avatar.png');
+    assert.equal(image.getAttribute('loading'), 'lazy');
     image.dispatch('error');
     assert.match(image.className, /\berror\b/);
     assert.match(card.thumb.className, /\berror\b/);
@@ -183,12 +185,13 @@ test('friend cards preserve custom lazy loading and expose image failures', () =
 
 test('friend cards load immediately when lazy loading is disabled', () => {
     const card = createCard('9bie');
-    const content = loadVoid(card, { browserLevelLoadingLazy: false, lazyload: false });
+    const content = loadVoid(card, { lazyload: false });
 
     content.parseBoardThumbs();
 
     const image = card.thumb.querySelector('img');
     assert.equal(image.getAttribute('src'), 'https://example.test/avatar.png');
+    assert.equal(image.getAttribute('loading'), null);
     assert.equal(image.getAttribute('data-src'), null);
     assert.equal(image.className, '');
 });
@@ -200,5 +203,5 @@ test('friend card source includes the dark surface and two-line title contract',
     assert.match(styles, /\.theme-dark & \{\s*background: \$td-bgColor-light;/);
     assert.match(styles, /-webkit-line-clamp: 2;/);
     assert.match(styles, /&\.error::before \{\s*display: flex;/);
-    assert.equal((lazyload.match(/\.parent\(\)\.addClass\('error'\)/g) || []).length, 2);
+    assert.equal((lazyload.match(/\.parent\(\)\.addClass\('error'\)/g) || []).length, 1);
 });

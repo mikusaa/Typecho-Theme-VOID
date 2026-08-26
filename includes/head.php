@@ -98,7 +98,6 @@ if (isset($_POST['void_action'])) {
         'lazyload' => (bool) $setting['lazyload'],
         'colorScheme' => (int) $setting['colorScheme'],
         'headerMode' => (int) $setting['headerMode'],
-        'browserLevelLoadingLazy' => (bool) $setting['browserLevelLoadingLazy'],
         'emotesBase' => $emotesBase,
         'VOIDPlugin' => (bool) $setting['VOIDPlugin'],
         'votePath' => $votePath,

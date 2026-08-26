@@ -17,7 +17,6 @@
     "commentFoldThreshold": [5, 1.5],
     "commentNotification": "请友善交流",
     "largePhotoSet": true,
-    "browserLevelLoadingLazy": false,
     "macStyleCodeBlock": true,
     "lineNumbers": true,
     "link": [

@@ -93,11 +93,10 @@ function assertImageNotContains($needle, $actual, $message)
 function resetImageSettings()
 {
     $GLOBALS['VOIDSetting'] = array(
-        'browserLevelLoadingLazy' => false,
+        'lazyload' => false,
         'largePhotoSet' => false,
         'parseFigcaption' => true
     );
-    Helper::$options->lazyload = '0';
 }
 
 resetImageSettings();
@@ -139,28 +138,18 @@ foreach (array(
 }
 
 resetImageSettings();
-Helper::$options->lazyload = '1';
-$scriptLazy = Contents::parseImages(
+$GLOBALS['VOIDSetting']['lazyload'] = true;
+$nativeLazy = Contents::parseImages(
     '<img src="https://cdn.example/a.jpg#vwid=800&vhei=1200" alt="竖图">'
 );
 assertImageContains(
-    '<img data-void-image-content width="800" height="1200" class="lazyload" alt="竖图" data-src="https://cdn.example/a.jpg#vwid=800&amp;vhei=1200" src="" decoding="async">',
-    $scriptLazy,
-    '脚本懒加载保留真实地址且不提前请求原图'
+    '<img data-void-image-content width="800" height="1200" alt="竖图" loading="lazy" src="https://cdn.example/a.jpg#vwid=800&amp;vhei=1200" decoding="async">',
+    $nativeLazy,
+    '普通正文使用浏览器原生懒加载并保留真实 src'
 );
-assertImageSame(1, substr_count($scriptLazy, '<img '), '脚本懒加载只输出一个真实图片节点');
-assertImageNotContains('blured-placeholder', $scriptLazy, '脚本懒加载不再输出模糊占位图');
-assertImageNotContains('remove-after', $scriptLazy, '脚本懒加载不再输出延时删除标记');
-
-resetImageSettings();
-Helper::$options->lazyload = '1';
-$GLOBALS['VOIDSetting']['browserLevelLoadingLazy'] = true;
-$browserLazy = Contents::parseImages('<img src="/native.jpg#vwid=1200&vhei=800" alt="原生懒加载">');
-assertImageContains('class="lazyload browserlevel-lazy"', $browserLazy, '浏览器原生懒加载类保持兼容');
-assertImageContains('data-src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLazy, '原生懒加载保留真实 data-src');
-assertImageContains('src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLazy, '原生懒加载保留真实 src');
-assertImageContains('loading="lazy"', $browserLazy, '原生懒加载输出 loading 属性');
-assertImageSame(1, substr_count($browserLazy, '<img '), '原生懒加载只输出一个真实图片节点');
+assertImageNotContains('data-src=', $nativeLazy, '原生懒加载不再依赖主题 data-src');
+assertImageNotContains('class="lazyload', $nativeLazy, '原生懒加载不再依赖主题显隐 class');
+assertImageNotContains('lazyload-container', $nativeLazy, '原生懒加载不再输出脚本占位容器');
 
 $galleryWidget = new ImageContractWidget(array(), 'Gallery.php');
 $galleryLazy = Contents::contentEx(
@@ -171,7 +160,7 @@ $galleryLazy = Contents::contentEx(
 assertImageContains('class="lazyload"', $galleryLazy, 'Gallery 强制使用可由分批展示控制的脚本懒加载');
 assertImageContains('data-src="/gallery-later.jpg#vwid=1200&amp;vhei=800"', $galleryLazy, 'Gallery 保留延迟图片地址');
 assertImageContains('src=""', $galleryLazy, 'Gallery 折叠前不输出可提前请求的真实 src');
-assertImageNotContains('browserlevel-lazy', $galleryLazy, 'Gallery 不受全站原生懒加载模式影响');
+assertImageContains('lazyload-container', $galleryLazy, 'Gallery 保留脚本加载占位容器');
 
 $ordinaryWidget = new ImageContractWidget(array(), 'page.php');
 $ordinaryNativeLazy = Contents::contentEx(
@@ -179,10 +168,31 @@ $ordinaryNativeLazy = Contents::contentEx(
     $ordinaryWidget,
     null
 );
-assertImageContains('class="lazyload browserlevel-lazy"', $ordinaryNativeLazy, '普通正文继续使用配置的原生懒加载');
-assertImageContains('src="/ordinary.jpg#vwid=1200&amp;vhei=800"', $ordinaryNativeLazy, '普通正文继续输出真实原生懒加载 src');
+assertImageContains('loading="lazy" src="/ordinary.jpg#vwid=1200&amp;vhei=800"', $ordinaryNativeLazy, '普通页面正文使用原生懒加载');
+assertImageNotContains('data-src=', $ordinaryNativeLazy, '普通页面正文不进入 Gallery 脚本加载器');
+
+$photoSetNativeLazy = Contents::contentEx(
+    '[photos]<img src="/photos.jpg#vwid=900&vhei=600" alt="普通图集">[/photos]',
+    $ordinaryWidget,
+    null
+);
+assertImageContains('class="photos"', $photoSetNativeLazy, '[photos] 继续输出普通图集结构');
+assertImageContains('loading="lazy" src="/photos.jpg#vwid=900&amp;vhei=600"', $photoSetNativeLazy, '[photos] 图片使用原生懒加载');
+assertImageNotContains('data-src=', $photoSetNativeLazy, '[photos] 不进入 Gallery 脚本加载器');
 
 resetImageSettings();
+$galleryDirect = Contents::contentEx(
+    '<img src="/gallery-direct.jpg#vwid=1200&vhei=800" alt="直接加载相册">',
+    $galleryWidget,
+    null
+);
+assertImageContains('src="/gallery-direct.jpg#vwid=1200&amp;vhei=800"', $galleryDirect, '关闭总开关后 Gallery 直接输出真实 src');
+assertImageNotContains('loading="lazy"', $galleryDirect, '关闭总开关后 Gallery 不输出原生懒加载');
+assertImageNotContains('data-src=', $galleryDirect, '关闭总开关后 Gallery 不进入脚本懒加载');
+assertImageNotContains('class="lazyload', $galleryDirect, '关闭总开关后 Gallery 不输出脚本显隐 class');
+
+resetImageSettings();
+$GLOBALS['VOIDSetting']['lazyload'] = true;
 $feed = Contents::parseImages('<img src="/feed.jpg#vwid=640&vhei=480" alt="Feed 图">', true);
 assertImageSame(
     '<figure><img src="/feed.jpg#vwid=640&amp;vhei=480" alt="Feed 图" width="640" height="480" decoding="async"><figcaption>Feed 图</figcaption></figure>',
@@ -207,6 +217,7 @@ assertImageContains('<code><img src="/code.jpg" alt="code"></code>', $protected,
 assertImageSame(1, substr_count($protected, 'data-void-image-item'), '代码区域外图片仍正常解析');
 
 resetImageSettings();
+$GLOBALS['VOIDSetting']['lazyload'] = true;
 $oneFigure = Contents::parseImages('<img src="/one.jpg#vwid=900&vhei=600" alt="一张">');
 $singleSet = Contents::parsePhotoSet('[photos]' . $oneFigure . '[/photos]');
 assertImageContains(

@@ -59,8 +59,8 @@ JSON 不支持注释或末尾多余的逗号。保存前建议使用 JSON 校验
 
 ## 图片加载
 
-| 设置 | 类型与默认值 | 说明 |
-| --- | --- | --- |
-| `browserLevelLoadingLazy` | 布尔值，`false` | 后台“图片懒加载”开启时，对普通正文图片和友链卡片缩略图使用浏览器原生 `loading="lazy"`；关闭时使用主题的脚本滚动懒加载。Gallery 为保持分批展示控制，始终使用脚本懒加载。 |
+图片加载不再提供超高级设置。后台“内容图片懒加载”是唯一公开开关，默认开启：普通正文图片、`[photos]` 和友链缩略图使用浏览器原生 `loading="lazy"`，Gallery 为保持分批展示控制而使用主题脚本加载。关闭后，这些内容图片均直接加载。
 
-已退役的 `bluredLazyload`、`CDNType`、`darkModeTime` 和 `followSystemColorScheme` 会从运行时配置中过滤。旧配置无需手工删除这些字段，但它们不再产生效果。
+头图、首页与归档封面、表情由主题根据位置自动安排加载优先级，不受该开关控制。
+
+已退役的 `browserLevelLoadingLazy`、`bluredLazyload`、`CDNType`、`darkModeTime` 和 `followSystemColorScheme` 会从运行时配置中过滤。旧配置无需手工删除这些字段，但它们不再产生效果。
