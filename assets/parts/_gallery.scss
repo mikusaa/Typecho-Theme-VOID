@@ -404,8 +404,7 @@
     .void-gallery .void-gallery-row figure[data-void-image-item],
     .void-gallery .void-gallery-row figure[data-void-image-item] figcaption,
     .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom].lazyload-container,
-    .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom] img[data-void-image-content],
-    .void-gallery .void-gallery-row figure[data-void-image-item] img.blured-placeholder {
+    .void-gallery .void-gallery-row figure[data-void-image-item] >a.void-image-link[data-void-image-zoom] img[data-void-image-content] {
         transition: none;
     }
 

@@ -597,9 +597,7 @@ class Utils
             'link' => array(),
             'commentFoldThreshold' => array(5, 1.5),
             'commentNotification' => '',
-            'bluredLazyload' => false,
-            'browserLevelLoadingLazy' => false,
-            'CDNType' => array()
+            'browserLevelLoadingLazy' => false
         );
 
         if(!empty($options->advance)){
@@ -612,7 +610,12 @@ class Utils
         }
 
         // 废弃键可以留在用户的自由格式配置中，但不再进入主题运行时设置。
-        unset($advanceSetting['darkModeTime'], $advanceSetting['followSystemColorScheme']);
+        unset(
+            $advanceSetting['darkModeTime'],
+            $advanceSetting['followSystemColorScheme'],
+            $advanceSetting['bluredLazyload'],
+            $advanceSetting['CDNType']
+        );
 
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
             $advanceSetting['headerMode'] = $advanceSetting['headerModeMobile'];

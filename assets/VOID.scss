@@ -146,15 +146,6 @@ img.lazyload {
     transition: 0.8s ease-in-out opacity;
 }
 
-img.blured-placeholder {
-    filter: blur(20px);
-    opacity: 1;
-    &.loaded {
-        opacity: 0!important;
-    }
-    transition: 0.8s ease-in-out opacity;
-}
-
 p.notice {
     padding: 0.5rem;
     padding-left: 0.75rem;

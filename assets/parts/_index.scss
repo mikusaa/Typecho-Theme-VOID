@@ -385,12 +385,6 @@ section#index-list{
                         object-fit: cover;
                         margin: 0;
                         display: block;
-                        .bluredLazyload &.lazyload {
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                        }
                     }
                 }
                 .content-wrap {

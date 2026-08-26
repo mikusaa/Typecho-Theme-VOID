@@ -1005,10 +1005,8 @@ test('gallery sources use the current image contract without Fancybox fallbacks'
         style,
         /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*figure\[data-void-image-item\]:focus-within[^}]*\{\s*transform:\s*none;/
     );
-    assert.match(
-        style,
-        /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*img\.blured-placeholder\s*\{\s*transition:\s*none;/
-    );
+    assert.doesNotMatch(style, /blured-placeholder/);
+    assert.doesNotMatch(stylesheet, /blured-placeholder/);
     assert.match(gallerySource, /rowData\.widths\.length === 1 \? ' is-single' : ''/);
     assert.match(
         style,

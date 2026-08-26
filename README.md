@@ -54,7 +54,7 @@
 4. 后台启用主题
 
 * 可选：将主题 `assets` 文件夹下的 `VOIDCacheRule.js` 复制一份到站点根目录，并在主题设置中启用 Service Worker 缓存。
-* 可选：主题文件夹下 advanceSetting.sample.json 中有一些高级设置，可以看看。
+* 可选：按[超高级设置说明](./advanceSetting.md)从合法的 [JSON 示例](./advanceSetting.sample.json)中选取所需配置。
 
 ### 主题颜色模式
 

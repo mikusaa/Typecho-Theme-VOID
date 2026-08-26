@@ -137,12 +137,8 @@ VOID_Lazyload = {
                     item.__voidLazyLoading = false;
                     $(item).attr('src', $(item).attr('data-src'));
                     $(item).addClass('loaded');
-                    $(item).siblings('.blured-placeholder').addClass('loaded');
                     $(item).parent().addClass('loaded');
                     VOID_Lazyload.removeEventListener();
-                    setTimeout(function () {
-                        $(item).siblings('.remove-after').remove();
-                    }, 1000);
                 };
                 img.onerror = function () {
                     item.__voidLazyLoading = false;
@@ -169,9 +165,6 @@ VOID_BrowserLoadingLazy = {
     loadedCallback: function (item) {
         $(item).addClass('loaded');
         $(item).parent().addClass('loaded');
-        setTimeout(function() {
-            $(item).siblings('.remove-after').remove();
-        }, 1000);
     },
 
     init: function () {

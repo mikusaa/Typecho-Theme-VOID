@@ -79,6 +79,8 @@ Helper::$options = new ThemeColorTestOptions(array(
     'advance' => json_encode(array(
         'darkModeTime' => array('start' => 21, 'end' => 6),
         'followSystemColorScheme' => true,
+        'bluredLazyload' => true,
+        'CDNType' => array('cdn.example' => 'UPYUN'),
         'headerMode' => 2,
         'feedContentMode' => 1
     ))
@@ -88,6 +90,8 @@ $settings = Utils::getVOIDSettings();
 themeColorAssertSame(3, $settings['colorScheme'], 'saved scheduled mode migrates to device-following');
 themeColorAssertSame(false, array_key_exists('darkModeTime', $settings), 'darkModeTime is filtered from runtime settings');
 themeColorAssertSame(false, array_key_exists('followSystemColorScheme', $settings), 'legacy device flag is filtered from runtime settings');
+themeColorAssertSame(false, array_key_exists('bluredLazyload', $settings), 'retired blurred lazy-load flag is filtered from runtime settings');
+themeColorAssertSame(false, array_key_exists('CDNType', $settings), 'retired CDN mapping is filtered from runtime settings');
 themeColorAssertSame(2, $settings['headerMode'], 'unrelated advanced settings remain available');
 themeColorAssertSame(0, $settings['feedContentMode'], 'invalid public Feed mode falls back without advance override');
 

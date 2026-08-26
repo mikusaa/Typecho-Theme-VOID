@@ -10,8 +10,6 @@ function createItem(attributes, options = {}) {
         classes: new Set(['lazyload']),
         hiddenAncestor: options.hiddenAncestor === true,
         parentClasses: new Set(),
-        placeholderClasses: new Set(),
-        placeholderRemoved: false,
         getAttribute(name) {
             return this.attributes.has(name) ? this.attributes.get(name) : null;
         },
@@ -86,20 +84,6 @@ function loadLazyload(items, isVisible) {
                     }
                 };
             },
-            siblings(selector) {
-                return {
-                    addClass(name) {
-                        target.placeholderClasses.add(name);
-                        return this;
-                    },
-                    remove() {
-                        if (selector === '.remove-after') {
-                            target.placeholderRemoved = true;
-                        }
-                        return this;
-                    }
-                };
-            }
         };
     }
     jQuery.each = (collection, callback) => collection.forEach((item, index) => callback(index, item));
@@ -162,8 +146,6 @@ test('an eager Gallery image starts outside the viewport with propagated priorit
     assert.equal(item.getAttribute('src'), 'https://example.test/gallery-first.jpg');
     assert.equal(item.classes.has('loaded'), true);
     assert.equal(item.parentClasses.has('loaded'), true);
-    assert.equal(item.placeholderClasses.has('loaded'), true);
-    assert.equal(item.placeholderRemoved, true);
 });
 
 test('an eager image waits while a hidden ancestor conceals it', () => {

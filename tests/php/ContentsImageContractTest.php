@@ -93,8 +93,6 @@ function assertImageNotContains($needle, $actual, $message)
 function resetImageSettings()
 {
     $GLOBALS['VOIDSetting'] = array(
-        'CDNType' => array(),
-        'bluredLazyload' => false,
         'browserLevelLoadingLazy' => false,
         'largePhotoSet' => false,
         'parseFigcaption' => true
@@ -142,22 +140,17 @@ foreach (array(
 
 resetImageSettings();
 Helper::$options->lazyload = '1';
-$GLOBALS['VOIDSetting']['bluredLazyload'] = true;
-$GLOBALS['VOIDSetting']['CDNType'] = array('cdn.example' => 'UPYUN');
-$customLazy = Contents::parseImages(
+$scriptLazy = Contents::parseImages(
     '<img src="https://cdn.example/a.jpg#vwid=800&vhei=1200" alt="竖图">'
 );
 assertImageContains(
-    '<img class="blured-placeholder remove-after" src="https://cdn.example/a.jpg!/max/64" alt="" aria-hidden="true" decoding="async">',
-    $customLazy,
-    '脚本懒加载占位图为空替代文本且对辅助技术隐藏'
-);
-assertImageContains(
     '<img data-void-image-content width="800" height="1200" class="lazyload" alt="竖图" data-src="https://cdn.example/a.jpg#vwid=800&amp;vhei=1200" src="" decoding="async">',
-    $customLazy,
-    '脚本懒加载只标记真实正文图片'
+    $scriptLazy,
+    '脚本懒加载保留真实地址且不提前请求原图'
 );
-assertImageSame(1, substr_count($customLazy, 'data-void-image-content'), '模糊占位图不带真实图片标记');
+assertImageSame(1, substr_count($scriptLazy, '<img '), '脚本懒加载只输出一个真实图片节点');
+assertImageNotContains('blured-placeholder', $scriptLazy, '脚本懒加载不再输出模糊占位图');
+assertImageNotContains('remove-after', $scriptLazy, '脚本懒加载不再输出延时删除标记');
 
 resetImageSettings();
 Helper::$options->lazyload = '1';
@@ -167,7 +160,7 @@ assertImageContains('class="lazyload browserlevel-lazy"', $browserLazy, '浏览�
 assertImageContains('data-src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLazy, '原生懒加载保留真实 data-src');
 assertImageContains('src="/native.jpg#vwid=1200&amp;vhei=800"', $browserLazy, '原生懒加载保留真实 src');
 assertImageContains('loading="lazy"', $browserLazy, '原生懒加载输出 loading 属性');
-assertImageNotContains('blured-placeholder', $browserLazy, '原生懒加载不重复输出模糊占位图');
+assertImageSame(1, substr_count($browserLazy, '<img '), '原生懒加载只输出一个真实图片节点');
 
 $galleryWidget = new ImageContractWidget(array(), 'Gallery.php');
 $galleryLazy = Contents::contentEx(

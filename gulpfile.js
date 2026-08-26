@@ -197,6 +197,7 @@ gulp.task('move:root', function () {
     return gulp.src(['./LICENSE',
         './README.md',
         './screenshot.webp',
+        './advanceSetting.md',
         './advanceSetting.sample.json',
         './change-log.md'], { encoding: false })
         .pipe(gulp.dest('./build/'));
