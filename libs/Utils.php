@@ -230,6 +230,14 @@ class Utils
      */
     public static function addButton()
     {
+        if (class_exists('HomePreview')) {
+            $homePreviewConfig = HomePreview::getEditorConfig();
+            if (is_array($homePreviewConfig)) {
+                echo '<script>window.VOIDHomePreviewConfig='
+                    . self::encodeJsonForHtml($homePreviewConfig) . ';</script>';
+            }
+        }
+
         ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker-7fedd5df0e.js');
         $emotePickerUrl = ob_get_clean();
@@ -242,7 +250,7 @@ class Utils
             . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
         ob_start();
-        self::indexTheme('/assets/editor-2366119a0f.js');
+        self::indexTheme('/assets/editor-4ad7054239.js');
         $editorUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
@@ -252,7 +260,7 @@ class Utils
         echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
         ob_start();
-        self::indexTheme('/assets/editor-admin-c1556b5c9d.css');
+        self::indexTheme('/assets/editor-admin-5918e7186f.css');
         $editorStyleUrl = ob_get_clean();
         echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }
@@ -541,7 +549,7 @@ class Utils
             'pjax' => false,
             'pjaxreload' => '',
             'indexStyle' => 0,
-            'lazyload' => false,
+            'lazyload' => true,
             'indexBannerTitle' => '',
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
@@ -588,10 +596,7 @@ class Utils
             'parseFigcaption' => true,
             'link' => array(),
             'commentFoldThreshold' => array(5, 1.5),
-            'commentNotification' => '',
-            'bluredLazyload' => false,
-            'browserLevelLoadingLazy' => false,
-            'CDNType' => array()
+            'commentNotification' => ''
         );
 
         if(!empty($options->advance)){
@@ -604,7 +609,13 @@ class Utils
         }
 
         // 废弃键可以留在用户的自由格式配置中，但不再进入主题运行时设置。
-        unset($advanceSetting['darkModeTime'], $advanceSetting['followSystemColorScheme']);
+        unset(
+            $advanceSetting['darkModeTime'],
+            $advanceSetting['followSystemColorScheme'],
+            $advanceSetting['bluredLazyload'],
+            $advanceSetting['CDNType'],
+            $advanceSetting['browserLevelLoadingLazy']
+        );
 
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
             $advanceSetting['headerMode'] = $advanceSetting['headerModeMobile'];
@@ -613,6 +624,7 @@ class Utils
         $output = array_merge($themeSetting, $advanceSetting);
         // 公开设置不允许被自由格式的高级设置同名键覆盖。
         $output['feedContentMode'] = $themeSetting['feedContentMode'];
+        $output['lazyload'] = $themeSetting['lazyload'];
         $output['VOIDPlugin'] = self::hasVOIDPlugin($GLOBALS['VOIDPluginREQ']);
 
         return $output;

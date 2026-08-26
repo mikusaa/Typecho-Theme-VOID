@@ -1465,74 +1465,28 @@ Class Contents
                 . $dimensionAttributes . ' decoding="async">' . $figcaption . '</figure>';
         }
 
-        $lazyload = Helper::options()->lazyload == '1';
-        $browserLazyload = $lazyload
-            && !self::$imageGalleryMode
-            && !empty($setting['browserLevelLoadingLazy']);
+        $lazyload = !empty($setting['lazyload']);
+        $scriptLazyload = $lazyload && self::$imageGalleryMode;
         $imageClass = '';
         $imageSrc = $escapedSrc;
         $lazyAttributes = '';
-        $placeholder = '';
 
-        if ($lazyload) {
-            $imageClass = $browserLazyload ? 'lazyload browserlevel-lazy' : 'lazyload';
+        if ($scriptLazyload) {
+            $imageClass = 'lazyload';
             $lazyAttributes = ' data-src="' . $escapedSrc . '"';
-
-            if ($browserLazyload) {
-                $lazyAttributes .= ' loading="lazy"';
-            } else {
-                $imageSrc = '';
-                if (!empty($setting['bluredLazyload'])) {
-                    $placeholderSrc = self::escapeHtml(self::genBluredPlaceholderSrc($srcOriginal));
-                    $placeholder = '<img class="blured-placeholder remove-after" src="' . $placeholderSrc
-                        . '" alt="" aria-hidden="true" decoding="async">';
-                }
-            }
+            $imageSrc = '';
+        } elseif ($lazyload) {
+            $lazyAttributes = ' loading="lazy"';
         }
 
         $classAttribute = $imageClass === '' ? '' : ' class="' . $imageClass . '"';
-        $image = $placeholder . '<img data-void-image-content' . $dimensionAttributes . $classAttribute
+        $image = '<img data-void-image-content' . $dimensionAttributes . $classAttribute
             . ' alt="' . $escapedAlt . '"' . $lazyAttributes . ' src="' . $imageSrc . '" decoding="async">';
 
         return '<figure data-void-image-item' . $figureAttributes . '><a class="void-image-link'
-            . ($lazyload ? ' lazyload-container' : '')
+            . ($scriptLazyload ? ' lazyload-container' : '')
             . '" data-void-image-zoom no-pjax href="' . $escapedSrc . '">' . $image . '</a>'
             . $figcaption . '</figure>';
-    }
-
-    /**
-     * 根据 CDN 类型生成占位图片
-     */
-    public static function genBluredPlaceholderSrc($src)
-    {
-        $setting = $GLOBALS['VOIDSetting'];
-        $cdn_config = $setting['CDNType'];
-        $addons = array(
-            "UPYUN" => '!/max/64',
-            "QINIU" => '?imageView2/2/w/64/q/75'
-        );
-
-        // 兼容 PHP 8.1+：parse_url 参数需为字符串
-        if (!is_string($src) || $src === '') {
-            return is_scalar($src) ? (string) $src : '';
-        }
-
-        // 兼容 PHP 8.1+：parse_url 结果可能非数组或缺少键
-        $components = parse_url($src);
-        $cdn = '';
-        if (is_array($components) && array_key_exists('host', $components) && array_key_exists($components['host'], $cdn_config)) {
-            $cdn = $cdn_config[$components['host']];
-        }
-
-        $addon = '';
-        if (array_key_exists($cdn, $addons)) {
-            $addon = $addons[$cdn];
-        }
-
-        $fragment = (is_array($components) && array_key_exists('fragment', $components)) ? $components['fragment'] : null;
-        $srcWithoutFragment = $fragment !== null ? str_replace('#' . $fragment, '', $src) : $src;
-
-        return $srcWithoutFragment . $addon;
     }
 
     /**

@@ -98,7 +98,6 @@ if (isset($_POST['void_action'])) {
         'lazyload' => (bool) $setting['lazyload'],
         'colorScheme' => (int) $setting['colorScheme'],
         'headerMode' => (int) $setting['headerMode'],
-        'browserLevelLoadingLazy' => (bool) $setting['browserLevelLoadingLazy'],
         'emotesBase' => $emotesBase,
         'VOIDPlugin' => (bool) $setting['VOIDPlugin'],
         'votePath' => $votePath,
@@ -148,14 +147,14 @@ if (isset($_POST['void_action'])) {
         <link href="<?php Utils::indexTheme('/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css'); ?>" rel="stylesheet">
     <?php endif; ?>
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-322b12e845.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-4323798e2d.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-dd158db552.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-1c2d9f3c9f.js'); ?>"></script>
     <script>
     window.VOIDConfig = <?php echo Utils::encodeJsonForHtml($voidConfig, '{}'); ?>;
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-1a1ad159bb.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-71e8136612.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>

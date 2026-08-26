@@ -12,6 +12,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 }
 
 require_once('libs/Utils.php');
+require_once('libs/HomePreview.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
 
@@ -111,6 +112,7 @@ function themeInit($archive = null)
     }
 
     VOID_refreshArchiveComputedFields($archive);
+    HomePreview::handle($archive);
 }
 
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
@@ -179,7 +181,13 @@ function themeConfig($form)
     $form->addInput($reward);
     $serifincontent = new Typecho_Widget_Helper_Form_Element_Radio('serifincontent', array('0' => '不启用', '1' => '启用'), '0', '文章内容使用衬线体', '是否对文章内容启用衬线体（思源宋体）。字体由主题本地提供。');
     $form->addInput($serifincontent);
-    $lazyload = new Typecho_Widget_Helper_Form_Element_Radio('lazyload', array('1' => '启用', '0' => '不启用'), '1', '图片懒加载', '是否启用图片懒加载。');
+    $lazyload = new Typecho_Widget_Helper_Form_Element_Radio(
+        'lazyload',
+        array('1' => '启用', '0' => '不启用'),
+        '1',
+        '内容图片懒加载',
+        '启用后，普通正文图片与友链缩略图使用浏览器原生懒加载，Gallery 使用分批脚本加载；头图、首页与归档封面、表情由主题自动安排加载优先级。'
+    );
     $form->addInput($lazyload);
     $enableMath = new Typecho_Widget_Helper_Form_Element_Radio('enableMath', array('0' => '不启用', '1' => '启用'), '0', '启用数学公式解析', '是否启用数学公式解析（MathJax 4）。启用后会额外加载约 1~3M 的资源。');
     $form->addInput($enableMath);
@@ -195,7 +203,7 @@ function themeConfig($form)
     $form->addInput($serviceworker);
 
     // 超高级设置
-    $advance = new Typecho_Widget_Helper_Form_Element_Textarea('advance', null, null, '超高级设置', '主题中包含一份 advanceSetting.sample.json，自己仿照着写吧。');
+    $advance = new Typecho_Widget_Helper_Form_Element_Textarea('advance', null, null, '超高级设置', '主题中的 advanceSetting.md 包含字段说明，可从 advanceSetting.sample.json 选取所需配置。');
     $form->addInput($advance);
 }
 
