@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
 
@@ -177,6 +178,15 @@ function loadMasonryEnvironment(options = {}) {
         window
     };
 }
+
+test('Masonry has a visible desktop two-column fallback before JavaScript takes over', () => {
+    const stylesheet = sass.compile(
+        path.resolve(__dirname, '../../assets/VOID.scss'),
+        { style: 'expanded', quietDeps: true }
+    ).css;
+
+    assert.match(stylesheet, /@media screen and \(min-width: 768px\) \{\s*\.wrapper\.wide section#index-list > ul:not\(\.masonry\) \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*gap: 30px;\s*\}\s*\.wrapper\.wide section#index-list > ul:not\(\.masonry\) > li \{\s*width: auto;\s*margin-bottom: 0;\s*\}\s*\}/);
+});
 
 test('Masonry resize sensors stay idempotent and follow replaced DOM nodes', () => {
     const environment = loadMasonryEnvironment();
