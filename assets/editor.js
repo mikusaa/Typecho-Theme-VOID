@@ -1132,10 +1132,830 @@ var VOID_Editor_Admin = (function ($) {
     };
 })(window.jQuery);
 
+var VOID_HomePreview = (function ($) {
+    var FINGERPRINT_IGNORED_FIELDS = {
+        cid: true,
+        do: true,
+        draft: true,
+        dst: true,
+        timezone: true
+    };
+    var REQUEST_STATE_KEY = '__voidHomePreviewRequestState';
+    var bootstrapObserver = null;
+    var instance = null;
+
+    function hasRequiredContext(form, config) {
+        return !!form
+            && !!window.Typecho
+            && typeof window.Typecho.savePost === 'function'
+            && typeof config.urlTemplate === 'string'
+            && config.urlTemplate.indexOf('{cid}') !== -1;
+    }
+
+    function stopBootstrapObserver() {
+        if (bootstrapObserver) {
+            bootstrapObserver.disconnect();
+            bootstrapObserver = null;
+        }
+    }
+
+    function positiveId(value) {
+        var normalized = String(value == null ? '' : value);
+        return /^[1-9][0-9]*$/.test(normalized) ? normalized : '';
+    }
+
+    function forEachFormData(data, callback) {
+        if (!data) {
+            return;
+        }
+
+        if (typeof data.forEach === 'function') {
+            data.forEach(function (value, name) {
+                callback(name, value);
+            });
+            return;
+        }
+
+        if (typeof data.entries === 'function') {
+            var iterator = data.entries();
+            var entry = iterator.next();
+            while (!entry.done) {
+                callback(entry.value[0], entry.value[1]);
+                entry = iterator.next();
+            }
+        }
+    }
+
+    function fingerprintValue(value) {
+        if (typeof value === 'string') {
+            return ['text', value];
+        }
+
+        return [
+            'file',
+            value && value.name ? String(value.name) : '',
+            value && typeof value.size === 'number' ? value.size : 0,
+            value && value.type ? String(value.type) : '',
+            value && typeof value.lastModified === 'number' ? value.lastModified : 0
+        ];
+    }
+
+    function fingerprintFormData(data) {
+        var values = [];
+
+        forEachFormData(data, function (name, value) {
+            name = String(name);
+            if (!FINGERPRINT_IGNORED_FIELDS[name]) {
+                values.push([name, fingerprintValue(value)]);
+            }
+        });
+
+        return JSON.stringify(values);
+    }
+
+    function normalizeUrl(url, baseUrl) {
+        try {
+            var normalized = new window.URL(String(url || ''), baseUrl || window.location.href);
+            normalized.hash = '';
+            return normalized.href;
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function isFormData(data, FormDataConstructor) {
+        if (
+            typeof FormDataConstructor === 'function'
+            && data instanceof FormDataConstructor
+        ) {
+            return true;
+        }
+
+        return Object.prototype.toString.call(data) === '[object FormData]';
+    }
+
+    function lastFormDataValue(data, name) {
+        var values;
+        var lastValue = '';
+
+        if (data && typeof data.getAll === 'function') {
+            values = data.getAll(name);
+            return values.length ? String(values[values.length - 1]) : '';
+        }
+
+        forEachFormData(data, function (entryName, value) {
+            if (String(entryName) === name) {
+                lastValue = String(value);
+            }
+        });
+        return lastValue;
+    }
+
+    function isSaveRequest(settings, formAction, FormDataConstructor, baseUrl) {
+        var method = settings && (settings.type || settings.method);
+        var data = settings && settings.data;
+        var requestUrl = normalizeUrl(settings && settings.url, baseUrl);
+        var actionUrl = normalizeUrl(formAction, baseUrl);
+
+        return !!settings
+            && String(method || '').toUpperCase() === 'POST'
+            && !!requestUrl
+            && requestUrl === actionUrl
+            && isFormData(data, FormDataConstructor)
+            && lastFormDataValue(data, 'do') === 'save';
+    }
+
+    function parseSaveResponse(data) {
+        var parsed = data;
+        if (typeof parsed === 'string') {
+            try {
+                parsed = JSON.parse(parsed);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        if (
+            !parsed
+            || (parsed.success !== 1 && parsed.success !== '1' && parsed.success !== true)
+        ) {
+            return null;
+        }
+
+        var cid = positiveId(parsed.cid);
+        if (!cid) {
+            return null;
+        }
+
+        return {
+            cid: cid
+        };
+    }
+
+    function getPreviewSource(latestCid, cidValue) {
+        return positiveId(latestCid) || positiveId(cidValue);
+    }
+
+    function buildPreviewUrl(template, cid) {
+        var sourceCid = positiveId(cid);
+        if (!sourceCid || typeof template !== 'string' || template.indexOf('{cid}') === -1) {
+            return '';
+        }
+
+        return template.replace(/\{cid\}/g, encodeURIComponent(sourceCid));
+    }
+
+    function openPreviewWindow(openWindow, url) {
+        var previewWindow;
+        try {
+            previewWindow = openWindow(url, '_blank');
+        } catch (error) {
+            return null;
+        }
+        if (!previewWindow) {
+            return null;
+        }
+
+        try {
+            previewWindow.opener = null;
+        } catch (error) {
+            // 个别浏览器会将 opener 暴露为只读属性。
+        }
+
+        return previewWindow;
+    }
+
+    function createElement(tagName, className, text) {
+        var element = document.createElement(tagName);
+        if (className) {
+            element.className = className;
+        }
+        if (typeof text === 'string') {
+            element.textContent = text;
+        }
+        return element;
+    }
+
+    function createActionMenu() {
+        var menu = createElement('div', 'void-home-preview-actions__menu');
+        var save = createElement('button', 'void-home-preview-actions__menu-item', '保存草稿并预览');
+        var previous = createElement('button', 'void-home-preview-actions__menu-item', '查看上次保存版本');
+        var cancel = createElement('button', 'void-home-preview-actions__menu-item void-home-preview-actions__menu-item--cancel', '取消');
+
+        menu.id = 'void-home-preview-menu';
+        menu.setAttribute('role', 'menu');
+        menu.hidden = true;
+
+        save.type = 'button';
+        save.setAttribute('role', 'menuitem');
+        save.setAttribute('data-action', 'save');
+
+        previous.type = 'button';
+        previous.setAttribute('role', 'menuitem');
+        previous.setAttribute('data-action', 'previous');
+
+        cancel.type = 'button';
+        cancel.setAttribute('role', 'menuitem');
+        cancel.setAttribute('data-action', 'cancel');
+
+        menu.appendChild(save);
+        menu.appendChild(previous);
+        menu.appendChild(cancel);
+
+        return {
+            cancel: cancel,
+            element: menu,
+            previous: previous,
+            save: save
+        };
+    }
+
+    function createActions() {
+        var root = createElement('section', 'void-home-preview-actions');
+        var summary = createElement('div', 'void-home-preview-actions__summary');
+        var status = createElement('span', 'void-home-preview-actions__status');
+        var control = createElement('div', 'void-home-preview-actions__control');
+        var trigger = createElement('button', 'btn void-home-preview-actions__trigger');
+        var triggerText = createElement('span', '', '首页预览 ↗');
+        var menu = createActionMenu();
+
+        root.id = 'void-home-preview-actions';
+        root.setAttribute('aria-label', '真实首页预览');
+
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        status.setAttribute('aria-atomic', 'true');
+
+        trigger.type = 'button';
+        trigger.setAttribute('aria-controls', menu.element.id);
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-haspopup', 'menu');
+
+        summary.appendChild(status);
+        trigger.appendChild(triggerText);
+        control.appendChild(trigger);
+        control.appendChild(menu.element);
+        root.appendChild(summary);
+        root.appendChild(control);
+
+        return {
+            control: control,
+            menu: menu,
+            root: root,
+            status: status,
+            trigger: trigger
+        };
+    }
+
+    function init() {
+        if (instance) {
+            return instance;
+        }
+
+        var form = document.querySelector('form[name="write_post"]');
+        var editArea = document.getElementById('wmd-editarea');
+        var config = window.VOIDHomePreviewConfig || {};
+        if (
+            !hasRequiredContext(form, config)
+            || !editArea
+            || !editArea.parentNode
+        ) {
+            return null;
+        }
+
+        var existing = document.getElementById('void-home-preview-actions');
+        if (existing) {
+            return null;
+        }
+
+        var ui = createActions();
+        var $form = $(form);
+        var $document = $(document);
+        var formAction = form.getAttribute('action') || form.action;
+        var latestCid = positiveId(($form.find('input[name="cid"]').first().val()));
+        var savedFingerprint = fingerprintFormData(new window.FormData(form));
+        var activeSaveRequests = 0;
+        var awaitingPreviewWindow = null;
+        var pendingPreviewWindow = null;
+        var observer = null;
+        var saveCycleFailed = false;
+        var statusTimer = null;
+        var destroyed = false;
+
+        function currentFingerprint() {
+            return fingerprintFormData(new window.FormData(form));
+        }
+
+        function currentSource() {
+            return getPreviewSource(
+                latestCid,
+                $form.find('input[name="cid"]').first().val()
+            );
+        }
+
+        function isDirty() {
+            return currentFingerprint() !== savedFingerprint;
+        }
+
+        function clearStatusTimer() {
+            if (statusTimer) {
+                window.clearTimeout(statusTimer);
+                statusTimer = null;
+            }
+        }
+
+        function setStatus(message, state, resetDelay) {
+            clearStatusTimer();
+            ui.status.textContent = message;
+            ui.status.setAttribute('data-state', state || 'default');
+            if (resetDelay) {
+                statusTimer = window.setTimeout(syncStatus, resetDelay);
+            }
+        }
+
+        function syncStatus() {
+            if (destroyed) {
+                return;
+            }
+
+            if (activeSaveRequests > 0) {
+                setStatus('正在保存草稿…', 'saving');
+            } else if (isDirty()) {
+                setStatus('有未保存修改', 'dirty');
+            } else if (currentSource()) {
+                setStatus('已保存', 'saved');
+            } else {
+                setStatus('尚未保存', 'empty');
+            }
+        }
+
+        function closeMenu(restoreFocus) {
+            ui.menu.element.hidden = true;
+            ui.trigger.setAttribute('aria-expanded', 'false');
+            if (restoreFocus) {
+                ui.trigger.focus();
+            }
+        }
+
+        function enabledMenuItems() {
+            return $(ui.menu.element)
+                .find('[role="menuitem"]:not(:disabled):not([hidden])')
+                .toArray();
+        }
+
+        function openMenu(focusLast) {
+            var source = currentSource();
+            ui.menu.previous.hidden = !source;
+            ui.menu.previous.disabled = !source;
+            ui.menu.previous.setAttribute('aria-disabled', source ? 'false' : 'true');
+            ui.menu.element.hidden = false;
+            ui.trigger.setAttribute('aria-expanded', 'true');
+
+            var items = enabledMenuItems();
+            if (items.length) {
+                (focusLast ? items[items.length - 1] : items[0]).focus();
+            }
+        }
+
+        function closePreviewWindow(previewWindow) {
+            if (!previewWindow || previewWindow.closed) {
+                return;
+            }
+
+            try {
+                previewWindow.close();
+            } catch (error) {
+                // 浏览器已关闭的窗口无需再次清理。
+            }
+        }
+
+        function failPreviewSave(previewWindow, message) {
+            if (awaitingPreviewWindow === previewWindow) {
+                awaitingPreviewWindow = null;
+            }
+            if (pendingPreviewWindow === previewWindow) {
+                pendingPreviewWindow = null;
+            }
+            closePreviewWindow(previewWindow);
+            setStatus(message || '保存失败，未打开首页预览', 'error');
+        }
+
+        function navigatePreview(previewWindow, sourceCid) {
+            var previewUrl = buildPreviewUrl(config.urlTemplate, sourceCid);
+            if (!previewWindow || previewWindow.closed || !previewUrl) {
+                failPreviewSave(previewWindow, '无法打开首页预览，请重试');
+                return false;
+            }
+
+            try {
+                if (previewWindow.location && typeof previewWindow.location.replace === 'function') {
+                    previewWindow.location.replace(previewUrl);
+                } else {
+                    previewWindow.location.href = previewUrl;
+                }
+            } catch (error) {
+                failPreviewSave(previewWindow, '无法打开首页预览，请重试');
+                return false;
+            }
+
+            setStatus('已在新标签页打开', 'opened', 3000);
+            return true;
+        }
+
+        function openSavedPreview(sourceCid) {
+            var previewWindow = openPreviewWindow(function (url, target) {
+                return window.open(url, target);
+            }, '');
+
+            if (!previewWindow) {
+                setStatus('新标签页被拦截，请允许弹出窗口后重试', 'error');
+                return false;
+            }
+
+            return navigatePreview(previewWindow, sourceCid);
+        }
+
+        function requestSaveForPreview(previewWindow) {
+            if (
+                destroyed
+                || !window.Typecho
+                || typeof window.Typecho.savePost !== 'function'
+            ) {
+                failPreviewSave(previewWindow, '无法保存草稿，请刷新后重试');
+                return;
+            }
+
+            awaitingPreviewWindow = previewWindow;
+            setStatus('正在保存草稿…', 'saving');
+            try {
+                $form.trigger('datachange');
+                window.Typecho.savePost();
+            } catch (error) {
+                awaitingPreviewWindow = null;
+                failPreviewSave(previewWindow, '保存失败，未打开首页预览');
+                return;
+            }
+
+            window.setTimeout(function () {
+                if (awaitingPreviewWindow === previewWindow) {
+                    failPreviewSave(previewWindow, '未能启动保存，请重试');
+                }
+            }, 0);
+        }
+
+        function startSaveAndPreview() {
+            var previewWindow = openPreviewWindow(function (url, target) {
+                return window.open(url, target);
+            }, '');
+
+            if (!previewWindow) {
+                setStatus('新标签页被拦截，草稿尚未保存', 'error');
+                return;
+            }
+
+            closeMenu(false);
+            requestSaveForPreview(previewWindow);
+        }
+
+        function onAjaxSend(event, xhr, settings) {
+            if (!isSaveRequest(
+                settings,
+                formAction,
+                window.FormData,
+                window.location.href
+            )) {
+                return;
+            }
+
+            var requestState = {
+                failed: false,
+                fingerprint: fingerprintFormData(settings.data),
+                previewWindow: awaitingPreviewWindow
+            };
+
+            awaitingPreviewWindow = null;
+            if (requestState.previewWindow) {
+                pendingPreviewWindow = requestState.previewWindow;
+            }
+            xhr[REQUEST_STATE_KEY] = requestState;
+            if (!activeSaveRequests) {
+                saveCycleFailed = false;
+            }
+            activeSaveRequests++;
+            if (!ui.menu.element.hidden) {
+                closeMenu(true);
+            }
+            ui.trigger.disabled = true;
+            ui.trigger.setAttribute('aria-busy', 'true');
+            setStatus('正在保存草稿…', 'saving');
+        }
+
+        function onAjaxSuccess(event, xhr, settings, data) {
+            var requestState = xhr[REQUEST_STATE_KEY];
+            if (!requestState) {
+                return;
+            }
+
+            var response = parseSaveResponse(data);
+            if (!response) {
+                requestState.failed = true;
+                saveCycleFailed = true;
+                if (requestState.previewWindow) {
+                    failPreviewSave(requestState.previewWindow, '保存响应无效，未打开首页预览');
+                } else {
+                    setStatus('保存失败，请重试', 'error');
+                }
+                return;
+            }
+
+            latestCid = response.cid;
+            savedFingerprint = requestState.fingerprint;
+
+            if (requestState.previewWindow) {
+                setStatus('正在确认最新保存版本…', 'saving');
+            } else {
+                syncStatus();
+            }
+        }
+
+        function onAjaxError(event, xhr) {
+            var requestState = xhr[REQUEST_STATE_KEY];
+            if (!requestState) {
+                return;
+            }
+
+            requestState.failed = true;
+            saveCycleFailed = true;
+            if (requestState.previewWindow) {
+                failPreviewSave(requestState.previewWindow, '保存失败，未打开首页预览');
+            } else {
+                setStatus('保存失败，请重试', 'error');
+            }
+        }
+
+        function onAjaxComplete(event, xhr) {
+            var requestState = xhr[REQUEST_STATE_KEY];
+            if (!requestState) {
+                return;
+            }
+
+            activeSaveRequests = Math.max(0, activeSaveRequests - 1);
+
+            try {
+                delete xhr[REQUEST_STATE_KEY];
+            } catch (error) {
+                xhr[REQUEST_STATE_KEY] = null;
+            }
+
+            if (activeSaveRequests) {
+                return;
+            }
+
+            ui.trigger.disabled = false;
+            ui.trigger.removeAttribute('aria-busy');
+
+            if (pendingPreviewWindow) {
+                var previewWindow = pendingPreviewWindow;
+                if (currentFingerprint() === savedFingerprint) {
+                    pendingPreviewWindow = null;
+                    navigatePreview(previewWindow, latestCid);
+                } else {
+                    setStatus('检测到新的修改，正在再次保存…', 'saving');
+                    requestSaveForPreview(previewWindow);
+                }
+                return;
+            }
+
+            if (!saveCycleFailed) {
+                syncStatus();
+            }
+        }
+
+        function onTriggerClick() {
+            if (!ui.menu.element.hidden) {
+                closeMenu(false);
+                return;
+            }
+
+            var source = currentSource();
+            if (!isDirty() && source) {
+                openSavedPreview(source);
+                return;
+            }
+
+            openMenu(false);
+        }
+
+        function onTriggerKeydown(event) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                openMenu(event.key === 'ArrowUp');
+            } else if (event.key === 'Escape' && !ui.menu.element.hidden) {
+                event.preventDefault();
+                closeMenu(true);
+            }
+        }
+
+        function onMenuKeydown(event) {
+            var items = enabledMenuItems();
+            var currentIndex = items.indexOf(document.activeElement);
+            var nextIndex;
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeMenu(true);
+                return;
+            }
+
+            if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault();
+                items[event.key === 'Home' ? 0 : items.length - 1].focus();
+                return;
+            }
+
+            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+                return;
+            }
+
+            event.preventDefault();
+            nextIndex = currentIndex + (event.key === 'ArrowDown' ? 1 : -1);
+            if (nextIndex < 0) {
+                nextIndex = items.length - 1;
+            } else if (nextIndex >= items.length) {
+                nextIndex = 0;
+            }
+            items[nextIndex].focus();
+        }
+
+        function onDocumentClick(event) {
+            if (!ui.menu.element.hidden && !ui.root.contains(event.target)) {
+                closeMenu(false);
+            }
+        }
+
+        function onFormChange() {
+            if (!destroyed) {
+                syncStatus();
+            }
+        }
+
+        function placeActions() {
+            var parent = editArea.parentNode;
+            var stats = document.getElementById('void-editor-stats');
+            if (stats && stats.parentNode === parent) {
+                if (ui.root.nextSibling !== stats) {
+                    parent.insertBefore(ui.root, stats);
+                }
+                return true;
+            }
+
+            if (ui.root.parentNode !== parent) {
+                parent.insertBefore(ui.root, editArea.nextSibling);
+            }
+            return false;
+        }
+
+        function destroy() {
+            if (destroyed) {
+                return;
+            }
+
+            destroyed = true;
+            clearStatusTimer();
+            closePreviewWindow(awaitingPreviewWindow);
+            if (pendingPreviewWindow !== awaitingPreviewWindow) {
+                closePreviewWindow(pendingPreviewWindow);
+            }
+            awaitingPreviewWindow = null;
+            pendingPreviewWindow = null;
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+            ui.trigger.removeEventListener('click', onTriggerClick);
+            ui.trigger.removeEventListener('keydown', onTriggerKeydown);
+            ui.menu.element.removeEventListener('keydown', onMenuKeydown);
+            ui.menu.save.removeEventListener('click', startSaveAndPreview);
+            ui.menu.previous.removeEventListener('click', openPrevious);
+            ui.menu.cancel.removeEventListener('click', cancelMenu);
+            document.removeEventListener('click', onDocumentClick);
+            $form.off('.voidHomePreview');
+            $document.off('.voidHomePreview');
+            if (ui.root.parentNode) {
+                ui.root.parentNode.removeChild(ui.root);
+            }
+            instance = null;
+        }
+
+        function openPrevious() {
+            var source = currentSource();
+            closeMenu(false);
+            if (source) {
+                openSavedPreview(source);
+            }
+        }
+
+        function cancelMenu() {
+            closeMenu(true);
+        }
+
+        placeActions();
+        if (
+            !document.getElementById('void-editor-stats')
+            && typeof window.MutationObserver === 'function'
+        ) {
+            observer = new window.MutationObserver(function () {
+                if (placeActions() && observer) {
+                    observer.disconnect();
+                    observer = null;
+                }
+            });
+            observer.observe(editArea.parentNode, { childList: true });
+        }
+
+        ui.trigger.addEventListener('click', onTriggerClick);
+        ui.trigger.addEventListener('keydown', onTriggerKeydown);
+        ui.menu.element.addEventListener('keydown', onMenuKeydown);
+        ui.menu.save.addEventListener('click', startSaveAndPreview);
+        ui.menu.previous.addEventListener('click', openPrevious);
+        ui.menu.cancel.addEventListener('click', cancelMenu);
+        document.addEventListener('click', onDocumentClick);
+        $form.on(
+            'input.voidHomePreview change.voidHomePreview write.voidHomePreview datachange.voidHomePreview',
+            onFormChange
+        );
+        $document.on('ajaxSend.voidHomePreview', onAjaxSend);
+        $document.on('ajaxSuccess.voidHomePreview', onAjaxSuccess);
+        $document.on('ajaxError.voidHomePreview', onAjaxError);
+        $document.on('ajaxComplete.voidHomePreview', onAjaxComplete);
+
+        instance = {
+            destroy: destroy,
+            element: ui.root
+        };
+        stopBootstrapObserver();
+        syncStatus();
+        return instance;
+    }
+
+    function start() {
+        if (instance) {
+            stopBootstrapObserver();
+            return instance;
+        }
+
+        var form = document.querySelector('form[name="write_post"]');
+        var config = window.VOIDHomePreviewConfig || {};
+        if (!hasRequiredContext(form, config)) {
+            stopBootstrapObserver();
+            return null;
+        }
+
+        if (document.getElementById('wmd-editarea')) {
+            return init();
+        }
+
+        if (!bootstrapObserver && typeof window.MutationObserver === 'function') {
+            bootstrapObserver = new window.MutationObserver(function () {
+                if (!document.getElementById('wmd-editarea')) {
+                    return;
+                }
+
+                if (init() || document.getElementById('void-home-preview-actions')) {
+                    stopBootstrapObserver();
+                }
+            });
+            bootstrapObserver.observe(form, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        return null;
+    }
+
+    return {
+        __test: {
+            buildPreviewUrl: buildPreviewUrl,
+            fingerprintFormData: fingerprintFormData,
+            getPreviewSource: getPreviewSource,
+            isSaveRequest: isSaveRequest,
+            openPreviewWindow: openPreviewWindow,
+            parseSaveResponse: parseSaveResponse
+        },
+        init: init,
+        start: start
+    };
+})(window.jQuery);
+
 $(function () {
     initEditorToolbar();
 
     if (window.VOID_Editor_Admin && typeof window.VOID_Editor_Admin.init === 'function') {
         window.VOID_Editor_Admin.init();
+    }
+
+    if (window.VOID_HomePreview && typeof window.VOID_HomePreview.start === 'function') {
+        window.VOID_HomePreview.start();
     }
 });

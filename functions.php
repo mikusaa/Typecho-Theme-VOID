@@ -12,6 +12,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 }
 
 require_once('libs/Utils.php');
+require_once('libs/HomePreview.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
 
@@ -111,6 +112,7 @@ function themeInit($archive = null)
     }
 
     VOID_refreshArchiveComputedFields($archive);
+    HomePreview::handle($archive);
 }
 
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
