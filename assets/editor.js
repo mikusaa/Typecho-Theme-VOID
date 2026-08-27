@@ -1336,74 +1336,55 @@ var VOID_HomePreview = (function ($) {
         return element;
     }
 
-    function createActionMenu() {
-        var menu = createElement('div', 'void-home-preview-actions__menu');
-        var save = createElement('button', 'void-home-preview-actions__menu-item', '保存草稿并预览');
-        var previous = createElement('button', 'void-home-preview-actions__menu-item', '查看上次保存版本');
-        var cancel = createElement('button', 'void-home-preview-actions__menu-item void-home-preview-actions__menu-item--cancel', '取消');
-
-        menu.id = 'void-home-preview-menu';
-        menu.setAttribute('role', 'menu');
-        menu.hidden = true;
-
-        save.type = 'button';
-        save.setAttribute('role', 'menuitem');
-        save.setAttribute('data-action', 'save');
-
-        previous.type = 'button';
-        previous.setAttribute('role', 'menuitem');
-        previous.setAttribute('data-action', 'previous');
-
-        cancel.type = 'button';
-        cancel.setAttribute('role', 'menuitem');
-        cancel.setAttribute('data-action', 'cancel');
-
-        menu.appendChild(save);
-        menu.appendChild(previous);
-        menu.appendChild(cancel);
-
-        return {
-            cancel: cancel,
-            element: menu,
-            previous: previous,
-            save: save
-        };
-    }
-
     function createActions() {
         var root = createElement('section', 'void-home-preview-actions');
         var summary = createElement('div', 'void-home-preview-actions__summary');
+        var title = createElement('span', 'void-home-preview-actions__title', '首页预览');
         var status = createElement('span', 'void-home-preview-actions__status');
-        var control = createElement('div', 'void-home-preview-actions__control');
-        var trigger = createElement('button', 'btn void-home-preview-actions__trigger');
-        var triggerText = createElement('span', '', '首页预览 ↗');
-        var menu = createActionMenu();
+        var controls = createElement('div', 'void-home-preview-actions__controls');
+        var primary = createElement(
+            'button',
+            'void-home-preview-actions__button void-home-preview-actions__button--primary',
+            '保存并预览 ↗'
+        );
+        var previous = createElement(
+            'button',
+            'void-home-preview-actions__button void-home-preview-actions__button--secondary',
+            '预览上次保存 ↗'
+        );
 
         root.id = 'void-home-preview-actions';
-        root.setAttribute('aria-label', '真实首页预览');
+        root.setAttribute('aria-labelledby', 'void-home-preview-title');
 
+        title.id = 'void-home-preview-title';
+
+        status.id = 'void-home-preview-status';
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
         status.setAttribute('aria-atomic', 'true');
 
-        trigger.type = 'button';
-        trigger.setAttribute('aria-controls', menu.element.id);
-        trigger.setAttribute('aria-expanded', 'false');
-        trigger.setAttribute('aria-haspopup', 'menu');
+        primary.type = 'button';
+        primary.setAttribute('data-action', 'preview');
+        primary.setAttribute('aria-describedby', status.id);
 
+        previous.type = 'button';
+        previous.hidden = true;
+        previous.setAttribute('data-action', 'previous');
+        previous.setAttribute('aria-describedby', status.id);
+
+        summary.appendChild(title);
         summary.appendChild(status);
-        trigger.appendChild(triggerText);
-        control.appendChild(trigger);
-        control.appendChild(menu.element);
+        controls.appendChild(primary);
+        controls.appendChild(previous);
         root.appendChild(summary);
-        root.appendChild(control);
+        root.appendChild(controls);
 
         return {
-            control: control,
-            menu: menu,
+            controls: controls,
+            previous: previous,
+            primary: primary,
             root: root,
-            status: status,
-            trigger: trigger
+            status: status
         };
     }
 
@@ -1473,11 +1454,32 @@ var VOID_HomePreview = (function ($) {
             }
         }
 
+        function syncActions() {
+            var source = currentSource();
+            var dirty = isDirty();
+            var busy = activeSaveRequests > 0;
+
+            ui.primary.textContent = source && !dirty
+                ? '打开首页预览 ↗'
+                : '保存并预览 ↗';
+            ui.primary.disabled = busy;
+            if (busy) {
+                ui.primary.setAttribute('aria-busy', 'true');
+            } else {
+                ui.primary.removeAttribute('aria-busy');
+            }
+
+            ui.previous.hidden = !source || !dirty;
+            ui.previous.disabled = busy || !source;
+            ui.previous.setAttribute('aria-disabled', ui.previous.disabled ? 'true' : 'false');
+        }
+
         function syncStatus() {
             if (destroyed) {
                 return;
             }
 
+            syncActions();
             if (activeSaveRequests > 0) {
                 setStatus('正在保存草稿…', 'saving');
             } else if (isDirty()) {
@@ -1486,34 +1488,6 @@ var VOID_HomePreview = (function ($) {
                 setStatus('已保存', 'saved');
             } else {
                 setStatus('尚未保存', 'empty');
-            }
-        }
-
-        function closeMenu(restoreFocus) {
-            ui.menu.element.hidden = true;
-            ui.trigger.setAttribute('aria-expanded', 'false');
-            if (restoreFocus) {
-                ui.trigger.focus();
-            }
-        }
-
-        function enabledMenuItems() {
-            return $(ui.menu.element)
-                .find('[role="menuitem"]:not(:disabled):not([hidden])')
-                .toArray();
-        }
-
-        function openMenu(focusLast) {
-            var source = currentSource();
-            ui.menu.previous.hidden = !source;
-            ui.menu.previous.disabled = !source;
-            ui.menu.previous.setAttribute('aria-disabled', source ? 'false' : 'true');
-            ui.menu.element.hidden = false;
-            ui.trigger.setAttribute('aria-expanded', 'true');
-
-            var items = enabledMenuItems();
-            if (items.length) {
-                (focusLast ? items[items.length - 1] : items[0]).focus();
             }
         }
 
@@ -1613,7 +1587,6 @@ var VOID_HomePreview = (function ($) {
                 return;
             }
 
-            closeMenu(false);
             requestSaveForPreview(previewWindow);
         }
 
@@ -1642,11 +1615,7 @@ var VOID_HomePreview = (function ($) {
                 saveCycleFailed = false;
             }
             activeSaveRequests++;
-            if (!ui.menu.element.hidden) {
-                closeMenu(true);
-            }
-            ui.trigger.disabled = true;
-            ui.trigger.setAttribute('aria-busy', 'true');
+            syncActions();
             setStatus('正在保存草稿…', 'saving');
         }
 
@@ -1707,12 +1676,10 @@ var VOID_HomePreview = (function ($) {
                 xhr[REQUEST_STATE_KEY] = null;
             }
 
+            syncActions();
             if (activeSaveRequests) {
                 return;
             }
-
-            ui.trigger.disabled = false;
-            ui.trigger.removeAttribute('aria-busy');
 
             if (pendingPreviewWindow) {
                 var previewWindow = pendingPreviewWindow;
@@ -1731,66 +1698,14 @@ var VOID_HomePreview = (function ($) {
             }
         }
 
-        function onTriggerClick() {
-            if (!ui.menu.element.hidden) {
-                closeMenu(false);
-                return;
-            }
-
+        function onPrimaryClick() {
             var source = currentSource();
             if (!isDirty() && source) {
                 openSavedPreview(source);
                 return;
             }
 
-            openMenu(false);
-        }
-
-        function onTriggerKeydown(event) {
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-                openMenu(event.key === 'ArrowUp');
-            } else if (event.key === 'Escape' && !ui.menu.element.hidden) {
-                event.preventDefault();
-                closeMenu(true);
-            }
-        }
-
-        function onMenuKeydown(event) {
-            var items = enabledMenuItems();
-            var currentIndex = items.indexOf(document.activeElement);
-            var nextIndex;
-
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                closeMenu(true);
-                return;
-            }
-
-            if (event.key === 'Home' || event.key === 'End') {
-                event.preventDefault();
-                items[event.key === 'Home' ? 0 : items.length - 1].focus();
-                return;
-            }
-
-            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
-                return;
-            }
-
-            event.preventDefault();
-            nextIndex = currentIndex + (event.key === 'ArrowDown' ? 1 : -1);
-            if (nextIndex < 0) {
-                nextIndex = items.length - 1;
-            } else if (nextIndex >= items.length) {
-                nextIndex = 0;
-            }
-            items[nextIndex].focus();
-        }
-
-        function onDocumentClick(event) {
-            if (!ui.menu.element.hidden && !ui.root.contains(event.target)) {
-                closeMenu(false);
-            }
+            startSaveAndPreview();
         }
 
         function onFormChange() {
@@ -1832,13 +1747,8 @@ var VOID_HomePreview = (function ($) {
                 observer.disconnect();
                 observer = null;
             }
-            ui.trigger.removeEventListener('click', onTriggerClick);
-            ui.trigger.removeEventListener('keydown', onTriggerKeydown);
-            ui.menu.element.removeEventListener('keydown', onMenuKeydown);
-            ui.menu.save.removeEventListener('click', startSaveAndPreview);
-            ui.menu.previous.removeEventListener('click', openPrevious);
-            ui.menu.cancel.removeEventListener('click', cancelMenu);
-            document.removeEventListener('click', onDocumentClick);
+            ui.primary.removeEventListener('click', onPrimaryClick);
+            ui.previous.removeEventListener('click', openPrevious);
             $form.off('.voidHomePreview');
             $document.off('.voidHomePreview');
             if (ui.root.parentNode) {
@@ -1849,14 +1759,9 @@ var VOID_HomePreview = (function ($) {
 
         function openPrevious() {
             var source = currentSource();
-            closeMenu(false);
             if (source) {
                 openSavedPreview(source);
             }
-        }
-
-        function cancelMenu() {
-            closeMenu(true);
         }
 
         placeActions();
@@ -1873,13 +1778,8 @@ var VOID_HomePreview = (function ($) {
             observer.observe(editArea.parentNode, { childList: true });
         }
 
-        ui.trigger.addEventListener('click', onTriggerClick);
-        ui.trigger.addEventListener('keydown', onTriggerKeydown);
-        ui.menu.element.addEventListener('keydown', onMenuKeydown);
-        ui.menu.save.addEventListener('click', startSaveAndPreview);
-        ui.menu.previous.addEventListener('click', openPrevious);
-        ui.menu.cancel.addEventListener('click', cancelMenu);
-        document.addEventListener('click', onDocumentClick);
+        ui.primary.addEventListener('click', onPrimaryClick);
+        ui.previous.addEventListener('click', openPrevious);
         $form.on(
             'input.voidHomePreview change.voidHomePreview write.voidHomePreview datachange.voidHomePreview',
             onFormChange

@@ -678,7 +678,7 @@ test('popup blocking returns before any draft save can start', () => {
 
     assert.match(
         saveFlow,
-        /if \(!previewWindow\) \{[\s\S]*?草稿尚未保存[\s\S]*?return;[\s\S]*?\}\s*closeMenu\(false\);\s*requestSaveForPreview\(previewWindow\);/
+        /if \(!previewWindow\) \{[\s\S]*?草稿尚未保存[\s\S]*?return;[\s\S]*?\}\s*requestSaveForPreview\(previewWindow\);/
     );
 });
 
@@ -692,25 +692,28 @@ test('editor integration adds an independent post-only action band and leaves na
     assert.match(homePreviewSource, /parent\.insertBefore\(ui\.root, editArea\.nextSibling\)/);
     assert.match(homePreviewSource, /parent\.insertBefore\(ui\.root, stats\)/);
     assert.match(homePreviewSource, /new window\.MutationObserver/);
-    assert.match(homePreviewSource, /'首页预览 ↗'/);
+    assert.match(homePreviewSource, /'首页预览'/);
     assert.doesNotMatch(homePreviewSource, /i-exlink/);
-    assert.match(homePreviewSource, /'保存草稿并预览'/);
-    assert.match(homePreviewSource, /'查看上次保存版本'/);
-    assert.match(homePreviewSource, /'取消'/);
-    assert.match(homePreviewSource, /ui\.menu\.previous\.hidden = !source/);
+    assert.match(homePreviewSource, /'保存并预览 ↗'/);
+    assert.match(homePreviewSource, /'打开首页预览 ↗'/);
+    assert.match(homePreviewSource, /'预览上次保存 ↗'/);
+    assert.doesNotMatch(homePreviewSource, /role', 'menu|aria-haspopup|取消/);
+    assert.match(homePreviewSource, /ui\.previous\.hidden = !source \|\| !dirty/);
 });
 
 test('matching saves own the busy state until ajaxComplete and editor changes refresh dirty state', () => {
+    const actionsFlow = sourceBetween(homePreviewSource, 'function syncActions()', 'function syncStatus()');
     const sendFlow = sourceBetween(homePreviewSource, 'function onAjaxSend(', 'function onAjaxSuccess(');
-    const completeFlow = sourceBetween(homePreviewSource, 'function onAjaxComplete(', 'function onTriggerClick(');
+    const completeFlow = sourceBetween(homePreviewSource, 'function onAjaxComplete(', 'function onPrimaryClick(');
 
     assert.match(sendFlow, /if \(!isSaveRequest\(/);
     assert.match(sendFlow, /activeSaveRequests\+\+/);
-    assert.match(sendFlow, /ui\.trigger\.disabled = true/);
-    assert.match(sendFlow, /ui\.trigger\.setAttribute\('aria-busy', 'true'\)/);
+    assert.match(sendFlow, /syncActions\(\)/);
+    assert.match(actionsFlow, /ui\.primary\.disabled = busy/);
+    assert.match(actionsFlow, /ui\.primary\.setAttribute\('aria-busy', 'true'\)/);
+    assert.match(actionsFlow, /ui\.previous\.disabled = busy \|\| !source/);
     assert.match(completeFlow, /activeSaveRequests = Math\.max\(0, activeSaveRequests - 1\)/);
-    assert.match(completeFlow, /ui\.trigger\.disabled = false/);
-    assert.match(completeFlow, /ui\.trigger\.removeAttribute\('aria-busy'\)/);
+    assert.match(completeFlow, /syncActions\(\)/);
     assert.match(
         homePreviewSource,
         /'input\.voidHomePreview change\.voidHomePreview write\.voidHomePreview datachange\.voidHomePreview'/
@@ -736,7 +739,7 @@ test('preview saves close failed blank tabs and settle races after active saves'
     const completeFlow = sourceBetween(
         homePreviewSource,
         'function onAjaxComplete(',
-        'function onTriggerClick('
+        'function onPrimaryClick('
     );
 
     assert.match(saveFlow, /try \{[\s\S]*?trigger\('datachange'\)[\s\S]*?Typecho\.savePost\(\)[\s\S]*?\} catch \(error\) \{[\s\S]*?failPreviewSave/);
@@ -768,12 +771,40 @@ test('both saved and dirty preview paths detach an empty tab before navigation',
 });
 
 test('previous-version preview never saves and the module does not enter the publish chain', () => {
-    const previousFlow = sourceBetween(homePreviewSource, 'function openPrevious()', 'function cancelMenu()');
+    const previousFlow = sourceBetween(homePreviewSource, 'function openPrevious()', 'placeActions();');
 
     assert.match(previousFlow, /openSavedPreview\(source\)/);
     assert.doesNotMatch(previousFlow, /savePost|datachange/);
     assert.doesNotMatch(homePreviewSource, /finishPublish|finishSave|\.submit\s*\(|visibility/);
     assert.equal((homePreviewSource.match(/Typecho\.savePost\(\)/g) || []).length, 1);
+});
+
+test('inline actions adapt to saved and dirty editor states without a menu', () => {
+    const harness = createHomePreviewHarness();
+    harness.api.init();
+
+    const primary = harness.document.querySelector('[data-action="preview"]');
+    const previous = harness.document.querySelector('[data-action="previous"]');
+    const status = harness.document.querySelector('.void-home-preview-actions__status');
+
+    assert.equal(primary.textContent, '打开首页预览 ↗');
+    assert.equal(previous.hidden, true);
+    assert.equal(status.textContent, '已保存');
+
+    harness.text.value = '未保存的正文';
+    harness.jQuery(harness.form).trigger('datachange');
+
+    assert.equal(primary.textContent, '保存并预览 ↗');
+    assert.equal(previous.hidden, false);
+    assert.equal(previous.disabled, false);
+    assert.equal(status.textContent, '有未保存修改');
+
+    harness.click(previous);
+    assert.equal(harness.requests.length, 0, 'previous-version preview never starts a save');
+    assert.equal(
+        harness.openedWindows[0].location.href,
+        'https://example.test/?void_home_preview=42&_=token'
+    );
 });
 
 test('late Markdown edit area discovery initializes the action band exactly once', () => {
@@ -812,10 +843,8 @@ test('concurrent saves converge before preview navigation or a serial repair sav
         harness.text.value = text;
         harness.jQuery(harness.form).trigger('datachange');
 
-        const trigger = harness.document.querySelector('.void-home-preview-actions__trigger');
-        harness.click(trigger);
-        const save = harness.document.querySelector('[data-action="save"]');
-        harness.click(save);
+        const preview = harness.document.querySelector('[data-action="preview"]');
+        harness.click(preview);
 
         assert.equal(harness.requests.length, 1, 'the preview starts one native save');
         assert.equal(harness.openedWindows.length, 1, 'the preview owns one detached tab');
@@ -883,17 +912,18 @@ test('concurrent saves converge before preview navigation or a serial repair sav
     });
 });
 
-test('action band has narrow-screen, dark-mode, hidden-menu and fullscreen CSS contracts', () => {
-    assert.match(editorCssSource, /\.void-home-preview-actions__menu\[hidden\][\s\S]*?display: none !important/);
+test('action band has unified panel, responsive, dark-mode and fullscreen CSS contracts', () => {
+    assert.match(editorCssSource, /\.void-home-preview-actions \{[\s\S]*?border-radius: 14px;[\s\S]*?box-shadow:/);
+    assert.match(editorCssSource, /\.void-home-preview-actions__button\[hidden\][\s\S]*?display: none !important/);
     assert.match(editorCssSource, /\.fullscreen \.void-home-preview-actions[\s\S]*?display: none !important/);
     assert.match(editorCssSource, /html\[data-typecho-theme="dark"\][\s\S]*?\.void-home-preview-actions/);
     assert.match(
         editorCssSource,
-        /@media \(max-width: 420px\)[\s\S]*?\.void-home-preview-actions[\s\S]*?\.void-home-preview-actions__trigger/
+        /@media \(max-width: 560px\)[\s\S]*?\.void-home-preview-actions__controls[\s\S]*?\.void-home-preview-actions__button/
     );
     assert.match(
         editorCssSource,
-        /@media \(max-width: 340px\)[\s\S]*?\.void-home-preview-actions__trigger/
+        /@media \(max-width: 360px\)[\s\S]*?\.void-home-preview-actions__controls[\s\S]*?flex-direction: column/
     );
-    assert.match(editorCssSource, /max-width: calc\(100vw - 32px\)/);
+    assert.doesNotMatch(editorCssSource, /\.void-home-preview-actions__menu/);
 });
