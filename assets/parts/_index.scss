@@ -295,7 +295,7 @@ section#index-list{
                 border-color: $td-borderColor;
             }
             margin-bottom: 30px;
-            transition: $animationTime-fast $animationTimingFunc opacity, $animationTime-fast $animationTimingFunc border;
+            transition: $animationTime-fast $animationTimingFunc border;
             @media screen and (min-width: 767.5px) {
                 padding-bottom: 0;
                 border: none;
@@ -311,7 +311,6 @@ section#index-list{
             }
             .single-col & {
                 width: 100%;
-                opacity: 1;
             }
             article {
                 position: relative;
@@ -452,5 +451,26 @@ section#index-list{
                 }
             }
         }
+    }
+}
+
+html.void-card-cover-transition section#index-list .banner img[data-void-card-cover] {
+    opacity: 0;
+    &.loaded {
+        opacity: 1;
+        transition: opacity $animationTime-very-slow $animationTimingFunc;
+    }
+    &.error {
+        opacity: 1;
+        transition: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    section#index-list.float-up {
+        animation: none;
+    }
+    html.void-card-cover-transition section#index-list .banner img[data-void-card-cover] {
+        transition: none;
     }
 }

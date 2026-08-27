@@ -42,36 +42,33 @@ if(!Utils::isPjax()){
                         : ' width="' . $bannerDimensions[0] . '" height="' . $bannerDimensions[1] . '"';
                     $bannerAsCover = (string) $this->fields->bannerascover;
                     if($bannerUrl == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
+                    $showFullContent = (string) $this->fields->showfullcontent === '1';
+                    $effectiveBannerAsCover = $showFullContent && $bannerAsCover === '2'
+                        ? '1'
+                        : $bannerAsCover;
+                    $renderBanner = $bannerUrl !== '' && $effectiveBannerAsCover !== '0';
                 ?>
-                <li id="p-<?php echo $postId; ?>" class="masonry-item style-<?php
-                        if($this->fields->showfullcontent=='1') {
-                            if($bannerAsCover == '2')
-                                echo '1';
-                            echo ' full-content';                        
-                        } else {
-                            echo $bannerAsCover;
-                        }
-                    ?>">
+                <li id="p-<?php echo $postId; ?>" class="masonry-item style-<?php echo $effectiveBannerAsCover; ?><?php if($showFullContent) echo ' full-content'; ?>">
                 
-                    <?php if($this->fields->showfullcontent != '1'): ?>
+                    <?php if(!$showFullContent): ?>
                         <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                     <?php endif; ?>
                         <article class="yue">
-                            <?php if($bannerUrl != ''): ?>
-                            <?php if($this->fields->showfullcontent == '1'): ?>
+                            <?php if($renderBanner): ?>
+                            <?php if($showFullContent): ?>
                                 <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                             <?php endif; ?>
                                 <div class="banner">
                                     <?php $priorityBannerCount++; ?>
                                     <?php if ($priorityBannerCount == 1): ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async" data-void-card-cover>
                                     <?php elseif ($priorityBannerCount == 2): ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async" data-void-card-cover>
                                     <?php else: ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async" data-void-card-cover>
                                     <?php endif; ?>
                                 </div>
-                            <?php if($this->fields->showfullcontent == '1'): ?>
+                            <?php if($showFullContent): ?>
                                 </a>
                             <?php endif; ?>
                             <?php endif; ?>
@@ -83,18 +80,18 @@ if(!Utils::isPjax()){
                                     <?php endif; ?>
                                 </div>
 
-                                <?php if($this->fields->showfullcontent == '1'): ?>
+                                <?php if($showFullContent): ?>
                                     <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                                 <?php endif; ?>
                                 <h1 class="title"><?php echo Utils::escapeHtml($postTitle); ?></h1>
-                                <?php if($this->fields->showfullcontent == '1'): ?>
+                                <?php if($showFullContent): ?>
                                     </a>
                                 <?php endif; ?>
                                 
                                 <?php if($this->fields->excerpt != '') echo '<p class="headline content">' . Utils::escapeHtml(Utils::decodeHtmlText($this->fields->excerpt)) . '</p>'; ?>
 
                                 <div class="articleBody">
-                                <?php if($this->fields->showfullcontent != '1'): ?>
+                                <?php if(!$showFullContent): ?>
                                     <?php if($this->fields->excerpt == ''): ?>
                                         <p><?php if(Utils::isMobile()) $this->excerpt(60); else $this->excerpt(80); ?></p>
                                     <?php endif; ?>
@@ -105,7 +102,7 @@ if(!Utils::isPjax()){
 
                             </div>
                         </article>
-                    <?php if($this->fields->showfullcontent != '1'): ?>
+                    <?php if(!$showFullContent): ?>
                         </a>
                     <?php endif; ?>
                 </li>

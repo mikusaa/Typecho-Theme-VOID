@@ -3110,6 +3110,9 @@ var VOID = {
     init: function () {
         /* 初始化 UI */
         VOID_Ui.checkHeader();
+        if (typeof VOID_CardCover !== 'undefined') {
+            VOID_CardCover.init(document.getElementById('pjax-container'));
+        }
         VOID_Ui.MasonryCtrler.init();
         VOID_Ui.DarkModeSwitcher.checkColorScheme();
         VOID_Ui.checkScrollTop();
@@ -3221,6 +3224,9 @@ var VOID = {
             $('#loggin-form').addClass('need-refresh');
         }
 
+        if (typeof VOID_CardCover !== 'undefined') {
+            VOID_CardCover.init(document.getElementById('pjax-container'));
+        }
         VOID_Ui.MasonryCtrler.init();
         VOID_Ui.lazyload();
 
