@@ -411,7 +411,7 @@ $setting = $GLOBALS['VOIDSetting'];
         </script>
         <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.3/tex-svg.js'); ?>'></script>
         <?php endif; ?>
-        <script src="<?php Utils::indexTheme('/assets/VOID-24de63e6ba.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-8a29d5c843.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){

@@ -43,19 +43,20 @@ $setting = $GLOBALS['VOIDSetting'];
                         : ' width="' . $bannerDimensions[0] . '" height="' . $bannerDimensions[1] . '"';
                     $bannerAsCover = (string) $this->fields->bannerascover;
                     if($bannerUrl == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
+                    $renderBanner = $bannerUrl !== '' && $bannerAsCover !== '0';
                 ?>
                 <li id="p-<?php echo $postId; ?>"  class="masonry-item style-<?php echo $bannerAsCover; ?>">
                     <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                         <article class="yue">
-                            <?php if($bannerUrl != ''): ?>
+                            <?php if($renderBanner): ?>
                                 <div class="banner">
                                     <?php $priorityBannerCount++; ?>
                                     <?php if ($priorityBannerCount == 1): ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async" data-void-card-cover>
                                     <?php elseif ($priorityBannerCount == 2): ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async" data-void-card-cover>
                                     <?php else: ?>
-                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async" data-void-card-cover>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
