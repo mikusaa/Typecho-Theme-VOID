@@ -230,14 +230,6 @@ class Utils
      */
     public static function addButton()
     {
-        if (class_exists('HomePreview')) {
-            $homePreviewConfig = HomePreview::getEditorConfig();
-            if (is_array($homePreviewConfig)) {
-                echo '<script>window.VOIDHomePreviewConfig='
-                    . self::encodeJsonForHtml($homePreviewConfig) . ';</script>';
-            }
-        }
-
         ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker-7fedd5df0e.js');
         $emotePickerUrl = ob_get_clean();
@@ -250,7 +242,7 @@ class Utils
             . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
         ob_start();
-        self::indexTheme('/assets/editor-4ad7054239.js');
+        self::indexTheme('/assets/editor-9051e7df24.js');
         $editorUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
@@ -260,7 +252,7 @@ class Utils
         echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
         ob_start();
-        self::indexTheme('/assets/editor-admin-5918e7186f.css');
+        self::indexTheme('/assets/editor-admin-cb55cb258c.css');
         $editorStyleUrl = ob_get_clean();
         echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }

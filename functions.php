@@ -12,7 +12,6 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 }
 
 require_once('libs/Utils.php');
-require_once('libs/HomePreview.php');
 require_once('libs/Contents.php');
 require_once('libs/Comments.php');
 
@@ -112,7 +111,6 @@ function themeInit($archive = null)
     }
 
     VOID_refreshArchiveComputedFields($archive);
-    HomePreview::handle($archive);
 }
 
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
@@ -216,6 +214,8 @@ function themeFields(Typecho_Widget_Helper_Layout $layout)
     $layout->addItem($excerpt);
     $banner = new Typecho_Widget_Helper_Form_Element_Text('banner', null, null, '文章主图', '输入图片URL，该图片会用于主页文章列表的显示。');
     $layout->addItem($banner);
+    $bannerMeta = new Typecho_Widget_Helper_Form_Element_Hidden('bannerMeta', null, null, '封面尺寸元数据');
+    $layout->addItem($bannerMeta);
     $bannerSource = new Typecho_Widget_Helper_Form_Element_Text('bannerSource', null, null, '主图来源', '输入来源信息，该信息会显示在文章题图下方。支持 markdown 格式。');
     $layout->addItem($bannerSource);
     $bannerStyle = new Typecho_Widget_Helper_Form_Element_Select('bannerStyle', array(

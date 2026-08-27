@@ -30,23 +30,18 @@ if(!Utils::isPjax()){
         <section id="index-list" class="float-up">
             <ul id="masonry">
             <?php $priorityBannerCount = 0; ?>
-            <?php $voidHomePreviewReplacementCid = 0; ?>
             <?php while($this->next()): ?>
                 <?php
                     $postId = (int) Utils::captureOutput($this, 'cid');
-                    $isVoidHomePreview = !empty($this->voidHomePreview);
-                    if ($isVoidHomePreview) {
-                        $voidHomePreviewReplacementCid = (int) $this->voidHomePreviewReplacementCid;
-                    } elseif ($voidHomePreviewReplacementCid > 0 && $postId === $voidHomePreviewReplacementCid) {
-                        continue;
-                    }
-                    $postPermalink = $isVoidHomePreview
-                        ? (string) $this->voidHomePreviewUrl
-                        : Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
+                    $postPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
                     $postTitle = Utils::decodeHtmlText(Utils::captureOutput($this, 'title'));
-                    $postNoPjax = $isVoidHomePreview ? ' no-pjax' : '';
+                    $bannerUrl = trim((string) $this->fields->banner);
+                    $bannerDimensions = Contents::getBannerDimensions($bannerUrl, $this->fields->bannerMeta);
+                    $bannerDimensionAttributes = null === $bannerDimensions
+                        ? ''
+                        : ' width="' . $bannerDimensions[0] . '" height="' . $bannerDimensions[1] . '"';
                     $bannerAsCover = (string) $this->fields->bannerascover;
-                    if($this->fields->banner == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
+                    if($bannerUrl == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
                 ?>
                 <li id="p-<?php echo $postId; ?>" class="masonry-item style-<?php
                         if($this->fields->showfullcontent=='1') {
@@ -59,21 +54,21 @@ if(!Utils::isPjax()){
                     ?>">
                 
                     <?php if($this->fields->showfullcontent != '1'): ?>
-                        <a<?php echo $postNoPjax; ?> href="<?php echo Utils::escapeHtml($postPermalink); ?>">
+                        <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                     <?php endif; ?>
                         <article class="yue">
-                            <?php if($this->fields->banner != ''): ?>
+                            <?php if($bannerUrl != ''): ?>
                             <?php if($this->fields->showfullcontent == '1'): ?>
-                                <a<?php echo $postNoPjax; ?> href="<?php echo Utils::escapeHtml($postPermalink); ?>">
+                                <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                             <?php endif; ?>
                                 <div class="banner">
                                     <?php $priorityBannerCount++; ?>
                                     <?php if ($priorityBannerCount == 1): ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" fetchpriority="high" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async">
                                     <?php elseif ($priorityBannerCount == 2): ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async">
                                     <?php else: ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="lazy" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
                             <?php if($this->fields->showfullcontent == '1'): ?>
@@ -89,7 +84,7 @@ if(!Utils::isPjax()){
                                 </div>
 
                                 <?php if($this->fields->showfullcontent == '1'): ?>
-                                    <a<?php echo $postNoPjax; ?> href="<?php echo Utils::escapeHtml($postPermalink); ?>">
+                                    <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                                 <?php endif; ?>
                                 <h1 class="title"><?php echo Utils::escapeHtml($postTitle); ?></h1>
                                 <?php if($this->fields->showfullcontent == '1'): ?>

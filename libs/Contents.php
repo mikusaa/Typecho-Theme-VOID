@@ -1389,6 +1389,10 @@ Class Contents
      */
     static private function getImageDimensions($src)
     {
+        if (!is_string($src) || trim($src) === '') {
+            return null;
+        }
+
         $parts = parse_url($src);
         if (false === $parts || !is_array($parts)) {
             return null;
@@ -1418,13 +1422,48 @@ Class Contents
             return null;
         }
 
-        $width = filter_var($widthText, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
-        $height = filter_var($heightText, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+        $range = array('options' => array('min_range' => 1, 'max_range' => 100000));
+        $width = filter_var($widthText, FILTER_VALIDATE_INT, $range);
+        $height = filter_var($heightText, FILTER_VALIDATE_INT, $range);
         if (false === $width || false === $height) {
             return null;
         }
 
         return array((int) $width, (int) $height);
+    }
+
+    /**
+     * 从 bannerMeta 或封面 URL 中读取一组可信封面尺寸。
+     */
+    static public function getBannerDimensions($banner, $bannerMeta = null)
+    {
+        if (!is_string($banner)) {
+            return null;
+        }
+
+        $banner = trim($banner);
+        if ($banner === '') {
+            return null;
+        }
+
+        if (is_string($bannerMeta) && trim($bannerMeta) !== '') {
+            $meta = json_decode($bannerMeta, true);
+            if (is_array($meta)
+                && isset($meta['version'], $meta['source'], $meta['width'], $meta['height'])
+                && $meta['version'] === 1
+                && is_string($meta['source'])
+                && $meta['source'] === $banner
+                && is_int($meta['width'])
+                && is_int($meta['height'])
+                && $meta['width'] >= 1
+                && $meta['width'] <= 100000
+                && $meta['height'] >= 1
+                && $meta['height'] <= 100000) {
+                return array($meta['width'], $meta['height']);
+            }
+        }
+
+        return self::getImageDimensions($banner);
     }
 
     /**
