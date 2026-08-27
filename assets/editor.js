@@ -53,12 +53,207 @@ function initEditorToolbar() {
     });
 }
 
+var VOID_BannerMeta = (function ($) {
+    var MAX_DIMENSION = 100000;
+    var PROBE_DELAY = 300;
+    var instance = null;
+
+    function normalizeSource(value) {
+        return String(value == null ? '' : value).trim();
+    }
+
+    function parseDimension(value) {
+        var text = String(value == null ? '' : value);
+        var number;
+
+        if (!/^[1-9][0-9]*$/.test(text)) {
+            return null;
+        }
+
+        number = Number(text);
+        return number >= 1 && number <= MAX_DIMENSION && Math.floor(number) === number
+            ? number
+            : null;
+    }
+
+    function parseMeta(value, source) {
+        var meta;
+        var width;
+        var height;
+
+        try {
+            meta = JSON.parse(String(value || ''));
+        } catch (error) {
+            return null;
+        }
+
+        if (!meta || meta.version !== 1 || typeof meta.source !== 'string'
+            || meta.source !== normalizeSource(source)) {
+            return null;
+        }
+
+        width = typeof meta.width === 'number' ? parseDimension(meta.width) : null;
+        height = typeof meta.height === 'number' ? parseDimension(meta.height) : null;
+        return width && height ? [width, height] : null;
+    }
+
+    function serializeMeta(source, width, height) {
+        return JSON.stringify({
+            version: 1,
+            source: normalizeSource(source),
+            width: width,
+            height: height
+        });
+    }
+
+    function init() {
+        var $banner = $('[name="fields[banner]"], [name="banner"]').first();
+        var $meta = $('[name="fields[bannerMeta]"], [name="bannerMeta"]').first();
+        var probeTimer = null;
+        var probeImage = null;
+        var probeToken = 0;
+        var controller;
+
+        if (instance || !$banner.length || !$meta.length) {
+            return instance;
+        }
+
+        function setMeta(source, width, height) {
+            var normalizedSource = normalizeSource(source);
+            var serialized;
+
+            if (!normalizedSource || normalizeSource($banner.val()) !== normalizedSource
+                || !parseDimension(width) || !parseDimension(height)) {
+                return false;
+            }
+
+            serialized = serializeMeta(normalizedSource, Number(width), Number(height));
+            if ($meta.val() === serialized) {
+                return false;
+            }
+
+            $meta.val(serialized).trigger('input').trigger('change');
+            return true;
+        }
+
+        function clearMeta() {
+            if ($meta.val() === '') {
+                return false;
+            }
+
+            $meta.val('').trigger('input').trigger('change');
+            return true;
+        }
+
+        function clearStaleMeta() {
+            var source = normalizeSource($banner.val());
+
+            if ($meta.val() !== '' && (!source || !parseMeta($meta.val(), source))) {
+                clearMeta();
+            }
+        }
+
+        function cancelProbe() {
+            probeToken++;
+            if (probeTimer !== null) {
+                window.clearTimeout(probeTimer);
+                probeTimer = null;
+            }
+            if (probeImage) {
+                probeImage.onload = null;
+                probeImage.onerror = null;
+                probeImage = null;
+            }
+        }
+
+        function startProbe(source, token) {
+            var image;
+
+            probeTimer = null;
+            if (token !== probeToken || normalizeSource($banner.val()) !== source) {
+                return;
+            }
+
+            image = new window.Image();
+            probeImage = image;
+
+            function finish(succeeded) {
+                if (token !== probeToken || probeImage !== image) {
+                    return;
+                }
+
+                probeImage = null;
+                image.onload = null;
+                image.onerror = null;
+                if (succeeded) {
+                    setMeta(source, image.naturalWidth, image.naturalHeight);
+                }
+            }
+
+            image.onload = function () {
+                finish(true);
+            };
+            image.onerror = function () {
+                finish(false);
+            };
+            image.src = source;
+
+            if (image.complete) {
+                finish(image.naturalWidth > 0 && image.naturalHeight > 0);
+            }
+        }
+
+        function scheduleProbe() {
+            var source;
+            var token;
+
+            cancelProbe();
+            clearStaleMeta();
+            source = normalizeSource($banner.val());
+            if (!source || parseMeta($meta.val(), source) || typeof window.Image !== 'function') {
+                return false;
+            }
+
+            token = probeToken;
+            probeTimer = window.setTimeout(function () {
+                startProbe(source, token);
+            }, PROBE_DELAY);
+            return true;
+        }
+
+        controller = {
+            destroy: function () {
+                if (instance !== controller) {
+                    return;
+                }
+
+                cancelProbe();
+                $banner.off('.voidBannerMeta');
+                instance = null;
+            }
+        };
+
+        instance = controller;
+        $banner.on('input.voidBannerMeta change.voidBannerMeta', scheduleProbe);
+        scheduleProbe();
+        return controller;
+    }
+
+    return {
+        __test: {
+            parseMeta: parseMeta,
+            serializeMeta: serializeMeta
+        },
+        init: init
+    };
+})(window.jQuery);
+
 var VOID_Editor_Admin = (function ($) {
     var VOID_FIELD_GROUPS = [
         {
             key: 'media',
-            title: '摘要、主图与预览',
-            description: '设置首页摘要、主图与卡片效果。',
+            title: '摘要与主图',
+            description: '设置首页摘要与主图。',
             full: true,
             fields: ['excerpt', 'banner', 'bannerSource', 'bannerStyle', 'bannerascover']
         },
@@ -120,7 +315,7 @@ var VOID_Editor_Admin = (function ($) {
             initBehaviorFieldLayout($panel);
             initSegmentedSelects($panel);
             initSwitchControls($panel);
-            initMediaFieldLayout($panel, initPostCardPreview($panel));
+            initMediaFieldLayout($panel);
         }
     }
 
@@ -129,6 +324,8 @@ var VOID_Editor_Admin = (function ($) {
         if (!$customField.length || $('#void-editor-fields').length) {
             return null;
         }
+
+        preserveHiddenMetadataField($customField, 'bannerMeta');
 
         var collectedGroups = [];
         var movedCount = 0;
@@ -190,6 +387,26 @@ var VOID_Editor_Admin = (function ($) {
         $customField.before($panel);
         cleanupCustomField($customField);
         return $panel;
+    }
+
+    function preserveHiddenMetadataField($customField, fieldName) {
+        var $control = $customField
+            .find('[name="fields[' + fieldName + ']"], [name="' + fieldName + '"]')
+            .first();
+        var $row;
+
+        if (!$control.length) {
+            return;
+        }
+
+        $row = $control.closest('li.field, tr');
+        if (!$row.length) {
+            return;
+        }
+
+        $control.detach();
+        $customField.before($control);
+        $row.remove();
     }
 
     function extractVoidField($customField, fieldName) {
@@ -308,7 +525,7 @@ var VOID_Editor_Admin = (function ($) {
         $groupBody.data('voidBehaviorLayoutReady', true);
     }
 
-    function initMediaFieldLayout($scope, previewController) {
+    function initMediaFieldLayout($scope) {
         var $groupBody = $scope.find('[data-group="media"] .void-editor-fields__group-body').first();
         var $bannerControl = findFieldControl($scope, 'banner');
         var $targets = $();
@@ -326,10 +543,6 @@ var VOID_Editor_Admin = (function ($) {
                 $targets = $targets.add($field.addClass('void-editor-media-dependent'));
             }
         });
-
-        if (previewController && previewController.element && previewController.element.length) {
-            $targets = $targets.add(previewController.element.addClass('void-editor-media-dependent'));
-        }
 
         if (!$targets.length) {
             return;
@@ -396,23 +609,10 @@ var VOID_Editor_Admin = (function ($) {
 
             visibilityState = shouldShow;
 
-            if (!shouldShow) {
-                if (previewController && typeof previewController.reset === 'function') {
-                    previewController.reset();
-                }
-            }
-
             $targets.each(function () {
                 toggleDependent($(this), shouldShow, isInitialSync);
             });
 
-            if (!shouldShow) {
-                return;
-            }
-
-            if (previewController && typeof previewController.refresh === 'function') {
-                previewController.refresh(true);
-            }
         }
 
         $bannerControl.on('input.voidMediaLayout change.voidMediaLayout', syncMediaDependents);
@@ -650,474 +850,6 @@ var VOID_Editor_Admin = (function ($) {
         return normalizeDescription(fallbackLabel);
     }
 
-    function initPostCardPreview($scope) {
-        var $mediaGroup = $scope.find('[data-group="media"] .void-editor-fields__group-body').first();
-        if (!$mediaGroup.length || $mediaGroup.data('voidPostPreviewReady')) {
-            return null;
-        }
-
-        var controls = {
-            title: $('#title').first(),
-            content: $('#text').first(),
-            excerpt: findFieldControl($scope, 'excerpt'),
-            banner: findFieldControl($scope, 'banner'),
-            bannerAsCover: findFieldControl($scope, 'bannerascover'),
-            showFullContent: findFieldControl($scope, 'showfullcontent')
-        };
-
-        if (!controls.banner.length) {
-            return null;
-        }
-
-        $mediaGroup.data('voidPostPreviewReady', true);
-        $mediaGroup.append([
-            '<details class="void-post-preview">',
-            '  <summary>',
-            '    <span class="void-post-preview__summary-main">',
-            '      <span class="void-post-preview__title">首页卡片预览</span>',
-            '      <span class="void-post-preview__status" data-state="pending" role="status" aria-live="polite" aria-atomic="true" title="待同步" aria-label="待同步">',
-            '        <span class="void-post-preview__status-dot" aria-hidden="true"></span>',
-            '        <span class="void-post-preview__status-text">待同步</span>',
-            '      </span>',
-            '    </span>',
-            '    <span class="void-post-preview__tip">展开查看效果</span>',
-            '  </summary>',
-            '  <div class="void-post-preview__body">',
-            '    <div class="void-post-preview__badges">',
-            '      <span class="void-post-preview__badge" data-role="index-mode"></span>',
-            '      <span class="void-post-preview__badge" data-role="list-banner"></span>',
-            '      <span class="void-post-preview__badge" data-role="excerpt-mode"></span>',
-            '    </div>',
-            '    <div class="void-post-preview__scenes">',
-            '      <section class="void-post-preview__scene">',
-            '        <div class="void-index-stage void-index-stage--desktop">',
-            '          <article class="void-home-preview-card void-home-preview-card--desktop" data-list-style="0">',
-            '            <div class="void-home-preview-card__banner" hidden>',
-            '              <img class="void-home-preview-card__image" alt="首页卡片主图预览" referrerpolicy="no-referrer">',
-            '            </div>',
-            '            <div class="void-home-preview-card__content">',
-            '              <div class="void-home-preview-card__meta">PREVIEW</div>',
-            '              <h1 class="void-home-preview-card__title">未填写标题</h1>',
-            '              <p class="void-home-preview-card__headline" hidden></p>',
-            '              <div class="void-home-preview-card__article-body" hidden>',
-            '                <p class="void-home-preview-card__body-text"></p>',
-            '              </div>',
-            '            </div>',
-            '          </article>',
-            '        </div>',
-            '      </section>',
-            '    </div>',
-            '  </div>',
-            '</details>'
-        ].join(''));
-
-        var $preview = $mediaGroup.find('.void-post-preview').last();
-        var $status = $preview.find('.void-post-preview__status');
-        var $statusText = $preview.find('.void-post-preview__status-text');
-        var $indexModeBadge = $preview.find('[data-role="index-mode"]');
-        var $listBannerBadge = $preview.find('[data-role="list-banner"]');
-        var $excerptModeBadge = $preview.find('[data-role="excerpt-mode"]');
-        var updateTimer = null;
-        var currentCardUrl = '';
-        var cardVariants = [
-            {
-                key: 'desktop',
-                autoExcerptLimit: 80,
-                fullContentLimit: 200,
-                refs: collectCardRefs($preview.find('.void-home-preview-card--desktop').first())
-            }
-        ];
-
-        function setStatus(text, state) {
-            var normalizedState = getStatusState(state);
-            var label = getStatusLabel(normalizedState);
-            var title = text || label;
-
-            $status.attr('data-state', normalizedState);
-            $status.attr('title', title);
-            $status.attr('aria-label', title);
-            $statusText.text(label);
-        }
-
-        function getStatusState(state) {
-            if (state === 'ready') {
-                return 'ready';
-            }
-
-            if (state === 'error') {
-                return 'error';
-            }
-
-            return 'pending';
-        }
-
-        function getStatusLabel(state) {
-            if (state === 'ready') {
-                return '已同步';
-            }
-
-            if (state === 'error') {
-                return '同步失败';
-            }
-
-            return '待同步';
-        }
-
-        function collectCardRefs($root) {
-            return {
-                root: $root,
-                banner: $root.find('.void-home-preview-card__banner').first(),
-                image: $root.find('.void-home-preview-card__image').first(),
-                title: $root.find('.void-home-preview-card__title').first(),
-                headline: $root.find('.void-home-preview-card__headline').first(),
-                body: $root.find('.void-home-preview-card__article-body').first(),
-                bodyText: $root.find('.void-home-preview-card__body-text').first()
-            };
-        }
-
-        function resetCardImage(refs) {
-            refs.banner.removeClass('is-loading is-error');
-            refs.image.removeAttr('data-void-preview-url');
-            refs.image.removeAttr('src');
-        }
-
-        function getCardImageState(refs, url) {
-            var imageEl = refs.image.get(0);
-
-            if (!imageEl || !url || refs.image.attr('data-void-preview-url') !== url || !refs.image.attr('src')) {
-                return 'idle';
-            }
-
-            if (refs.banner.hasClass('is-error')) {
-                return 'error';
-            }
-
-            if (imageEl.complete) {
-                return imageEl.naturalWidth > 0 ? 'loaded' : 'error';
-            }
-
-            return 'loading';
-        }
-
-        function findValue($control) {
-            if (!$control || !$control.length) {
-                return '';
-            }
-
-            return normalizeDescription($control.val());
-        }
-
-        function stripPreviewMarkup(text) {
-            return String(text || '')
-                .replace(/<!--html-->|<!--markdown-->|<!--more-->/gi, ' ')
-                .replace(/```[\s\S]*?```/g, ' ')
-                .replace(/~~~[\s\S]*?~~~/g, ' ')
-                .replace(/`[^`\n]+`/g, ' ')
-                .replace(/\[photos[^\]]*\][\s\S]*?\[\/photos\]/gi, ' ')
-                .replace(/\[links[^\]]*\][\s\S]*?\[\/links\]/gi, ' ')
-                .replace(/\[notice([^\]]*)\]([\s\S]*?)\[\/notice\]/gi, '$2')
-                .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
-                .replace(/\[([^\]]+)\]\(([^)]*)\)/g, '$1')
-                .replace(/^#{1,6}\s+/gm, '')
-                .replace(/^\s*[-*+]\s+/gm, '')
-                .replace(/^\s*\d+\.\s+/gm, '')
-                .replace(/<img\b[^>]*>/gi, ' ')
-                .replace(/<[^>]+>/g, ' ')
-                .replace(/#vwid=\d{1,5}&vhei=\d{1,5}/gi, ' ')
-                .replace(/\{\{(.+?):(.+?)\}\}/g, '$1')
-                .replace(/::\((.*?)\)|:@\((.*?)\)|:&\((.*?)\)|:\$\((.*?)\)|:!\((.*?)\)/g, ' ')
-                .replace(/\u00a0/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        function truncateText(text, limit) {
-            var chars = Array.from(String(text || ''));
-            if (chars.length <= limit) {
-                return chars.join('');
-            }
-
-            return chars.slice(0, limit).join('') + '...';
-        }
-
-        function getPreviewData() {
-            var rawContent = controls.content.length ? controls.content.val() : '';
-            var normalizedContent = stripPreviewMarkup(rawContent);
-            var customExcerpt = findValue(controls.excerpt);
-            var bannerUrl = findValue(controls.banner);
-            var bannerAsCover = findValue(controls.bannerAsCover) || '1';
-            var showFullContent = findValue(controls.showFullContent) === '1';
-            var hasBanner = bannerUrl !== '';
-            var effectiveListStyle = '0';
-
-            if (hasBanner) {
-                if (showFullContent) {
-                    effectiveListStyle = '1';
-                } else if (bannerAsCover === '2') {
-                    effectiveListStyle = '2';
-                } else if (bannerAsCover === '0') {
-                    effectiveListStyle = '0';
-                } else {
-                    effectiveListStyle = '1';
-                }
-            }
-
-            return {
-                title: findValue(controls.title) || '未填写标题',
-                customExcerpt: customExcerpt,
-                bannerUrl: bannerUrl,
-                bannerAsCover: bannerAsCover,
-                showFullContent: showFullContent,
-                effectiveListStyle: effectiveListStyle,
-                hasVisibleBanner: hasBanner && effectiveListStyle !== '0',
-                normalizedContent: normalizedContent
-            };
-        }
-
-        function getIndexModeLabel(data) {
-            return data.showFullContent ? '首页模式：全文展示' : '首页模式：摘要卡片';
-        }
-
-        function getListBannerLabel(data) {
-            if (!data.bannerUrl) {
-                return '首页主图：未设置';
-            }
-
-            if (data.showFullContent) {
-                return '首页主图：全文模式下为顶部图';
-            }
-
-            if (data.bannerAsCover === '2') {
-                return '首页主图：标题背景';
-            }
-
-            if (data.bannerAsCover === '0') {
-                return '首页主图：不显示';
-            }
-
-            return '首页主图：标题上方';
-        }
-
-        function getExcerptModeLabel(data) {
-            if (data.showFullContent) {
-                if (data.customExcerpt) {
-                    return '摘要：自定义引文';
-                }
-
-                return '摘要：正文截取';
-            }
-
-            if (data.customExcerpt) {
-                return '摘要：自定义';
-            }
-
-            return '摘要：自动';
-        }
-
-        function getClosedStatus(data) {
-            if (!data.bannerUrl) {
-                return '未设置主图，当前为无图卡片。';
-            }
-
-            return '展开后按首页样式预览卡片效果。';
-        }
-
-        function renderCard(cardVariant, data) {
-            var refs = cardVariant.refs;
-            var autoExcerpt = truncateText(data.normalizedContent, cardVariant.autoExcerptLimit);
-            var fullContentPreview = truncateText(data.normalizedContent, cardVariant.fullContentLimit);
-
-            refs.root.attr('data-list-style', data.effectiveListStyle);
-            refs.root.toggleClass('is-full-content', data.showFullContent);
-            refs.root.toggleClass('has-banner', data.hasVisibleBanner);
-            refs.title.text(data.title);
-
-            if (data.customExcerpt) {
-                refs.headline.text(data.customExcerpt).prop('hidden', false);
-            } else {
-                refs.headline.text('').prop('hidden', true);
-            }
-
-            if (data.showFullContent) {
-                refs.body.prop('hidden', false);
-                refs.bodyText.text(fullContentPreview || '正文内容预览将在这里显示。');
-            } else if (!data.customExcerpt) {
-                refs.body.prop('hidden', false);
-                refs.bodyText.text(autoExcerpt || '未填写摘要时，这里会显示自动摘要。');
-            } else {
-                refs.body.prop('hidden', true);
-                refs.bodyText.text('');
-            }
-
-            refs.banner.prop('hidden', !data.hasVisibleBanner);
-        }
-
-        function renderPreview(data) {
-            $indexModeBadge.text(getIndexModeLabel(data));
-            $listBannerBadge.text(getListBannerLabel(data));
-            $excerptModeBadge.text(getExcerptModeLabel(data));
-
-            $.each(cardVariants, function (_, cardVariant) {
-                renderCard(cardVariant, data);
-            });
-        }
-
-        function loadCardImages(data, forceRefresh) {
-            if (!data.hasVisibleBanner) {
-                currentCardUrl = '';
-                $.each(cardVariants, function (_, cardVariant) {
-                    resetCardImage(cardVariant.refs);
-                });
-                setStatus(data.bannerUrl ? '首页卡片当前不显示主图，已按首页样式更新预览。' : '未设置主图，当前按无图状态预览。', data.bannerUrl ? 'muted' : 'empty');
-                return;
-            }
-
-            if (!$preview.prop('open')) {
-                if (data.bannerUrl !== currentCardUrl) {
-                    currentCardUrl = '';
-                    $.each(cardVariants, function (_, cardVariant) {
-                        resetCardImage(cardVariant.refs);
-                    });
-                }
-                setStatus(getClosedStatus(data), 'collapsed');
-                return;
-            }
-
-            if (!forceRefresh && currentCardUrl === data.bannerUrl) {
-                var allLoaded = true;
-                var hasStoredError = false;
-
-                $.each(cardVariants, function (_, cardVariant) {
-                    var imageState = getCardImageState(cardVariant.refs, data.bannerUrl);
-                    if (imageState === 'error') {
-                        hasStoredError = true;
-                    }
-
-                    if (imageState !== 'loaded') {
-                        allLoaded = false;
-                    }
-                });
-
-                if (hasStoredError) {
-                    setStatus('主图加载失败，请检查链接是否可访问。', 'error');
-                    return;
-                }
-
-                if (allLoaded) {
-                    setStatus('当前首页卡片预览已同步。', 'ready');
-                    return;
-                }
-            }
-
-            currentCardUrl = data.bannerUrl;
-            setStatus('正在加载首页卡片...', 'loading');
-
-            var pending = 0;
-            var hasError = false;
-
-            $.each(cardVariants, function (index, cardVariant) {
-                var refs = cardVariant.refs;
-                var imageEl = refs.image.get(0);
-                var imageState = getCardImageState(refs, data.bannerUrl);
-
-                if (imageState === 'loaded') {
-                    refs.banner.removeClass('is-loading is-error').prop('hidden', false);
-                    return;
-                }
-
-                refs.banner.addClass('is-loading').removeClass('is-error').prop('hidden', false);
-                refs.image.off('.voidIndexPreview' + index);
-                pending++;
-                refs.image.one('load.voidIndexPreview' + index, function () {
-                    refs.banner.removeClass('is-loading');
-                    pending--;
-                    if (!hasError && pending === 0) {
-                        setStatus('当前首页卡片预览已同步。', 'ready');
-                    }
-                });
-                refs.image.one('error.voidIndexPreview' + index, function () {
-                    refs.banner.removeClass('is-loading').addClass('is-error');
-                    pending--;
-                    if (!hasError) {
-                        hasError = true;
-                        setStatus('主图加载失败，请检查链接是否可访问。', 'error');
-                    } else if (pending === 0) {
-                        setStatus('主图加载失败，请检查链接是否可访问。', 'error');
-                    }
-                });
-                refs.image.attr('data-void-preview-url', data.bannerUrl);
-                refs.image.attr('src', data.bannerUrl);
-
-                if (imageEl && imageEl.complete) {
-                    refs.image.triggerHandler(imageEl.naturalWidth > 0 ? 'load' : 'error');
-                }
-            });
-
-            if (!hasError && pending === 0) {
-                setStatus('当前首页卡片预览已同步。', 'ready');
-            }
-        }
-
-        function resetPreviewState() {
-            currentCardUrl = '';
-
-            if ($preview.prop('open')) {
-                $preview.prop('open', false);
-            }
-
-            $.each(cardVariants, function (_, cardVariant) {
-                resetCardImage(cardVariant.refs);
-                cardVariant.refs.banner.prop('hidden', true);
-            });
-
-            setStatus('填写主图后可预览首页卡片效果。', 'pending');
-        }
-
-        function updatePreview(forceRefresh) {
-            var data = getPreviewData();
-            renderPreview(data);
-            loadCardImages(data, forceRefresh);
-        }
-
-        function schedulePreview(forceRefresh) {
-            window.clearTimeout(updateTimer);
-            updateTimer = window.setTimeout(function () {
-                updatePreview(forceRefresh);
-            }, 160);
-        }
-
-        $.each(controls, function (_, $control) {
-            if ($control && $control.length) {
-                $control.on('input change', function () {
-                    schedulePreview($preview.prop('open'));
-                });
-            }
-        });
-
-        $preview.on('toggle', function () {
-            if ($preview.prop('open')) {
-                updatePreview(true);
-                return;
-            }
-
-            schedulePreview(false);
-        });
-
-        $(window).on('resize.voidPostPreview', function () {
-            schedulePreview($preview.prop('open'));
-        });
-
-        updatePreview(false);
-
-        return {
-            element: $preview,
-            refresh: function (forceRefresh) {
-                schedulePreview(forceRefresh);
-            },
-            reset: resetPreviewState
-        };
-    }
-
     function findFieldControl($scope, fieldName) {
         var $field = $scope.find('[data-void-field="' + fieldName + '"]').first();
         if (!$field.length) {
@@ -1132,730 +864,14 @@ var VOID_Editor_Admin = (function ($) {
     };
 })(window.jQuery);
 
-var VOID_HomePreview = (function ($) {
-    var FINGERPRINT_IGNORED_FIELDS = {
-        cid: true,
-        do: true,
-        draft: true,
-        dst: true,
-        timezone: true
-    };
-    var REQUEST_STATE_KEY = '__voidHomePreviewRequestState';
-    var bootstrapObserver = null;
-    var instance = null;
-
-    function hasRequiredContext(form, config) {
-        return !!form
-            && !!window.Typecho
-            && typeof window.Typecho.savePost === 'function'
-            && typeof config.urlTemplate === 'string'
-            && config.urlTemplate.indexOf('{cid}') !== -1;
-    }
-
-    function stopBootstrapObserver() {
-        if (bootstrapObserver) {
-            bootstrapObserver.disconnect();
-            bootstrapObserver = null;
-        }
-    }
-
-    function positiveId(value) {
-        var normalized = String(value == null ? '' : value);
-        return /^[1-9][0-9]*$/.test(normalized) ? normalized : '';
-    }
-
-    function forEachFormData(data, callback) {
-        if (!data) {
-            return;
-        }
-
-        if (typeof data.forEach === 'function') {
-            data.forEach(function (value, name) {
-                callback(name, value);
-            });
-            return;
-        }
-
-        if (typeof data.entries === 'function') {
-            var iterator = data.entries();
-            var entry = iterator.next();
-            while (!entry.done) {
-                callback(entry.value[0], entry.value[1]);
-                entry = iterator.next();
-            }
-        }
-    }
-
-    function fingerprintValue(value) {
-        if (typeof value === 'string') {
-            return ['text', value];
-        }
-
-        return [
-            'file',
-            value && value.name ? String(value.name) : '',
-            value && typeof value.size === 'number' ? value.size : 0,
-            value && value.type ? String(value.type) : '',
-            value && typeof value.lastModified === 'number' ? value.lastModified : 0
-        ];
-    }
-
-    function fingerprintFormData(data) {
-        var values = [];
-
-        forEachFormData(data, function (name, value) {
-            name = String(name);
-            if (!FINGERPRINT_IGNORED_FIELDS[name]) {
-                values.push([name, fingerprintValue(value)]);
-            }
-        });
-
-        return JSON.stringify(values);
-    }
-
-    function normalizeUrl(url, baseUrl) {
-        try {
-            var normalized = new window.URL(String(url || ''), baseUrl || window.location.href);
-            normalized.hash = '';
-            return normalized.href;
-        } catch (error) {
-            return '';
-        }
-    }
-
-    function isFormData(data, FormDataConstructor) {
-        if (
-            typeof FormDataConstructor === 'function'
-            && data instanceof FormDataConstructor
-        ) {
-            return true;
-        }
-
-        return Object.prototype.toString.call(data) === '[object FormData]';
-    }
-
-    function lastFormDataValue(data, name) {
-        var values;
-        var lastValue = '';
-
-        if (data && typeof data.getAll === 'function') {
-            values = data.getAll(name);
-            return values.length ? String(values[values.length - 1]) : '';
-        }
-
-        forEachFormData(data, function (entryName, value) {
-            if (String(entryName) === name) {
-                lastValue = String(value);
-            }
-        });
-        return lastValue;
-    }
-
-    function isSaveRequest(settings, formAction, FormDataConstructor, baseUrl) {
-        var method = settings && (settings.type || settings.method);
-        var data = settings && settings.data;
-        var requestUrl = normalizeUrl(settings && settings.url, baseUrl);
-        var actionUrl = normalizeUrl(formAction, baseUrl);
-
-        return !!settings
-            && String(method || '').toUpperCase() === 'POST'
-            && !!requestUrl
-            && requestUrl === actionUrl
-            && isFormData(data, FormDataConstructor)
-            && lastFormDataValue(data, 'do') === 'save';
-    }
-
-    function parseSaveResponse(data) {
-        var parsed = data;
-        if (typeof parsed === 'string') {
-            try {
-                parsed = JSON.parse(parsed);
-            } catch (error) {
-                return null;
-            }
-        }
-
-        if (
-            !parsed
-            || (parsed.success !== 1 && parsed.success !== '1' && parsed.success !== true)
-        ) {
-            return null;
-        }
-
-        var cid = positiveId(parsed.cid);
-        if (!cid) {
-            return null;
-        }
-
-        return {
-            cid: cid
-        };
-    }
-
-    function getPreviewSource(latestCid, cidValue) {
-        return positiveId(latestCid) || positiveId(cidValue);
-    }
-
-    function buildPreviewUrl(template, cid) {
-        var sourceCid = positiveId(cid);
-        if (!sourceCid || typeof template !== 'string' || template.indexOf('{cid}') === -1) {
-            return '';
-        }
-
-        return template.replace(/\{cid\}/g, encodeURIComponent(sourceCid));
-    }
-
-    function openPreviewWindow(openWindow, url) {
-        var previewWindow;
-        try {
-            previewWindow = openWindow(url, '_blank');
-        } catch (error) {
-            return null;
-        }
-        if (!previewWindow) {
-            return null;
-        }
-
-        try {
-            previewWindow.opener = null;
-        } catch (error) {
-            // 个别浏览器会将 opener 暴露为只读属性。
-        }
-
-        return previewWindow;
-    }
-
-    function createElement(tagName, className, text) {
-        var element = document.createElement(tagName);
-        if (className) {
-            element.className = className;
-        }
-        if (typeof text === 'string') {
-            element.textContent = text;
-        }
-        return element;
-    }
-
-    function createActions() {
-        var root = createElement('section', 'void-home-preview-actions');
-        var summary = createElement('div', 'void-home-preview-actions__summary');
-        var title = createElement('span', 'void-home-preview-actions__title', '首页预览');
-        var status = createElement('span', 'void-home-preview-actions__status');
-        var controls = createElement('div', 'void-home-preview-actions__controls');
-        var primary = createElement(
-            'button',
-            'void-home-preview-actions__button void-home-preview-actions__button--primary',
-            '保存并预览 ↗'
-        );
-        var previous = createElement(
-            'button',
-            'void-home-preview-actions__button void-home-preview-actions__button--secondary',
-            '预览上次保存 ↗'
-        );
-
-        root.id = 'void-home-preview-actions';
-        root.setAttribute('aria-labelledby', 'void-home-preview-title');
-
-        title.id = 'void-home-preview-title';
-
-        status.id = 'void-home-preview-status';
-        status.setAttribute('role', 'status');
-        status.setAttribute('aria-live', 'polite');
-        status.setAttribute('aria-atomic', 'true');
-
-        primary.type = 'button';
-        primary.setAttribute('data-action', 'preview');
-        primary.setAttribute('aria-describedby', status.id);
-
-        previous.type = 'button';
-        previous.hidden = true;
-        previous.setAttribute('data-action', 'previous');
-        previous.setAttribute('aria-describedby', status.id);
-
-        summary.appendChild(title);
-        summary.appendChild(status);
-        controls.appendChild(primary);
-        controls.appendChild(previous);
-        root.appendChild(summary);
-        root.appendChild(controls);
-
-        return {
-            controls: controls,
-            previous: previous,
-            primary: primary,
-            root: root,
-            status: status
-        };
-    }
-
-    function init() {
-        if (instance) {
-            return instance;
-        }
-
-        var form = document.querySelector('form[name="write_post"]');
-        var editArea = document.getElementById('wmd-editarea');
-        var config = window.VOIDHomePreviewConfig || {};
-        if (
-            !hasRequiredContext(form, config)
-            || !editArea
-            || !editArea.parentNode
-        ) {
-            return null;
-        }
-
-        var existing = document.getElementById('void-home-preview-actions');
-        if (existing) {
-            return null;
-        }
-
-        var ui = createActions();
-        var $form = $(form);
-        var $document = $(document);
-        var formAction = form.getAttribute('action') || form.action;
-        var latestCid = positiveId(($form.find('input[name="cid"]').first().val()));
-        var savedFingerprint = fingerprintFormData(new window.FormData(form));
-        var activeSaveRequests = 0;
-        var awaitingPreviewWindow = null;
-        var pendingPreviewWindow = null;
-        var observer = null;
-        var saveCycleFailed = false;
-        var statusTimer = null;
-        var destroyed = false;
-
-        function currentFingerprint() {
-            return fingerprintFormData(new window.FormData(form));
-        }
-
-        function currentSource() {
-            return getPreviewSource(
-                latestCid,
-                $form.find('input[name="cid"]').first().val()
-            );
-        }
-
-        function isDirty() {
-            return currentFingerprint() !== savedFingerprint;
-        }
-
-        function clearStatusTimer() {
-            if (statusTimer) {
-                window.clearTimeout(statusTimer);
-                statusTimer = null;
-            }
-        }
-
-        function setStatus(message, state, resetDelay) {
-            clearStatusTimer();
-            ui.status.textContent = message;
-            ui.status.setAttribute('data-state', state || 'default');
-            if (resetDelay) {
-                statusTimer = window.setTimeout(syncStatus, resetDelay);
-            }
-        }
-
-        function syncActions() {
-            var source = currentSource();
-            var dirty = isDirty();
-            var busy = activeSaveRequests > 0;
-
-            ui.primary.textContent = source && !dirty
-                ? '打开首页预览 ↗'
-                : '保存并预览 ↗';
-            ui.primary.disabled = busy;
-            if (busy) {
-                ui.primary.setAttribute('aria-busy', 'true');
-            } else {
-                ui.primary.removeAttribute('aria-busy');
-            }
-
-            ui.previous.hidden = !source || !dirty;
-            ui.previous.disabled = busy || !source;
-            ui.previous.setAttribute('aria-disabled', ui.previous.disabled ? 'true' : 'false');
-        }
-
-        function syncStatus() {
-            if (destroyed) {
-                return;
-            }
-
-            syncActions();
-            if (activeSaveRequests > 0) {
-                setStatus('正在保存草稿…', 'saving');
-            } else if (isDirty()) {
-                setStatus('有未保存修改', 'dirty');
-            } else if (currentSource()) {
-                setStatus('已保存', 'saved');
-            } else {
-                setStatus('尚未保存', 'empty');
-            }
-        }
-
-        function closePreviewWindow(previewWindow) {
-            if (!previewWindow || previewWindow.closed) {
-                return;
-            }
-
-            try {
-                previewWindow.close();
-            } catch (error) {
-                // 浏览器已关闭的窗口无需再次清理。
-            }
-        }
-
-        function failPreviewSave(previewWindow, message) {
-            if (awaitingPreviewWindow === previewWindow) {
-                awaitingPreviewWindow = null;
-            }
-            if (pendingPreviewWindow === previewWindow) {
-                pendingPreviewWindow = null;
-            }
-            closePreviewWindow(previewWindow);
-            setStatus(message || '保存失败，未打开首页预览', 'error');
-        }
-
-        function navigatePreview(previewWindow, sourceCid) {
-            var previewUrl = buildPreviewUrl(config.urlTemplate, sourceCid);
-            if (!previewWindow || previewWindow.closed || !previewUrl) {
-                failPreviewSave(previewWindow, '无法打开首页预览，请重试');
-                return false;
-            }
-
-            try {
-                if (previewWindow.location && typeof previewWindow.location.replace === 'function') {
-                    previewWindow.location.replace(previewUrl);
-                } else {
-                    previewWindow.location.href = previewUrl;
-                }
-            } catch (error) {
-                failPreviewSave(previewWindow, '无法打开首页预览，请重试');
-                return false;
-            }
-
-            setStatus('已在新标签页打开', 'opened', 3000);
-            return true;
-        }
-
-        function openSavedPreview(sourceCid) {
-            var previewWindow = openPreviewWindow(function (url, target) {
-                return window.open(url, target);
-            }, '');
-
-            if (!previewWindow) {
-                setStatus('新标签页被拦截，请允许弹出窗口后重试', 'error');
-                return false;
-            }
-
-            return navigatePreview(previewWindow, sourceCid);
-        }
-
-        function requestSaveForPreview(previewWindow) {
-            if (
-                destroyed
-                || !window.Typecho
-                || typeof window.Typecho.savePost !== 'function'
-            ) {
-                failPreviewSave(previewWindow, '无法保存草稿，请刷新后重试');
-                return;
-            }
-
-            awaitingPreviewWindow = previewWindow;
-            setStatus('正在保存草稿…', 'saving');
-            try {
-                $form.trigger('datachange');
-                window.Typecho.savePost();
-            } catch (error) {
-                awaitingPreviewWindow = null;
-                failPreviewSave(previewWindow, '保存失败，未打开首页预览');
-                return;
-            }
-
-            window.setTimeout(function () {
-                if (awaitingPreviewWindow === previewWindow) {
-                    failPreviewSave(previewWindow, '未能启动保存，请重试');
-                }
-            }, 0);
-        }
-
-        function startSaveAndPreview() {
-            var previewWindow = openPreviewWindow(function (url, target) {
-                return window.open(url, target);
-            }, '');
-
-            if (!previewWindow) {
-                setStatus('新标签页被拦截，草稿尚未保存', 'error');
-                return;
-            }
-
-            requestSaveForPreview(previewWindow);
-        }
-
-        function onAjaxSend(event, xhr, settings) {
-            if (!isSaveRequest(
-                settings,
-                formAction,
-                window.FormData,
-                window.location.href
-            )) {
-                return;
-            }
-
-            var requestState = {
-                failed: false,
-                fingerprint: fingerprintFormData(settings.data),
-                previewWindow: awaitingPreviewWindow
-            };
-
-            awaitingPreviewWindow = null;
-            if (requestState.previewWindow) {
-                pendingPreviewWindow = requestState.previewWindow;
-            }
-            xhr[REQUEST_STATE_KEY] = requestState;
-            if (!activeSaveRequests) {
-                saveCycleFailed = false;
-            }
-            activeSaveRequests++;
-            syncActions();
-            setStatus('正在保存草稿…', 'saving');
-        }
-
-        function onAjaxSuccess(event, xhr, settings, data) {
-            var requestState = xhr[REQUEST_STATE_KEY];
-            if (!requestState) {
-                return;
-            }
-
-            var response = parseSaveResponse(data);
-            if (!response) {
-                requestState.failed = true;
-                saveCycleFailed = true;
-                if (requestState.previewWindow) {
-                    failPreviewSave(requestState.previewWindow, '保存响应无效，未打开首页预览');
-                } else {
-                    setStatus('保存失败，请重试', 'error');
-                }
-                return;
-            }
-
-            latestCid = response.cid;
-            savedFingerprint = requestState.fingerprint;
-
-            if (requestState.previewWindow) {
-                setStatus('正在确认最新保存版本…', 'saving');
-            } else {
-                syncStatus();
-            }
-        }
-
-        function onAjaxError(event, xhr) {
-            var requestState = xhr[REQUEST_STATE_KEY];
-            if (!requestState) {
-                return;
-            }
-
-            requestState.failed = true;
-            saveCycleFailed = true;
-            if (requestState.previewWindow) {
-                failPreviewSave(requestState.previewWindow, '保存失败，未打开首页预览');
-            } else {
-                setStatus('保存失败，请重试', 'error');
-            }
-        }
-
-        function onAjaxComplete(event, xhr) {
-            var requestState = xhr[REQUEST_STATE_KEY];
-            if (!requestState) {
-                return;
-            }
-
-            activeSaveRequests = Math.max(0, activeSaveRequests - 1);
-
-            try {
-                delete xhr[REQUEST_STATE_KEY];
-            } catch (error) {
-                xhr[REQUEST_STATE_KEY] = null;
-            }
-
-            syncActions();
-            if (activeSaveRequests) {
-                return;
-            }
-
-            if (pendingPreviewWindow) {
-                var previewWindow = pendingPreviewWindow;
-                if (currentFingerprint() === savedFingerprint) {
-                    pendingPreviewWindow = null;
-                    navigatePreview(previewWindow, latestCid);
-                } else {
-                    setStatus('检测到新的修改，正在再次保存…', 'saving');
-                    requestSaveForPreview(previewWindow);
-                }
-                return;
-            }
-
-            if (!saveCycleFailed) {
-                syncStatus();
-            }
-        }
-
-        function onPrimaryClick() {
-            var source = currentSource();
-            if (!isDirty() && source) {
-                openSavedPreview(source);
-                return;
-            }
-
-            startSaveAndPreview();
-        }
-
-        function onFormChange() {
-            if (!destroyed) {
-                syncStatus();
-            }
-        }
-
-        function placeActions() {
-            var parent = editArea.parentNode;
-            var stats = document.getElementById('void-editor-stats');
-            if (stats && stats.parentNode === parent) {
-                if (ui.root.nextSibling !== stats) {
-                    parent.insertBefore(ui.root, stats);
-                }
-                return true;
-            }
-
-            if (ui.root.parentNode !== parent) {
-                parent.insertBefore(ui.root, editArea.nextSibling);
-            }
-            return false;
-        }
-
-        function destroy() {
-            if (destroyed) {
-                return;
-            }
-
-            destroyed = true;
-            clearStatusTimer();
-            closePreviewWindow(awaitingPreviewWindow);
-            if (pendingPreviewWindow !== awaitingPreviewWindow) {
-                closePreviewWindow(pendingPreviewWindow);
-            }
-            awaitingPreviewWindow = null;
-            pendingPreviewWindow = null;
-            if (observer) {
-                observer.disconnect();
-                observer = null;
-            }
-            ui.primary.removeEventListener('click', onPrimaryClick);
-            ui.previous.removeEventListener('click', openPrevious);
-            $form.off('.voidHomePreview');
-            $document.off('.voidHomePreview');
-            if (ui.root.parentNode) {
-                ui.root.parentNode.removeChild(ui.root);
-            }
-            instance = null;
-        }
-
-        function openPrevious() {
-            var source = currentSource();
-            if (source) {
-                openSavedPreview(source);
-            }
-        }
-
-        placeActions();
-        if (
-            !document.getElementById('void-editor-stats')
-            && typeof window.MutationObserver === 'function'
-        ) {
-            observer = new window.MutationObserver(function () {
-                if (placeActions() && observer) {
-                    observer.disconnect();
-                    observer = null;
-                }
-            });
-            observer.observe(editArea.parentNode, { childList: true });
-        }
-
-        ui.primary.addEventListener('click', onPrimaryClick);
-        ui.previous.addEventListener('click', openPrevious);
-        $form.on(
-            'input.voidHomePreview change.voidHomePreview write.voidHomePreview datachange.voidHomePreview',
-            onFormChange
-        );
-        $document.on('ajaxSend.voidHomePreview', onAjaxSend);
-        $document.on('ajaxSuccess.voidHomePreview', onAjaxSuccess);
-        $document.on('ajaxError.voidHomePreview', onAjaxError);
-        $document.on('ajaxComplete.voidHomePreview', onAjaxComplete);
-
-        instance = {
-            destroy: destroy,
-            element: ui.root
-        };
-        stopBootstrapObserver();
-        syncStatus();
-        return instance;
-    }
-
-    function start() {
-        if (instance) {
-            stopBootstrapObserver();
-            return instance;
-        }
-
-        var form = document.querySelector('form[name="write_post"]');
-        var config = window.VOIDHomePreviewConfig || {};
-        if (!hasRequiredContext(form, config)) {
-            stopBootstrapObserver();
-            return null;
-        }
-
-        if (document.getElementById('wmd-editarea')) {
-            return init();
-        }
-
-        if (!bootstrapObserver && typeof window.MutationObserver === 'function') {
-            bootstrapObserver = new window.MutationObserver(function () {
-                if (!document.getElementById('wmd-editarea')) {
-                    return;
-                }
-
-                if (init() || document.getElementById('void-home-preview-actions')) {
-                    stopBootstrapObserver();
-                }
-            });
-            bootstrapObserver.observe(form, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        return null;
-    }
-
-    return {
-        __test: {
-            buildPreviewUrl: buildPreviewUrl,
-            fingerprintFormData: fingerprintFormData,
-            getPreviewSource: getPreviewSource,
-            isSaveRequest: isSaveRequest,
-            openPreviewWindow: openPreviewWindow,
-            parseSaveResponse: parseSaveResponse
-        },
-        init: init,
-        start: start
-    };
-})(window.jQuery);
-
 $(function () {
     initEditorToolbar();
 
-    if (window.VOID_Editor_Admin && typeof window.VOID_Editor_Admin.init === 'function') {
-        window.VOID_Editor_Admin.init();
+    if (window.VOID_BannerMeta && typeof window.VOID_BannerMeta.init === 'function') {
+        window.VOID_BannerMeta.init();
     }
 
-    if (window.VOID_HomePreview && typeof window.VOID_HomePreview.start === 'function') {
-        window.VOID_HomePreview.start();
+    if (window.VOID_Editor_Admin && typeof window.VOID_Editor_Admin.init === 'function') {
+        window.VOID_Editor_Admin.init();
     }
 });

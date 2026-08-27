@@ -36,21 +36,26 @@ $setting = $GLOBALS['VOIDSetting'];
                     $postId = (int) Utils::captureOutput($this, 'cid');
                     $postPermalink = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
                     $postTitle = Utils::decodeHtmlText(Utils::captureOutput($this, 'title'));
+                    $bannerUrl = trim((string) $this->fields->banner);
+                    $bannerDimensions = Contents::getBannerDimensions($bannerUrl, $this->fields->bannerMeta);
+                    $bannerDimensionAttributes = null === $bannerDimensions
+                        ? ''
+                        : ' width="' . $bannerDimensions[0] . '" height="' . $bannerDimensions[1] . '"';
                     $bannerAsCover = (string) $this->fields->bannerascover;
-                    if($this->fields->banner == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
+                    if($bannerUrl == '' || !in_array($bannerAsCover, array('0', '1', '2'), true)) $bannerAsCover='0';
                 ?>
                 <li id="p-<?php echo $postId; ?>"  class="masonry-item style-<?php echo $bannerAsCover; ?>">
                     <a href="<?php echo Utils::escapeHtml($postPermalink); ?>">
                         <article class="yue">
-                            <?php if($this->fields->banner != ''): ?>
+                            <?php if($bannerUrl != ''): ?>
                                 <div class="banner">
                                     <?php $priorityBannerCount++; ?>
                                     <?php if ($priorityBannerCount == 1): ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" fetchpriority="high" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" fetchpriority="high" decoding="async">
                                     <?php elseif ($priorityBannerCount == 2): ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="eager" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="eager" decoding="async">
                                     <?php else: ?>
-                                        <img src="<?php echo Utils::escapeHtml($this->fields->banner); ?>" alt="" loading="lazy" decoding="async">
+                                        <img src="<?php echo Utils::escapeHtml($bannerUrl); ?>" alt=""<?php echo $bannerDimensionAttributes; ?> loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>

@@ -230,14 +230,6 @@ class Utils
      */
     public static function addButton()
     {
-        if (class_exists('HomePreview')) {
-            $homePreviewConfig = HomePreview::getEditorConfig();
-            if (is_array($homePreviewConfig)) {
-                echo '<script>window.VOIDHomePreviewConfig='
-                    . self::encodeJsonForHtml($homePreviewConfig) . ';</script>';
-            }
-        }
-
         ob_start();
         self::indexTheme('/assets/libs/emotes/emote-picker.js');
         $emotePickerUrl = ob_get_clean();
