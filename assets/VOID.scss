@@ -266,7 +266,7 @@ p.notice {
 #ctrler-panel {
     position: fixed;
     right: 1.5rem;
-    bottom: 1.5rem;
+    bottom: calc(1.5rem + var(--void-footer-overlap, 0px));
     width: 40px;
     z-index: 3;
     transition: $animationTime $animationTimingFunc transform;
@@ -308,7 +308,7 @@ p.notice {
     .sidebar-show & {
         right: 330px;
     }
-    bottom: 1.5rem;
+    bottom: calc(1.5rem + var(--void-footer-overlap, 0px));
     transform: translate(0, 1.5rem);
     .setting-panel-show & {
         opacity: 1;

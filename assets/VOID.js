@@ -3127,6 +3127,9 @@ var VOID = {
         VOID_Content.countWords();
         VOID_Content.parseDetails();
         VOID_Content.parseTOC();
+        if (typeof VOID_ControllerPanel !== 'undefined') {
+            VOID_ControllerPanel.init();
+        }
         VOID_Content.highlight();
         VOID_Content.parseUrl();
         VOID.scheduleTypography();
@@ -3234,6 +3237,9 @@ var VOID = {
         VOID_Content.countWords();
         VOID_Content.parseDetails();
         VOID_Content.parseTOC();
+        if (typeof VOID_ControllerPanel !== 'undefined') {
+            VOID_ControllerPanel.refresh();
+        }
         VOID_Content.parseUrl();
         VOID_Content.highlight();
         VOID.scheduleTypography();
