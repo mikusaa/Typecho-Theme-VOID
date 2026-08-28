@@ -147,14 +147,14 @@ if (isset($_POST['void_action'])) {
         <link href="<?php Utils::indexTheme('/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css'); ?>" rel="stylesheet">
     <?php endif; ?>
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-322b12e845.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-fe562e2c17.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-143b2716de.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-1c2d9f3c9f.js'); ?>"></script>
     <script>
     window.VOIDConfig = <?php echo Utils::encodeJsonForHtml($voidConfig, '{}'); ?>;
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-d914dd8856.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-b1fc49e91a.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>
