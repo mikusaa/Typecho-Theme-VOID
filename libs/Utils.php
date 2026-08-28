@@ -58,6 +58,152 @@ class Utils
     }
 
     /**
+     * 将评论提示语格式化为仅含换行、加粗和安全链接的 HTML
+     *
+     * @return string
+     */
+    public static function formatCommentNotification($value)
+    {
+        if (!is_scalar($value)) {
+            return '';
+        }
+
+        $source = (string) $value;
+        $parts = preg_split(
+            '/(<(?:[^>"\']|"[^"]*"|\'[^\']*\')*>)/',
+            $source,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+        );
+
+        if (false === $parts) {
+            return self::formatCommentNotificationText($source);
+        }
+
+        $output = '';
+        $stack = array();
+        foreach ($parts as $part) {
+            if (!preg_match('/^<(\/?)([a-z][a-z0-9]*)(.*?)>$/is', $part, $matches)) {
+                $output .= self::formatCommentNotificationText($part);
+                continue;
+            }
+
+            $closing = $matches[1] === '/';
+            $tag = strtolower($matches[2]);
+            $attributes = $matches[3];
+            if (!in_array($tag, array('a', 'b', 'br', 'strong'), true)) {
+                continue;
+            }
+
+            if ($closing) {
+                $last = count($stack) - 1;
+                if ($last < 0 || $stack[$last]['source'] !== $tag) {
+                    continue;
+                }
+
+                $entry = array_pop($stack);
+                if ($entry['output'] !== '') {
+                    $output .= '</' . $entry['output'] . '>';
+                }
+                continue;
+            }
+
+            if ($tag === 'br') {
+                $output .= '<br>';
+                continue;
+            }
+
+            if ($tag === 'strong' || $tag === 'b') {
+                $output .= '<strong>';
+                $stack[] = array('source' => $tag, 'output' => 'strong');
+                continue;
+            }
+
+            $link = self::formatCommentNotificationLink($attributes);
+            $hasOpenLink = false;
+            foreach ($stack as $entry) {
+                if ($entry['source'] === 'a') {
+                    $hasOpenLink = true;
+                    break;
+                }
+            }
+
+            if ($link !== '' && !$hasOpenLink) {
+                $output .= $link;
+                $stack[] = array('source' => 'a', 'output' => 'a');
+            } else {
+                $stack[] = array('source' => 'a', 'output' => '');
+            }
+        }
+
+        while (!empty($stack)) {
+            $entry = array_pop($stack);
+            if ($entry['output'] !== '') {
+                $output .= '</' . $entry['output'] . '>';
+            }
+        }
+
+        return $output;
+    }
+
+    private static function formatCommentNotificationText($value)
+    {
+        $text = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return nl2br(self::escapeHtml($text), false);
+    }
+
+    private static function formatCommentNotificationLink($source)
+    {
+        $attributes = array();
+        if (preg_match_all(
+            '/(?:^|\s+)([a-z][a-z0-9:-]*)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'=<>\x60]+))/i',
+            (string) $source,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $match) {
+                $name = strtolower($match[1]);
+                if (array_key_exists($name, $attributes)) {
+                    continue;
+                }
+
+                if (isset($match[2]) && $match[2] !== '') {
+                    $attributes[$name] = $match[2];
+                } elseif (isset($match[3]) && $match[3] !== '') {
+                    $attributes[$name] = $match[3];
+                } else {
+                    $attributes[$name] = isset($match[4]) ? $match[4] : '';
+                }
+            }
+        }
+
+        if (!array_key_exists('href', $attributes)) {
+            return '';
+        }
+
+        $url = self::getSafeHttpUrl($attributes['href']);
+        if (null === $url) {
+            return '';
+        }
+
+        $output = '<a href="' . self::escapeHtml($url) . '"';
+        if (isset($attributes['target'])) {
+            $target = strtolower(trim(html_entity_decode(
+                $attributes['target'],
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8'
+            )));
+            if ($target === '_blank') {
+                $output .= ' target="_blank" rel="noopener noreferrer"';
+            } elseif ($target === '_self') {
+                $output .= ' target="_self"';
+            }
+        }
+
+        return $output . '>';
+    }
+
+    /**
      * 将结构化数据安全嵌入 HTML script 元素
      *
      * @return string
@@ -444,9 +590,9 @@ class Utils
     }
 
     /**
-     * 返回可安全用于赞赏二维码的 URL，非法输入返回 null。
+     * 返回经过校验的 HTTP(S) 或相对 URL，非法输入返回 null。
      */
-    public static function getSafeRewardUrl($value)
+    public static function getSafeHttpUrl($value)
     {
         if (!is_string($value)) {
             return null;
@@ -490,11 +636,11 @@ class Utils
                 return null;
             }
 
-            return self::isValidRewardAbsoluteUrl($url) ? $url : null;
+            return self::isValidHttpAbsoluteUrl($url) ? $url : null;
         }
 
         if (substr($url, 0, 2) === '//') {
-            return self::isValidRewardAbsoluteUrl('https:' . $url) ? $url : null;
+            return self::isValidHttpAbsoluteUrl('https:' . $url) ? $url : null;
         }
 
         if (substr($url, 0, 1) !== '/' && preg_match('/^[^\/?#]*:/', $url) === 1) {
@@ -510,9 +656,17 @@ class Utils
     }
 
     /**
+     * 保留公开的赞赏 URL 校验入口。
+     */
+    public static function getSafeRewardUrl($value)
+    {
+        return self::getSafeHttpUrl($value);
+    }
+
+    /**
      * 校验带主机名的 HTTP(S) URL。
      */
-    private static function isValidRewardAbsoluteUrl($url)
+    private static function isValidHttpAbsoluteUrl($url)
     {
         if (filter_var($url, FILTER_VALIDATE_URL) === false) {
             return false;

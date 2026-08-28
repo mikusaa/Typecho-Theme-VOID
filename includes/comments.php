@@ -45,7 +45,7 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
                 </div>
                 <h3 id="response" class="widget-title text-left">添加新评论</h3>
                 <?php if(!empty($setting['commentNotification'])): ?>
-                    <p class="comment-notification notice"><?php echo Utils::escapeHtml($setting['commentNotification']); ?></p>
+                    <p class="comment-notification notice"><?php echo Utils::formatCommentNotification($setting['commentNotification']); ?></p>
                 <?php endif; ?>
                 <?php $commentUrl = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'commentUrl')); ?>
                 <form method="post" action="<?php echo Utils::escapeHtml($commentUrl); ?>" id="comment-form">
