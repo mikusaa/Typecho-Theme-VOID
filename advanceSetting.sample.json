@@ -15,7 +15,7 @@
     "twitterId": "",
     "weiboId": "",
     "commentFoldThreshold": [5, 1.5],
-    "commentNotification": "请友善交流",
+    "commentNotification": "请<strong>友善交流</strong>",
     "largePhotoSet": true,
     "macStyleCodeBlock": true,
     "lineNumbers": true,

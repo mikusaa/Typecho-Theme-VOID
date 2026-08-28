@@ -52,8 +52,18 @@ JSON 不支持注释或末尾多余的逗号。保存前建议使用 JSON 校验
 | --- | --- | --- |
 | `twitterId` | 字符串，`""` | Twitter/X 分享文字和卡片元数据中的账号 ID，不含 `@`。 |
 | `weiboId` | 字符串，`""` | 微博分享文字中的账号 ID，不含 `@`。 |
-| `commentNotification` | 字符串，`""` | 评论表单上方的提示语。 |
+| `commentNotification` | 字符串，`""` | 评论表单上方的提示语；支持换行、加粗和链接。 |
 | `commentFoldThreshold` | 二元素数组，`[5, 1.5]` | 自动折叠评论的 `[最低点踩数, 点踩/点赞比例]`。依赖启用中的 VOID 插件 1.4.0 或更高版本。 |
+
+`commentNotification` 可以使用 JSON 的 `\n` 或 `<br>` 换行，使用 `<strong>`、`<b>` 加粗，并使用
+`<a href="...">` 添加链接。链接仅接受 HTTP(S) 或站内相对地址；`target` 仅支持 `_self` 和 `_blank`，
+其中 `_blank` 会自动增加 `rel="noopener noreferrer"`。其他标签和属性会被丢弃，但标签内的文字会保留。
+
+```json
+{
+    "commentNotification": "请<strong>友善交流</strong><br>提交前请阅读<a href=\"/about\">评论规则</a>"
+}
+```
 
 `[5, 1.5]` 表示点踩数至少为 5，且至少达到点赞数的 1.5 倍时折叠。访客仍可手动展开评论。
 
