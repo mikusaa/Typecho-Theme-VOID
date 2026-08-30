@@ -377,7 +377,7 @@ class Utils
     public static function addButton()
     {
         ob_start();
-        self::indexTheme('/assets/libs/emotes/emote-picker-7fedd5df0e.js');
+        self::indexTheme('/assets/libs/emotes/emote-picker-2d39c94753.js');
         $emotePickerUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($emotePickerUrl) . '"></script>';
 
@@ -388,7 +388,7 @@ class Utils
             . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
         ob_start();
-        self::indexTheme('/assets/editor-9051e7df24.js');
+        self::indexTheme('/assets/editor-a69994f106.js');
         $editorUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
@@ -398,7 +398,7 @@ class Utils
         echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
         ob_start();
-        self::indexTheme('/assets/editor-admin-cb55cb258c.css');
+        self::indexTheme('/assets/editor-admin-53773442fd.css');
         $editorStyleUrl = ob_get_clean();
         echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }
