@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const sass = require('sass');
 
 class FakeClassList {
     constructor() {
@@ -893,6 +894,23 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
         /touch-action: pan-y pinch-zoom;/
     );
     assert.doesNotMatch(photoSetsSource, /addEventListener\(['"](?:wheel|mousewheel)/);
+});
+
+test('large photo-set width remains limited to single and pair layouts', () => {
+    const styles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_article.scss'), 'utf8');
+    const compiled = sass.compile(path.resolve(__dirname, '../../assets/VOID.scss'), {
+        loadPaths: [path.resolve(__dirname, '../../assets')],
+        style: 'expanded'
+    }).css;
+
+    assert.match(
+        styles,
+        /&\.large\s*\{[\s\S]*?&\[data-void-photo-layout="strip"\][\s\S]*?width: 100%;[\s\S]*?margin-left: 0;/
+    );
+    assert.match(
+        compiled,
+        /article \.photos\.large\[data-void-photo-layout=strip\] \{\s+width: 100%;\s+margin-left: 0;\s+\}/
+    );
 });
 
 test('image zoom creates body overlay and document stage without a dialog or scroll lock', () => {
