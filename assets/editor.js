@@ -32,7 +32,7 @@ function insertAtCursor(myField, myValue) {
 function initEditorToolbar() {
     if ($('#wmd-button-row').length > 0) {
         $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-photoset-button" style="" title="插入图集">图集</li>');
-        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-emotes-button"><button type="button" id="void-editor-emotes-trigger" class="void-editor-emotes-trigger" title="插入表情" aria-label="打开表情选择器">☺</button></li>');
+        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-emotes-button"><button type="button" id="void-editor-emotes-trigger" class="void-editor-emotes-trigger" title="插入表情" aria-label="打开表情选择器">表情</button></li>');
 
         if (window.VoidEmotes && document.getElementById('text')) {
             var host = document.createElement('div');

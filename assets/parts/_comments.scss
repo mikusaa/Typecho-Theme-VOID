@@ -118,18 +118,24 @@
             }
             .void-emotes-trigger{
                 display: inline-flex;
-                width: 44px;
-                height: 44px;
+                width: 2.08rem;
+                height: 2.08rem;
                 align-items: center;
                 justify-content: center;
-                flex: 0 0 44px;
+                flex: 0 0 2.08rem;
+                box-sizing: border-box;
                 padding: 0;
-                border: 1px solid transparent;
-                border-radius: 3px;
+                border: 3px solid transparent;
+                border-radius: 0;
                 background: none;
                 color: rgba($textColor, 0.62);
-                font-size: 21px;
-                line-height: 1;
+                font-size: 14px;
+                line-height: 1.15;
+                svg{
+                    display: block;
+                    width: 16px;
+                    height: 16px;
+                }
                 &:hover,
                 &[aria-expanded="true"]{
                     border-color: rgba(0,0,0,.12);

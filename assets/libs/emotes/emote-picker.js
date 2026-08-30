@@ -427,7 +427,7 @@
             this.trigger = document.createElement('button');
             this.trigger.type = 'button';
             this.trigger.className = 'void-emotes-trigger';
-            this.trigger.textContent = '☺';
+            this.trigger.textContent = '表情';
             this.container.appendChild(this.trigger);
             this.generatedTrigger = true;
         }
