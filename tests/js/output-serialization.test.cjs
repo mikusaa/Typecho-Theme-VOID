@@ -215,7 +215,7 @@ function loadUpdateChecker() {
         fs.readFileSync(path.resolve(__dirname, '../../assets/check_update.js'), 'utf8'),
         {
             String,
-            VOIDVersion: '3.5.4.1',
+            VOIDVersion: '3.6.0',
             XMLHttpRequest: FakeXMLHttpRequest,
             document
         }
