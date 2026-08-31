@@ -390,6 +390,9 @@
         this.baseUrl = getBaseUrl(options.baseUrl);
         this.trigger = asElement(options.trigger)
             || asElement(this.container.getAttribute('data-trigger') ? '#' + this.container.getAttribute('data-trigger') : null);
+        this.manualTrigger = options.manualTrigger === true && !!this.trigger;
+        this.onOpen = typeof options.onOpen === 'function' ? options.onOpen : null;
+        this.onClose = typeof options.onClose === 'function' ? options.onClose : null;
         this.abortController = typeof window.AbortController === 'function' ? new window.AbortController() : null;
         this.index = null;
         this.indexPromise = null;
@@ -432,10 +435,12 @@
             this.generatedTrigger = true;
         }
 
-        this.trigger.setAttribute('aria-label', '打开表情选择器');
-        this.trigger.setAttribute('title', '表情');
-        this.trigger.setAttribute('aria-expanded', 'false');
-        this.trigger.setAttribute('aria-controls', this.id + '-panel');
+        if (!this.manualTrigger) {
+            this.trigger.setAttribute('aria-label', '打开表情选择器');
+            this.trigger.setAttribute('title', '表情');
+            this.trigger.setAttribute('aria-expanded', 'false');
+            this.trigger.setAttribute('aria-controls', this.id + '-panel');
+        }
 
         this.container.classList.add('void-emotes-host', 'void-emotes-host--' + this.mode);
 
@@ -491,13 +496,15 @@
 
     Picker.prototype.bind = function () {
         var self = this;
-        this.listen(this.trigger, 'click', function () {
-            if (self.isOpen) {
-                self.close();
-            } else {
-                self.open();
-            }
-        });
+        if (!this.manualTrigger) {
+            this.listen(this.trigger, 'click', function () {
+                if (self.isOpen) {
+                    self.close();
+                } else {
+                    self.open();
+                }
+            });
+        }
         this.listen(this.closeButton, 'click', function () {
             self.close();
             self.trigger.focus();
@@ -559,8 +566,10 @@
         this.isOpen = true;
         this.panel.hidden = false;
         this.container.classList.add('is-open');
-        this.trigger.setAttribute('aria-expanded', 'true');
-        this.trigger.setAttribute('aria-label', '关闭表情选择器');
+        if (!this.manualTrigger) {
+            this.trigger.setAttribute('aria-expanded', 'true');
+            this.trigger.setAttribute('aria-label', '关闭表情选择器');
+        }
 
         if (isMobileInput()) {
             this.target.blur();
@@ -577,6 +586,9 @@
         } else {
             this.loadIndex();
         }
+        if (this.onOpen) {
+            this.onOpen(this);
+        }
     };
 
     Picker.prototype.close = function () {
@@ -588,14 +600,19 @@
         this.renderEpoch++;
         this.panel.hidden = true;
         this.container.classList.remove('is-open');
-        this.trigger.setAttribute('aria-expanded', 'false');
-        this.trigger.setAttribute('aria-label', '打开表情选择器');
+        if (!this.manualTrigger) {
+            this.trigger.setAttribute('aria-expanded', 'false');
+            this.trigger.setAttribute('aria-label', '打开表情选择器');
+        }
         this.stopAnimations();
         this.restoreAnimatedIcons();
 
         if (this.mode === 'popover') {
             window.removeEventListener('resize', this.repositionHandler);
             window.removeEventListener('scroll', this.repositionHandler, true);
+        }
+        if (this.onClose) {
+            this.onClose(this);
         }
     };
 

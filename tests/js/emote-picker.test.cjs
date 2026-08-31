@@ -119,6 +119,16 @@ function loadPickerEnvironment(windowOverrides = {}) {
             this.listeners.set(name, listeners.filter((candidate) => candidate !== listener));
         }
 
+        dispatchEvent(event) {
+            event.target = event.target || this;
+            event.preventDefault = event.preventDefault || function () {};
+            (this.listeners.get(event.type) || []).slice().forEach((listener) => listener(event));
+        }
+
+        click() {
+            this.dispatchEvent({ type: 'click' });
+        }
+
         querySelectorAll() {
             return [];
         }
@@ -158,9 +168,6 @@ function loadPickerEnvironment(windowOverrides = {}) {
             }
         }
 
-        dispatchEvent() {
-            return true;
-        }
     }
 
     document = {
@@ -174,6 +181,7 @@ function loadPickerEnvironment(windowOverrides = {}) {
         localStorage: null,
         navigator: {},
         innerWidth: 1024,
+        innerHeight: 768,
         matchMedia: () => ({ matches: false }),
         addEventListener: (name, listener) => {
             const listeners = windowListeners.get(name) || [];
@@ -500,6 +508,101 @@ test('picker mount is idempotent and can remount after PJAX destruction', () => 
     assert.ok(second);
     assert.notEqual(second, first);
     assert.equal(container.children.length, 2);
+});
+
+test('default trigger mode keeps component-owned click and ARIA behavior', () => {
+    const { window, Element } = loadPickerEnvironment();
+    const container = new Element('div');
+    const target = new Element('textarea');
+    const trigger = new Element('button');
+    const picker = window.VoidEmotes.mount({ container, target, trigger, mode: 'inline' });
+
+    picker.index = { defaultPack: 'recent', tabs: [] };
+    picker.selectPack = function () {};
+    assert.equal((trigger.listeners.get('click') || []).length, 1);
+    assert.equal(trigger.getAttribute('aria-controls'), picker.panel.id);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+
+    trigger.click();
+    assert.equal(picker.isOpen, true);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+    trigger.click();
+    assert.equal(picker.isOpen, false);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+});
+
+test('manual trigger mode preserves caller ARIA and reports open and close state', () => {
+    const { window, document, Element } = loadPickerEnvironment();
+    const container = new Element('div');
+    const target = new Element('textarea');
+    const trigger = new Element('button');
+    const states = [];
+    trigger.setAttribute('aria-label', '插入 VOID 扩展语法');
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-controls', 'void-editor-menu');
+    trigger.setAttribute('aria-expanded', 'false');
+    const picker = window.VoidEmotes.mount({
+        container,
+        target,
+        trigger,
+        mode: 'inline',
+        manualTrigger: true,
+        onOpen: (instance) => states.push(['open', instance]),
+        onClose: (instance) => states.push(['close', instance])
+    });
+
+    picker.index = { defaultPack: 'recent', tabs: [] };
+    picker.selectPack = function () {};
+    assert.equal((trigger.listeners.get('click') || []).length, 0);
+    assert.equal(trigger.getAttribute('aria-controls'), 'void-editor-menu');
+    assert.equal(trigger.getAttribute('aria-label'), '插入 VOID 扩展语法');
+
+    trigger.click();
+    assert.equal(picker.isOpen, false);
+    picker.open();
+    assert.equal(picker.isOpen, true);
+    assert.deepEqual(states[0], ['open', picker]);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(trigger.getAttribute('aria-controls'), 'void-editor-menu');
+
+    picker.closeButton.click();
+    assert.equal(picker.isOpen, false);
+    assert.deepEqual(states[1], ['close', picker]);
+    assert.equal(document.activeElement, trigger);
+    assert.equal(trigger.getAttribute('aria-label'), '插入 VOID 扩展语法');
+});
+
+test('manual popover uses the shared trigger for positioning and Escape focus restoration', () => {
+    const { window, document, Element } = loadPickerEnvironment();
+    const container = new Element('div');
+    const target = new Element('textarea');
+    const trigger = new Element('button');
+    let closed = 0;
+    trigger.getBoundingClientRect = () => ({ top: 100, right: 172, bottom: 126, left: 118 });
+    const picker = window.VoidEmotes.mount({
+        container,
+        target,
+        trigger,
+        mode: 'popover',
+        manualTrigger: true,
+        onClose: () => { closed++; }
+    });
+    picker.index = { defaultPack: 'recent', tabs: [] };
+    picker.selectPack = function () {};
+
+    picker.open();
+    assert.equal(container.style.left, '118px');
+    assert.equal(container.style.top, '134px');
+    assert.equal(container.style.width, '420px');
+
+    window.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault() {} });
+    assert.equal(picker.isOpen, false);
+    assert.equal(closed, 1);
+    assert.equal(document.activeElement, trigger);
+
+    picker.destroy();
+    assert.equal(picker.listeners.length, 0);
+    assert.equal(container.__voidEmotesInstance, null);
 });
 
 test('Escape closes an open picker even when focus is outside the panel', () => {
