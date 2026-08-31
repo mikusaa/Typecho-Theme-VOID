@@ -76,6 +76,12 @@ if($this->is('post') || $this->is('page')) {
                         <?php endif;?>
                     <?php } ?>
                 </p>
+                <?php if(($this->is('post') || $this->is('page')) && $this->template != 'Archives.php' && Contents::shouldShowBannerSource($this)): ?>
+                    <?php $bannerSourceHtml = Contents::getBannerSourceHtml($this->fields->bannerSource); ?>
+                    <?php if($bannerSourceHtml !== ''): ?>
+                        <p class="banner-source-meta"><?php echo $bannerSourceHtml; ?></p>
+                    <?php endif; ?>
+                <?php endif; ?>
             <?php endif;?>
         </div>
     <?php elseif($this->is('index')): ?>

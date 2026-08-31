@@ -216,7 +216,7 @@ function themeFields(Typecho_Widget_Helper_Layout $layout)
     $layout->addItem($banner);
     $bannerMeta = new Typecho_Widget_Helper_Form_Element_Hidden('bannerMeta', null, null, '封面尺寸元数据');
     $layout->addItem($bannerMeta);
-    $bannerSource = new Typecho_Widget_Helper_Form_Element_Text('bannerSource', null, null, '主图来源', '输入来源信息，该信息会显示在文章题图下方。支持 markdown 格式。');
+    $bannerSource = new Typecho_Widget_Helper_Form_Element_Text('bannerSource', null, null, '主图来源', '输入来源信息，该信息会显示在题图标题区元信息下方。支持 markdown 格式。');
     $layout->addItem($bannerSource);
     $bannerStyle = new Typecho_Widget_Helper_Form_Element_Select('bannerStyle', array(
         0 => '显示在顶部',

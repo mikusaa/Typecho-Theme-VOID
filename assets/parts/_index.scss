@@ -73,6 +73,20 @@ main{
                 font-weight: 300;
                 margin-bottom: 0;
             }
+            .banner-source-meta {
+                width: 100%;
+                max-width: 32rem;
+                margin: 0.45rem 0 0;
+                text-align: center;
+                font-size: 0.8rem;
+                font-weight: 300;
+                line-height: 1.6;
+                opacity: 0.68;
+                overflow-wrap: anywhere;
+                a {
+                    color: inherit;
+                }
+            }
             .subtitle {
                 font-size: 1rem;
                 display: block;
@@ -167,6 +181,9 @@ main{
                 }
                 & a{
                     border-bottom: 1px solid white;
+                }
+                .banner-source-meta a {
+                    border-bottom-color: rgba(255, 255, 255, 0.32);
                 }
             }
         }

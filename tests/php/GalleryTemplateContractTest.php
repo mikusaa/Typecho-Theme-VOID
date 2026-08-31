@@ -34,7 +34,7 @@ galleryTemplateAssertSame(2, substr_count($template, 'if (!Utils::isPjax())'), '
 galleryTemplateAssertContains('<main id="pjax-container">', $template, 'template owns the main PJAX container');
 galleryTemplateAssertContains("\$this->need('includes/ldjson.php')", $template, 'template keeps structured metadata');
 galleryTemplateAssertContains("\$this->need('includes/banner.php')", $template, 'template keeps the page banner');
-galleryTemplateAssertContains("\$this->need('includes/banner-source.php')", $template, 'template keeps banner attribution');
+galleryTemplateAssertNotContains("\$this->need('includes/banner-source.php')", $template, 'template relies on the shared banner attribution line');
 galleryTemplateAssertContains('data-void-gallery', $template, 'template exposes the Gallery controller root');
 galleryTemplateAssertContains('<?php $this->content(); ?>', $template, 'content continues through the shared Contents pipeline');
 galleryTemplateAssertContains("\$this->need('includes/comments.php')", $template, 'page comments preserve the normal template behavior');

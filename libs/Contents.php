@@ -1943,7 +1943,7 @@ Class Contents
             $content .= $linkHtml;
         }
 
-        return '题图来自 ' . $content;
+        return '封面图来源：' . $content;
     }
 
     /**
