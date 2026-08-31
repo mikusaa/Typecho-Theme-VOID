@@ -22,7 +22,6 @@ if (!Utils::isPjax()) {
 
     <?php $this->need('includes/ldjson.php'); ?>
     <?php $this->need('includes/banner.php'); ?>
-    <?php $this->need('includes/banner-source.php'); ?>
 
     <div class="void-gallery-page">
         <article class="void-gallery yue float-up" data-void-gallery>
