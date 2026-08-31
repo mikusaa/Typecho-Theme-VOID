@@ -91,6 +91,218 @@ var VOID_Content = {
         });
     },
 
+    normalizeTableLabel: function (value) {
+        return String(value || '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+    },
+
+    tableCellHasSpan: function (cell) {
+        return !cell || parseInt(cell.getAttribute('colspan') || '1', 10) !== 1
+            || parseInt(cell.getAttribute('rowspan') || '1', 10) !== 1;
+    },
+
+    isPureTableMediaCell: function (cell) {
+        var mediaRoot;
+        var rootTag;
+
+        if (!cell || typeof cell.querySelector !== 'function'
+            || !cell.children || cell.children.length !== 1) {
+            return false;
+        }
+
+        mediaRoot = cell.children[0];
+        rootTag = String(mediaRoot.tagName || '').toUpperCase();
+        if (rootTag !== 'IMG'
+            && rootTag !== 'A'
+            && rootTag !== 'PICTURE'
+            && rootTag !== 'FIGURE') {
+            return false;
+        }
+        if (rootTag !== 'IMG'
+            && (!mediaRoot.querySelector
+                || !mediaRoot.querySelector('img[data-void-image-content], img'))) {
+            return false;
+        }
+        if (rootTag !== 'FIGURE' && this.normalizeTableLabel(mediaRoot.textContent) !== '') {
+            return false;
+        }
+
+        return this.normalizeTableLabel(cell.textContent)
+            === this.normalizeTableLabel(mediaRoot.textContent);
+    },
+
+    getResponsiveTableModel: function (table) {
+        var bodyIndex;
+        var cellIndex;
+        var headerCells;
+        var headerIndex;
+        var headerRow;
+        var labels = [];
+        var rowIndex;
+        var rows = [];
+        var mediaIndexes = [];
+
+        if (!table || !table.tHead || table.tHead.rows.length !== 1
+            || !table.tBodies || table.tBodies.length === 0 || table.tFoot
+            || (typeof table.querySelector === 'function' && table.querySelector('table'))) {
+            return null;
+        }
+
+        headerRow = table.tHead.rows[0];
+        headerCells = headerRow.cells;
+        if (!headerCells || headerCells.length === 0) {
+            return null;
+        }
+
+        for (headerIndex = 0; headerIndex < headerCells.length; headerIndex++) {
+            if (headerCells[headerIndex].tagName.toLowerCase() !== 'th'
+                || this.tableCellHasSpan(headerCells[headerIndex])) {
+                return null;
+            }
+
+            labels.push(this.normalizeTableLabel(headerCells[headerIndex].textContent));
+            if (labels[headerIndex] === '') {
+                return null;
+            }
+        }
+
+        for (bodyIndex = 0; bodyIndex < table.tBodies.length; bodyIndex++) {
+            for (rowIndex = 0; rowIndex < table.tBodies[bodyIndex].rows.length; rowIndex++) {
+                var row = table.tBodies[bodyIndex].rows[rowIndex];
+                var mediaIndex = -1;
+                var mediaCount = 0;
+
+                if (!row.cells || row.cells.length !== labels.length) {
+                    return null;
+                }
+
+                for (cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
+                    if (String(row.cells[cellIndex].tagName || '').toLowerCase() !== 'td'
+                        || this.tableCellHasSpan(row.cells[cellIndex])) {
+                        return null;
+                    }
+                    if (this.isPureTableMediaCell(row.cells[cellIndex])) {
+                        mediaIndex = cellIndex;
+                        mediaCount += 1;
+                    }
+                }
+
+                if (mediaCount > 1) {
+                    return null;
+                }
+
+                rows.push(row);
+                mediaIndexes.push(mediaIndex);
+            }
+        }
+
+        return {
+            headerCells: headerCells,
+            labels: labels,
+            mediaIndexes: mediaIndexes,
+            rows: rows
+        };
+    },
+
+    ensureTableWrapper: function (table) {
+        var wrapper = table.parentNode;
+
+        if (wrapper && wrapper.classList && wrapper.classList.contains('void-table-scroll')) {
+            return wrapper;
+        }
+        if (!table.ownerDocument || !table.parentNode) {
+            return null;
+        }
+
+        wrapper = table.ownerDocument.createElement('div');
+        wrapper.className = 'void-table-scroll';
+        wrapper.setAttribute('role', 'region');
+        wrapper.setAttribute('aria-label', '可横向滚动的表格');
+        wrapper.setAttribute('tabindex', '0');
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+        return wrapper;
+    },
+
+    clearResponsiveTableState: function (table, wrapper) {
+        var cells = table.querySelectorAll('td');
+        var index;
+        var rows = table.querySelectorAll('tbody tr');
+
+        table.removeAttribute('data-void-table-responsive');
+        if (wrapper) {
+            wrapper.classList.remove('void-table-scroll--responsive');
+        }
+
+        for (index = 0; index < rows.length; index++) {
+            rows[index].removeAttribute('data-void-table-has-media');
+        }
+        for (index = 0; index < cells.length; index++) {
+            cells[index].removeAttribute('data-void-table-label');
+            cells[index].removeAttribute('data-void-table-media');
+            cells[index].removeAttribute('data-void-table-primary');
+        }
+    },
+
+    enhanceTable: function (table) {
+        var cellIndex;
+        var headerIndex;
+        var mediaIndex;
+        var model;
+        var primaryAssigned;
+        var row;
+        var rowIndex;
+        var wrapper = this.ensureTableWrapper(table);
+
+        if (!wrapper) {
+            return;
+        }
+
+        this.clearResponsiveTableState(table, wrapper);
+        model = this.getResponsiveTableModel(table);
+        if (!model) {
+            return;
+        }
+
+        table.setAttribute('data-void-table-responsive', '');
+        wrapper.classList.add('void-table-scroll--responsive');
+
+        for (headerIndex = 0; headerIndex < model.headerCells.length; headerIndex++) {
+            if (!model.headerCells[headerIndex].getAttribute('scope')) {
+                model.headerCells[headerIndex].setAttribute('scope', 'col');
+            }
+        }
+
+        for (rowIndex = 0; rowIndex < model.rows.length; rowIndex++) {
+            row = model.rows[rowIndex];
+            mediaIndex = model.mediaIndexes[rowIndex];
+            primaryAssigned = false;
+
+            if (mediaIndex >= 0) {
+                row.setAttribute('data-void-table-has-media', '');
+            }
+
+            for (cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
+                row.cells[cellIndex].setAttribute('data-void-table-label', model.labels[cellIndex]);
+                if (cellIndex === mediaIndex) {
+                    row.cells[cellIndex].setAttribute('data-void-table-media', '');
+                } else if (!primaryAssigned) {
+                    row.cells[cellIndex].setAttribute('data-void-table-primary', '');
+                    primaryAssigned = true;
+                }
+            }
+        }
+    },
+
+    parseTables: function (root) {
+        var index;
+        var scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+        var tables = scope.querySelectorAll('.yue table');
+
+        for (index = 0; index < tables.length; index++) {
+            this.enhanceTable(tables[index]);
+        }
+    },
+
     // 处理友链列表
     parseBoardThumbs: function () {
         var items = document.querySelectorAll('.board-thumb');
@@ -3131,6 +3343,7 @@ var VOID = {
 
         VOID_Content.countWords();
         VOID_Content.parseDetails();
+        VOID_Content.parseTables(document.getElementById('pjax-container') || document);
         VOID_Content.parseTOC();
         if (typeof VOID_ControllerPanel !== 'undefined') {
             VOID_ControllerPanel.init();
@@ -3241,6 +3454,7 @@ var VOID = {
         VOID_Ui.checkScrollTop();
         VOID_Content.countWords();
         VOID_Content.parseDetails();
+        VOID_Content.parseTables(document.getElementById('pjax-container') || document);
         VOID_Content.parseTOC();
         if (typeof VOID_ControllerPanel !== 'undefined') {
             VOID_ControllerPanel.refresh();

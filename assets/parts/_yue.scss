@@ -204,37 +204,296 @@
     padding: 0;
 }
 
-.yue table {
-    width: max-content;
+.yue .void-table-scroll {
+    width: 100%;
     max-width: 100%;
+    margin: 0 auto 1.5em;
+    border-top: 1px solid rgba(#000, 0.16);
+    border-bottom: 1px solid rgba(#000, 0.16);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+
+    .theme-dark & {
+        border-color: rgba(#fff, 0.15);
+    }
+
+    &:focus-visible {
+        outline: 2px solid $highlightColor;
+        outline-offset: 3px;
+    }
+
+    >table {
+        display: table;
+        width: 100%;
+        min-width: max-content;
+        max-width: none;
+        margin: 0;
+        overflow: visible;
+    }
+}
+
+.yue table {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    max-width: 100%;
+    margin: 0 auto 1.5em;
     border-collapse: collapse;
     border-spacing: 0;
-    margin: 0 auto 1.5em;
-    font-size: 0.96em;
     box-sizing: border-box;
-    display: block;
-    word-break: normal;
+    font-size: 0.9em;
+    line-height: 1.55;
     overflow-x: auto;
+    overflow-wrap: anywhere;
+    word-break: normal;
     -webkit-overflow-scrolling: touch;
-}
-.yue thead {
-    background-color: #efefee;
-    .theme-dark & {
-        background-color: $td-bgColor-dark;
+
+    caption {
+        padding: 0 0 8px;
+        color: $fadeColor;
+        font-family: $void-font-sans;
+        font-size: 0.78em;
+        text-align: left;
+
+        .theme-dark & {
+            color: $td-textColor-dark;
+        }
+    }
+
+    a {
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    figure[data-void-image-item] {
+        width: 144px!important;
+        max-width: 144px!important;
+        margin: 0;
+        clear: none;
+
+        >a.void-image-link {
+            width: 144px;
+            height: auto;
+            max-width: none;
+            max-height: none;
+            aspect-ratio: 8 / 5!important;
+            overflow: hidden;
+
+            img[data-void-image-content] {
+                width: 100%;
+                max-width: none;
+                height: 100%;
+                max-height: none;
+                object-fit: cover;
+            }
+        }
+
+        figcaption {
+            width: 144px;
+            padding: 0 4px;
+            font-size: 12px;
+        }
+    }
+
+    td[data-void-table-media] {
+        >img:not(.biaoqing),
+        >a>img:not(.biaoqing),
+        >picture img:not(.biaoqing) {
+            display: block;
+            width: 144px;
+            max-width: none;
+            height: 90px;
+            max-height: none;
+            margin: 0;
+            object-fit: cover;
+        }
     }
 }
+
+.yue thead {
+    background: transparent;
+}
+
 .yue th,
 .yue td {
-    padding: 4px 8px 4px 10px;
-    border: 1px solid #dadada;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 0;
+    border-bottom: 1px solid rgba(#000, 0.08);
+    vertical-align: top;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: normal;
+
     .theme-dark & {
-        border-color: rgba(#dadada, 0.2);
+        border-color: rgba(#fff, 0.08);
     }
 }
-.yue tr:nth-child(even) {
-    background-color: #efefee;
+
+.yue th {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    color: $fadeColor;
+    font-family: $void-font-sans;
+    font-size: 0.76em;
+    font-weight: 500;
+    white-space: nowrap;
+
     .theme-dark & {
-        background-color: $td-bgColor-dark;
+        color: $td-textColor-dark;
+    }
+}
+
+.yue tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+@media (hover: hover) {
+    .yue tbody tr:hover td {
+        background: rgba($highlightColor, 0.045);
+
+        .theme-dark & {
+            background: rgba($highlightColor, 0.085);
+        }
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .yue .void-table-scroll--responsive {
+        overflow: visible;
+
+        >table[data-void-table-responsive] {
+            display: block;
+            width: 100%;
+            min-width: 0;
+        }
+    }
+
+    .yue table[data-void-table-responsive] {
+        >thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        >tbody {
+            display: block;
+            width: 100%;
+        }
+
+        >tbody>tr {
+            display: block;
+            position: relative;
+            width: 100%;
+            min-width: 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(#000, 0.12);
+
+            .theme-dark & {
+                border-color: rgba(#fff, 0.12);
+            }
+
+            &:last-child {
+                border-bottom: 0;
+            }
+
+            &[data-void-table-has-media] {
+                min-height: 93px;
+                padding-left: 105px;
+            }
+        }
+
+        td {
+            display: grid;
+            grid-template-columns: max-content minmax(0, 1fr);
+            gap: 8px;
+            width: 100%;
+            min-width: 0;
+            padding: 2px 0;
+            border: 0;
+            color: $fadeColor;
+            font-family: $void-font-sans;
+            font-size: 0.78em;
+            line-height: 1.45;
+            text-align: left!important;
+
+            .theme-dark & {
+                color: $td-textColor-dark;
+            }
+
+            &::before {
+                content: attr(data-void-table-label);
+                color: $fadeColor;
+                font-size: 0.92em;
+                white-space: nowrap;
+
+                .theme-dark & {
+                    color: $td-textColor-dark;
+                }
+            }
+
+            >* {
+                min-width: 0;
+            }
+
+            &[data-void-table-primary] {
+                padding-bottom: 5px;
+                color: $darkColor;
+                font-family: $void-font-default;
+                font-size: 0.88em;
+                line-height: 1.5;
+
+                .theme-dark & {
+                    color: $td-textColor-light;
+                }
+            }
+
+            &[data-void-table-media] {
+                display: block;
+                position: absolute;
+                top: 12px;
+                left: 0;
+                width: 92px;
+                padding: 0;
+
+                &::before {
+                    display: none;
+                }
+
+                figure[data-void-image-item] {
+                    width: 92px!important;
+                    max-width: 92px!important;
+
+                    >a.void-image-link {
+                        width: 92px;
+                        aspect-ratio: 4 / 3!important;
+                    }
+
+                    figcaption {
+                        width: 92px;
+                    }
+                }
+
+                >img:not(.biaoqing),
+                >a>img:not(.biaoqing),
+                >picture img:not(.biaoqing) {
+                    display: block;
+                    width: 92px;
+                    max-width: none;
+                    height: 69px;
+                    max-height: none;
+                    margin: 0;
+                    object-fit: cover;
+                }
+            }
+        }
     }
 }
 
