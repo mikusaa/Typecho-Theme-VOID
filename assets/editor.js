@@ -29,12 +29,287 @@ function insertAtCursor(myField, myValue) {
     document.documentElement.scrollTop=documentTop;
 }
 
+var VOID_Editor_Alerts = (function ($) {
+    var ALERT_TYPES = {
+        NOTE: '说明',
+        TIP: '提示',
+        IMPORTANT: '重要',
+        WARNING: '警告',
+        CAUTION: '危险'
+    };
+    var PLACEHOLDER = '提示内容';
+    var instance = null;
+
+    function isSupportedType(type) {
+        return Object.prototype.hasOwnProperty.call(ALERT_TYPES, type);
+    }
+
+    function createTemplate(type, selection, lineEnding) {
+        var body;
+        var lines;
+
+        if (!isSupportedType(type)) {
+            return null;
+        }
+
+        body = selection === undefined || selection === null || selection === ''
+            ? PLACEHOLDER : String(selection);
+        lineEnding = lineEnding || '\n';
+        lines = body.split(/\r\n|\r|\n/);
+
+        return '> [!' + type + ']' + lineEnding + lines.map(function (line) {
+            return line === '' ? '>' : '> ' + line;
+        }).join(lineEnding);
+    }
+
+    function detectLineEnding(value) {
+        return /\r\n/.test(value) ? '\r\n' : '\n';
+    }
+
+    function getLeadingSeparator(value, lineEnding) {
+        if (value === '') {
+            return '';
+        }
+        if (/(?:\r\n|\r|\n)[ \t]*(?:\r\n|\r|\n)$/.test(value)) {
+            return '';
+        }
+        return /(?:\r\n|\r|\n)$/.test(value) ? lineEnding : lineEnding + lineEnding;
+    }
+
+    function getTrailingSeparator(value, lineEnding) {
+        if (value === '') {
+            return '';
+        }
+        if (/^(?:\r\n|\r|\n)[ \t]*(?:\r\n|\r|\n)/.test(value)) {
+            return '';
+        }
+        return /^(?:\r\n|\r|\n)/.test(value) ? lineEnding : lineEnding + lineEnding;
+    }
+
+    function applyTemplate(value, selectionStart, selectionEnd, type) {
+        var source = String(value == null ? '' : value);
+        var start = Math.max(0, Math.min(source.length, Number(selectionStart) || 0));
+        var end = Math.max(start, Math.min(source.length, Number(selectionEnd) || 0));
+        var selected = source.substring(start, end);
+        var lineEnding = detectLineEnding(source);
+        var template = createTemplate(type, selected, lineEnding);
+        var before;
+        var after;
+        var leading;
+        var trailing;
+        var insertedStart;
+        var nextValue;
+
+        if (template === null) {
+            return null;
+        }
+
+        before = source.substring(0, start);
+        after = source.substring(end);
+        leading = getLeadingSeparator(before, lineEnding);
+        trailing = getTrailingSeparator(after, lineEnding);
+        insertedStart = before.length + leading.length;
+        nextValue = before + leading + template + trailing + after;
+
+        if (selected === '') {
+            start = insertedStart + template.indexOf(PLACEHOLDER);
+            end = start + PLACEHOLDER.length;
+        } else {
+            start = insertedStart + template.length;
+            end = start;
+        }
+
+        return {
+            selectionEnd: end,
+            selectionStart: start,
+            value: nextValue
+        };
+    }
+
+    function applyToField(field, type) {
+        var result;
+
+        if (!field || typeof field.selectionStart !== 'number'
+            || typeof field.selectionEnd !== 'number') {
+            return false;
+        }
+
+        result = applyTemplate(field.value, field.selectionStart, field.selectionEnd, type);
+        if (result === null) {
+            return false;
+        }
+
+        field.value = result.value;
+        field.focus();
+        field.setSelectionRange(result.selectionStart, result.selectionEnd);
+        $(field).trigger('input');
+        return true;
+    }
+
+    function init() {
+        var toolbar = document.getElementById('wmd-button-row');
+        var field = document.getElementById('text');
+        var wrapper;
+        var trigger;
+        var menu;
+        var controller;
+
+        if (!toolbar || !field) {
+            return null;
+        }
+        if (instance && instance.toolbar === toolbar && instance.field === field) {
+            return instance;
+        }
+        if (instance) {
+            instance.destroy();
+        }
+
+        wrapper = document.getElementById('wmd-alerts-button');
+        if (!wrapper) {
+            $(toolbar).append(
+                '<li class="wmd-spacer wmd-spacer1 void-editor-alerts-spacer"></li>' +
+                '<li class="wmd-button void-editor-alerts" id="wmd-alerts-button">' +
+                '  <button type="button" class="void-editor-alerts__trigger" id="void-editor-alerts-trigger"' +
+                '    aria-label="插入提示块" aria-haspopup="menu" aria-expanded="false"' +
+                '    aria-controls="void-editor-alerts-menu">' +
+                '    <span>提示块</span><span class="void-editor-alerts__caret" aria-hidden="true"></span>' +
+                '  </button>' +
+                '  <div class="void-editor-alerts__menu" id="void-editor-alerts-menu" role="menu" hidden>' +
+                '    <button type="button" role="menuitem" data-alert-type="NOTE">说明 <code>NOTE</code></button>' +
+                '    <button type="button" role="menuitem" data-alert-type="TIP">提示 <code>TIP</code></button>' +
+                '    <button type="button" role="menuitem" data-alert-type="IMPORTANT">重要 <code>IMPORTANT</code></button>' +
+                '    <button type="button" role="menuitem" data-alert-type="WARNING">警告 <code>WARNING</code></button>' +
+                '    <button type="button" role="menuitem" data-alert-type="CAUTION">危险 <code>CAUTION</code></button>' +
+                '  </div>' +
+                '</li>'
+            );
+            wrapper = document.getElementById('wmd-alerts-button');
+        }
+
+        trigger = wrapper.querySelector('.void-editor-alerts__trigger');
+        menu = wrapper.querySelector('.void-editor-alerts__menu');
+        if (!trigger || !menu) {
+            return null;
+        }
+
+        function getItems() {
+            return Array.prototype.slice.call(menu.querySelectorAll('[role="menuitem"]'));
+        }
+
+        function closeMenu(restoreFocus) {
+            menu.hidden = true;
+            trigger.setAttribute('aria-expanded', 'false');
+            if (restoreFocus) {
+                trigger.focus();
+            }
+        }
+
+        function openMenu(focusIndex) {
+            var items = getItems();
+            menu.hidden = false;
+            trigger.setAttribute('aria-expanded', 'true');
+            if (typeof focusIndex === 'number' && items.length) {
+                items[(focusIndex + items.length) % items.length].focus();
+            }
+        }
+
+        function moveItemFocus(current, direction) {
+            var items = getItems();
+            var index = items.indexOf(current);
+            if (index !== -1 && items.length) {
+                items[(index + direction + items.length) % items.length].focus();
+            }
+        }
+
+        $(trigger).on('click.voidEditorAlerts', function () {
+            if (menu.hidden) {
+                openMenu();
+            } else {
+                closeMenu(false);
+            }
+        }).on('keydown.voidEditorAlerts', function (event) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                openMenu(event.key === 'ArrowDown' ? 0 : -1);
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (menu.hidden) {
+                    openMenu(0);
+                } else {
+                    closeMenu(false);
+                }
+            } else if (event.key === 'Escape' && !menu.hidden) {
+                event.preventDefault();
+                closeMenu(true);
+            }
+        });
+
+        $(menu).on('click.voidEditorAlerts', '[role="menuitem"]', function () {
+            if (applyToField(field, this.getAttribute('data-alert-type'))) {
+                closeMenu(false);
+            }
+        }).on('keydown.voidEditorAlerts', '[role="menuitem"]', function (event) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                moveItemFocus(this, event.key === 'ArrowDown' ? 1 : -1);
+            } else if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault();
+                openMenu(event.key === 'Home' ? 0 : -1);
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                $(this).trigger('click');
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeMenu(true);
+            } else if (event.key === 'Tab') {
+                closeMenu(false);
+            }
+        });
+
+        $(document).on('mousedown.voidEditorAlerts', function (event) {
+            if (event.target !== wrapper && !$.contains(wrapper, event.target)) {
+                closeMenu(false);
+            }
+        });
+
+        controller = {
+            field: field,
+            toolbar: toolbar,
+            destroy: function () {
+                if (instance !== controller) {
+                    return;
+                }
+                $(trigger).off('.voidEditorAlerts');
+                $(menu).off('.voidEditorAlerts');
+                $(document).off('.voidEditorAlerts');
+                closeMenu(false);
+                instance = null;
+            }
+        };
+        instance = controller;
+        return controller;
+    }
+
+    return {
+        __test: {
+            applyTemplate: applyTemplate,
+            createTemplate: createTemplate
+        },
+        init: init
+    };
+})(window.jQuery);
+
 function initEditorToolbar() {
     if ($('#wmd-button-row').length > 0) {
-        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-photoset-button" style="" title="插入图集">图集</li>');
-        $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-emotes-button"><button type="button" id="void-editor-emotes-trigger" class="void-editor-emotes-trigger" title="插入表情" aria-label="打开表情选择器">表情</button></li>');
+        if (!document.getElementById('wmd-photoset-button')) {
+            $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-photoset-button" style="" title="插入图集">图集</li>');
+        }
+        if (!document.getElementById('wmd-emotes-button')) {
+            $('#wmd-button-row').append('<li class="wmd-spacer wmd-spacer1"></li><li class="wmd-button" id="wmd-emotes-button"><button type="button" id="void-editor-emotes-trigger" class="void-editor-emotes-trigger" title="插入表情" aria-label="打开表情选择器">表情</button></li>');
+        }
 
-        if (window.VoidEmotes && document.getElementById('text')) {
+        if (window.VoidEmotes && document.getElementById('text')
+            && !document.getElementById('void-editor-emotes')) {
             var host = document.createElement('div');
             host.id = 'void-editor-emotes';
             host.setAttribute('data-trigger', 'void-editor-emotes-trigger');
@@ -47,10 +322,15 @@ function initEditorToolbar() {
         }
     }
 
-    $(document).on('click', '#wmd-photoset-button', function () {
-        var myField = document.getElementById('text');
-        insertAtCursor(myField, '\n\n[photos]\n\n[/photos]\n\n');
-    });
+    $(document).off('click.voidEditorToolbar', '#wmd-photoset-button')
+        .on('click.voidEditorToolbar', '#wmd-photoset-button', function () {
+            var myField = document.getElementById('text');
+            insertAtCursor(myField, '\n\n[photos]\n\n[/photos]\n\n');
+        });
+
+    if (window.VOID_Editor_Alerts && typeof window.VOID_Editor_Alerts.init === 'function') {
+        window.VOID_Editor_Alerts.init();
+    }
 }
 
 var VOID_BannerMeta = (function ($) {

@@ -94,7 +94,10 @@ function feedContractAssertNotContains($needle, $actual, $message)
 
 function setFeedContentMode($mode)
 {
-    $GLOBALS['VOIDSetting'] = array('feedContentMode' => $mode);
+    $GLOBALS['VOIDSetting'] = array(
+        'feedContentMode' => $mode,
+        'largePhotoSet' => false
+    );
 }
 
 $feed = new FeedContractWidget(array('type' => 'feed'));
@@ -117,6 +120,25 @@ feedContractAssertSame(
     '默认模式继续传递过滤链的最后结果'
 );
 
+$alertSource = '<blockquote>[!NOTE]<br>Feed 正文</blockquote>';
+$fullAlertFeed = Contents::contentEx($alertSource, $feed, null);
+feedContractAssertSame(
+    '<blockquote><p>说明</p><p>Feed 正文</p></blockquote>',
+    $fullAlertFeed,
+    '完整 Feed 清理 Alert class 后保留标题和正文顺序'
+);
+feedContractAssertSame(
+    '<blockquote><p>普通引用</p></blockquote>',
+    Contents::contentEx('<blockquote><p>普通引用</p></blockquote>', $feed, null),
+    '完整 Feed 中普通引用保持不变'
+);
+feedContractAssertSame(
+    '<blockquote class="void-alert void-alert--note"><p class="void-alert__title">说明</p>'
+        . '<p>Feed 正文</p></blockquote>',
+    Contents::excerptEx($alertSource, $page, null),
+    '普通摘要保留 Alert 结构'
+);
+
 setFeedContentMode(1);
 feedContractAssertSame(false, Contents::shouldTruncateFeed($page), '普通文章页面不启用 Feed 截断');
 feedContractAssertSame($source, Contents::contentEx_999($source, $page, null), '非 Feed 正文保持不变');
@@ -133,6 +155,18 @@ feedContractAssertSame(
     Contents::shouldTruncateFeed(new FeedContractWidget(array('type' => 'comments'))),
     '独立评论 Feed 不启用正文截断'
 );
+
+$truncatedAlertFeed = Contents::contentEx_999(
+    $alertSource,
+    $feed,
+    Contents::contentEx($alertSource, $feed, null)
+);
+feedContractAssertContains(
+    '<p>说明 Feed 正文</p>',
+    $truncatedAlertFeed,
+    '截断 Feed 将 Alert 标题和正文输出为可读导语'
+);
+feedContractAssertNotContains('void-alert', $truncatedAlertFeed, '截断 Feed 不保留主题样式 class');
 
 $basic = Contents::contentEx_999($source, $feed, null);
 feedContractAssertContains('<p>第一段</p>', $basic, '正文 Feed 保留首个文本段落');

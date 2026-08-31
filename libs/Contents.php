@@ -199,7 +199,7 @@ Class Contents
         $text = self::parseImages($text, $isFeedContext, $isGalleryContext);
         $text = self::parseBiaoQing($text);
         $text = self::parsePhotoSet($text);
-        $text = self::parseNotice($text);
+        $text = self::parseAlerts($text);
 
         if ($isFeedContext) {
             $text = self::sanitizeFeedHtml($text);
@@ -222,7 +222,7 @@ Class Contents
 
         $text = self::parseRuby($text);
         $text = self::parseBiaoQing($text);
-        $text = self::parseNotice($text);
+        $text = self::parseAlerts($text);
         // Typecho 1.3 的 excerpt 基于 content 生成，需要额外清理已渲染图集
         $text = self::transformPhotoSetContainers($text, true);
         $text = preg_replace('/\[(?:photos(?=\s|\])[^\]]*|\/photos\s*)\]/i', '', $text);
@@ -707,16 +707,343 @@ Class Contents
     }
 
     /**
-     * 解析提示块
-     * 
+     * GitHub Alert 类型与本地化标题。
+     */
+    static private $alertTypes = array(
+        'NOTE' => array('slug' => 'note', 'title' => '说明'),
+        'TIP' => array('slug' => 'tip', 'title' => '提示'),
+        'IMPORTANT' => array('slug' => 'important', 'title' => '重要'),
+        'WARNING' => array('slug' => 'warning', 'title' => '警告'),
+        'CAUTION' => array('slug' => 'caution', 'title' => '危险')
+    );
+
+    /**
+     * 解析 GitHub Alerts 与单段旧版 notice 别名。
+     *
      * @return string
+     */
+    static public function parseAlerts($content)
+    {
+        if (!is_string($content) || $content === ''
+            || (strpos($content, '[!') === false && stripos($content, '[notice]') === false)) {
+            return $content;
+        }
+
+        $result = '';
+        $offset = 0;
+        $length = strlen($content);
+        $openElements = array();
+
+        while ($offset < $length) {
+            $tagStart = strpos($content, '<', $offset);
+            if (false === $tagStart) {
+                $result .= substr($content, $offset);
+                break;
+            }
+
+            $result .= substr($content, $offset, $tagStart - $offset);
+            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
+            if (null === $tagEnd) {
+                $result .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
+            $tagInfo = self::parseFeedTag($tag);
+            if (null === $tagInfo) {
+                $result .= $tag;
+                $offset = $tagEnd + 1;
+                continue;
+            }
+
+            if (!$tagInfo['closing'] && !$tagInfo['selfClosing']
+                && self::isFeedRawTextTag($tagInfo['name'])) {
+                $closing = self::findClosingFeedElement($content, $tagInfo['name'], $tagEnd + 1);
+                if (null === $closing) {
+                    $result .= substr($content, $tagStart);
+                    break;
+                }
+
+                $result .= substr($content, $tagStart, $closing[1] - $tagStart + 1);
+                $offset = $closing[1] + 1;
+                continue;
+            }
+
+            if (empty($openElements) && !$tagInfo['closing'] && !$tagInfo['selfClosing']
+                && ($tagInfo['name'] === 'blockquote' || $tagInfo['name'] === 'p')) {
+                $closing = self::findClosingFeedElement($content, $tagInfo['name'], $tagEnd + 1);
+                if (null !== $closing) {
+                    $inner = substr($content, $tagEnd + 1, $closing[0] - $tagEnd - 1);
+                    $transformed = $tagInfo['name'] === 'blockquote'
+                        ? self::transformGitHubAlert($tag, $inner)
+                        : self::transformLegacyNotice($tag, $inner);
+
+                    if (null !== $transformed) {
+                        $result .= $transformed;
+                        $offset = $closing[1] + 1;
+                        continue;
+                    }
+
+                    // 普通引用块整体跳过，避免解析其中嵌套的伪 Alert。
+                    if ($tagInfo['name'] === 'blockquote') {
+                        $result .= substr($content, $tagStart, $closing[1] - $tagStart + 1);
+                        $offset = $closing[1] + 1;
+                        continue;
+                    }
+                }
+            }
+
+            $result .= $tag;
+            self::updateAlertElementStack($tagInfo, $openElements);
+            $offset = $tagEnd + 1;
+        }
+
+        return $result;
+    }
+
+    /**
+     * 保留旧公开入口。
      */
     static public function parseNotice($content)
     {
-        $reg = '/<p>\s*\[notice(?:[^\]]*)\](.*?)\[\/notice\]\s*<\/p>/is';
-        $content = preg_replace($reg, '<p class="notice">$1</p>', $content);
-        $reg = '/\[notice(?:[^\]]*)\](.*?)\[\/notice\]/is';
-        return preg_replace($reg, '<p class="notice">$1</p>', $content);
+        return self::parseAlerts($content);
+    }
+
+    /**
+     * 将独立 GitHub 引用块转换为主题 Alert。
+     */
+    static private function transformGitHubAlert($openingTag, $inner)
+    {
+        $sections = self::splitGitHubAlertSections($inner);
+        if (count($sections) > 1) {
+            $rendered = '';
+            foreach ($sections as $section) {
+                $alert = self::transformGitHubAlertSingle($openingTag, $section);
+                if (null === $alert) {
+                    return null;
+                }
+                $rendered .= $alert;
+            }
+            return $rendered;
+        }
+
+        return self::transformGitHubAlertSingle($openingTag, $inner);
+    }
+
+    /**
+     * HyperDown 会把相邻的引用块合并；按顶层、以 marker 开头的段落拆回多个 Alert。
+     */
+    static private function splitGitHubAlertSections($inner)
+    {
+        $sections = array();
+        $current = '';
+        $offset = 0;
+        $length = strlen($inner);
+        $openElements = array();
+
+        while ($offset < $length) {
+            $tagStart = strpos($inner, '<', $offset);
+            if (false === $tagStart) {
+                $current .= substr($inner, $offset);
+                break;
+            }
+
+            $current .= substr($inner, $offset, $tagStart - $offset);
+            $tagEnd = self::findHtmlTokenEnd($inner, $tagStart);
+            if (null === $tagEnd) {
+                $current .= '<';
+                $offset = $tagStart + 1;
+                continue;
+            }
+
+            $tag = substr($inner, $tagStart, $tagEnd - $tagStart + 1);
+            $tagInfo = self::parseFeedTag($tag);
+            if (null === $tagInfo) {
+                $current .= $tag;
+                $offset = $tagEnd + 1;
+                continue;
+            }
+
+            if (!$tagInfo['closing'] && !$tagInfo['selfClosing']
+                && $tagInfo['name'] === 'p' && empty($openElements)) {
+                $closing = self::findClosingFeedElement($inner, 'p', $tagEnd + 1);
+                if (null !== $closing) {
+                    $paragraphInner = substr(
+                        $inner,
+                        $tagEnd + 1,
+                        $closing[0] - $tagEnd - 1
+                    );
+                    if (self::isGitHubAlertParagraph($paragraphInner)
+                        && trim($current) !== '') {
+                        $sections[] = $current;
+                        $current = '';
+                    }
+
+                    $current .= substr($inner, $tagStart, $closing[1] - $tagStart + 1);
+                    $offset = $closing[1] + 1;
+                    continue;
+                }
+            }
+
+            $current .= $tag;
+            self::updateAlertElementStack($tagInfo, $openElements);
+            $offset = $tagEnd + 1;
+        }
+
+        if ($current !== '' || empty($sections)) {
+            $sections[] = $current;
+        }
+
+        return $sections;
+    }
+
+    /**
+     * 判断顶层段落是否以正式 Alert marker 开头。
+     */
+    static private function isGitHubAlertParagraph($content)
+    {
+        return preg_match('/\A\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $content) === 1;
+    }
+
+    /**
+     * 将单个引用块转换为主题 Alert。
+     */
+    static private function transformGitHubAlertSingle($openingTag, $inner)
+    {
+        $attributes = self::parseHtmlAttributes($openingTag);
+        if (!empty($attributes)) {
+            return null;
+        }
+
+        if (!preg_match('/\A\s*/', $inner, $leading)) {
+            return null;
+        }
+        $paragraphStart = strlen($leading[0]);
+        if ($paragraphStart >= strlen($inner)) {
+            return null;
+        }
+
+        // HyperDown 对单段引用不输出 <p>，直接处理其首段行内内容。
+        if ($inner[$paragraphStart] !== '<') {
+            $paragraphInner = substr($inner, $paragraphStart);
+            $remainingParagraph = self::stripGitHubAlertMarker($paragraphInner, $type);
+            if (null === $remainingParagraph) {
+                return null;
+            }
+
+            $body = trim($remainingParagraph) === '' ? '' : '<p>' . $remainingParagraph . '</p>';
+            return self::renderAlertBlock($type, $body);
+        }
+
+        $paragraphTagEnd = self::findHtmlTokenEnd($inner, $paragraphStart);
+        if (null === $paragraphTagEnd) {
+            return null;
+        }
+        $paragraphTag = substr($inner, $paragraphStart, $paragraphTagEnd - $paragraphStart + 1);
+        $paragraphInfo = self::parseFeedTag($paragraphTag);
+        if (null === $paragraphInfo || $paragraphInfo['name'] !== 'p'
+            || $paragraphInfo['closing'] || $paragraphInfo['selfClosing']
+            || !empty(self::parseHtmlAttributes($paragraphTag))) {
+            return null;
+        }
+
+        $paragraphClosing = self::findClosingFeedElement($inner, 'p', $paragraphTagEnd + 1);
+        if (null === $paragraphClosing) {
+            return null;
+        }
+        $paragraphInner = substr(
+            $inner,
+            $paragraphTagEnd + 1,
+            $paragraphClosing[0] - $paragraphTagEnd - 1
+        );
+        $remainingParagraph = self::stripGitHubAlertMarker($paragraphInner, $type);
+        if (null === $remainingParagraph) {
+            return null;
+        }
+
+        $body = '';
+        if (trim($remainingParagraph) !== '') {
+            $body .= '<p>' . $remainingParagraph . '</p>';
+        }
+        $body .= substr($inner, $paragraphClosing[1] + 1);
+
+        return self::renderAlertBlock($type, $body);
+    }
+
+    /**
+     * 读取段首 Alert marker，并要求正文从下一行开始。
+     */
+    static private function stripGitHubAlertMarker($content, &$type)
+    {
+        if (!preg_match('/\A\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $content, $marker)) {
+            return null;
+        }
+
+        $remaining = substr($content, strlen($marker[0]));
+        if (trim($remaining) === '') {
+            $type = self::$alertTypes[$marker[1]];
+            return '';
+        }
+
+        if (!preg_match('/\A[ \t]*(?:\r?\n|<br\s*\/?>)[ \t\r\n]*/i', $remaining, $separator)) {
+            return null;
+        }
+
+        $type = self::$alertTypes[$marker[1]];
+        return substr($remaining, strlen($separator[0]));
+    }
+
+    /**
+     * 旧版 notice 仅作为同一段落内的 NOTE 别名。
+     */
+    static private function transformLegacyNotice($openingTag, $inner)
+    {
+        if (!empty(self::parseHtmlAttributes($openingTag))
+            || !preg_match('/\A\s*\[notice\](.*?)\[\/notice\]\s*\z/is', $inner, $matches)) {
+            return null;
+        }
+
+        // HyperDown 将换行转为 <br>；这意味着旧 notice 不是单段内容，应保留原文。
+        if (stripos($matches[1], '<br') !== false
+            || preg_match('/<\s*\/?\s*(?:p|div|ul|ol|li|pre|blockquote|table|h[1-6]|hr)\b/i', $matches[1])) {
+            return null;
+        }
+
+        $body = trim($matches[1]) === '' ? '' : '<p>' . $matches[1] . '</p>';
+        return self::renderAlertBlock(self::$alertTypes['NOTE'], $body);
+    }
+
+    /**
+     * 输出固定白名单中的 Alert 结构。
+     */
+    static private function renderAlertBlock($type, $body)
+    {
+        return '<blockquote class="void-alert void-alert--' . $type['slug'] . '">'
+            . '<p class="void-alert__title">' . $type['title'] . '</p>'
+            . $body . '</blockquote>';
+    }
+
+    /**
+     * 跟踪顶层元素，确保列表、容器或其他引用内的标记不会升级为 Alert。
+     */
+    static private function updateAlertElementStack($tagInfo, &$openElements)
+    {
+        if ($tagInfo['selfClosing']) {
+            return;
+        }
+
+        if (!$tagInfo['closing']) {
+            $openElements[] = $tagInfo['name'];
+            return;
+        }
+
+        for ($index = count($openElements) - 1; $index >= 0; $index--) {
+            if ($openElements[$index] === $tagInfo['name']) {
+                array_splice($openElements, $index);
+                return;
+            }
+        }
     }
 
     /**

@@ -410,6 +410,11 @@ var VOID_Content = {
         $.each($('div.articleBody p, div.articleBody blockquote'), function (index, item) {
             var text = item.textContent || '';
 
+            // Alert markup and fallback markers are structured content, not prose to hyphenate.
+            if ($(item).closest('.void-alert').length > 0 || /\[!|\[\/?notice\b/i.test(text)) {
+                return;
+            }
+
             // 避免在 MathJax 解析前把 TeX 命令打断（如 \begin 被插入软连字符）
             if (/\\begin\{|\\\(|\\\[|(^|[^\\])\$\$|(^|[^\\])\$/.test(text)) {
                 return;

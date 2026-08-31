@@ -205,7 +205,20 @@
 <details><summary>增强的 Markdown 语法</summary><br>
 
 * 注音语法：`{{文本:zhu yin}}`，会渲染为：<ruby>文本<rp> (</rp><rt>zhu yin</rt><rp>)</rp></ruby>
-* notice 提示块：`[notice]提示内容[/notice]`
+
+提示块使用 [GitHub Alerts](https://docs.github.com/zh/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) 语法。例如：
+
+```markdown
+> [!WARNING]
+> 升级之前请先备份数据库。
+>
+> - 检查 PHP 版本
+> - 停用缓存插件
+```
+
+支持 `NOTE`、`TIP`、`IMPORTANT`、`WARNING`、`CAUTION` 五种大写类型，默认标题依次为“说明、提示、重要、警告、危险”。提示块不支持自定义标题。
+
+旧文章中的单段 `[notice]提示内容[/notice]` 仍会作为 `NOTE` 兼容解析；新内容请只使用 GitHub Alerts 语法。
 
 </details>
 
