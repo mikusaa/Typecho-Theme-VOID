@@ -82,6 +82,12 @@ if (isset($_POST['void_action'])) {
     ob_start();
     Utils::indexTheme('/assets/libs/emotes/');
     $emotesBase = ob_get_clean();
+    $mathJaxUrl = '';
+    if ($setting['enableMath']) {
+        ob_start();
+        Utils::indexTheme('/assets/libs/mathjax/4.1.3/tex-svg.js');
+        $mathJaxUrl = ob_get_clean();
+    }
     ob_start();
     Utils::index('/action/void?');
     $votePath = ob_get_clean();
@@ -95,6 +101,7 @@ if (isset($_POST['void_action'])) {
         'home' => $homeUrl,
         'buildTime' => $buildTime,
         'enableMath' => (bool) $setting['enableMath'],
+        'mathJaxUrl' => $mathJaxUrl,
         'lazyload' => (bool) $setting['lazyload'],
         'colorScheme' => (int) $setting['colorScheme'],
         'headerMode' => (int) $setting['headerMode'],
@@ -147,7 +154,7 @@ if (isset($_POST['void_action'])) {
         <link href="<?php Utils::indexTheme('/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css'); ?>" rel="stylesheet">
     <?php endif; ?>
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-322b12e845.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-d8467213b1.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-3eeafbfdad.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-1c2d9f3c9f.js'); ?>"></script>
