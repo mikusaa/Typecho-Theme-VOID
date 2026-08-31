@@ -100,9 +100,12 @@ test('MathJax keeps the intentional minimal runtime file set', () => {
 });
 
 test('runtime references and browser bundles expose the expected APIs', () => {
+    const head = read('includes/head.php');
     const footer = read('includes/footer.php');
-    assert.match(footer, /assets\/libs\/mathjax\/4\.1\.3\/tex-svg\.js/);
-    assert.doesNotMatch(footer, /assets\/libs\/mathjax\/4\.1\.1\//);
+    assert.match(head, /assets\/libs\/mathjax\/4\.1\.3\/tex-svg\.js/);
+    assert.match(head, /'mathJaxUrl'\s*=>\s*\$mathJaxUrl/);
+    assert.doesNotMatch(footer, /assets\/libs\/mathjax\/4\.1\.3\/tex-svg\.js/);
+    assert.doesNotMatch(head + footer, /assets\/libs\/mathjax\/4\.1\.1\//);
 
     const mathJax = read('assets/libs/mathjax/4.1.3/tex-svg.js');
     assert.match(mathJax, /const nC="4\.1\.3"/);

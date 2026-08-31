@@ -491,6 +491,7 @@ outputSerializationAssertSame(true, is_array($voidConfig), 'VOIDConfig 是可解
 if (is_array($voidConfig)) {
     outputSerializationAssertSame(true, $voidConfig['PJAX'], 'VOIDConfig 保留布尔值');
     outputSerializationAssertSame(false, $voidConfig['enableMath'], 'VOIDConfig 保留 false 布尔值');
+    outputSerializationAssertSame('', $voidConfig['mathJaxUrl'], '关闭公式解析时不公开 MathJax 资源地址');
     outputSerializationAssertSame(3, $voidConfig['colorScheme'], 'VOIDConfig 保留整数值');
     outputSerializationAssertSame(2, $voidConfig['headerMode'], 'VOIDConfig 保留 headerMode 整数值');
     outputSerializationAssertSame(true, $voidConfig['lazyload'], 'VOIDConfig 保留唯一公开懒加载开关');
@@ -507,6 +508,20 @@ if (is_array($voidConfig)) {
     );
     outputSerializationAssertSame($GLOBALS['VOIDVersion'], $voidConfig['version'], 'VOIDConfig 保留含攻击字符的版本字符串');
 }
+
+$GLOBALS['VOIDSetting']['enableMath'] = true;
+$mathHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');
+$mathVoidConfig = outputSerializationVoidConfig($mathHead);
+outputSerializationAssertSame(true, is_array($mathVoidConfig), '启用公式解析时 VOIDConfig 仍是可解析 JSON');
+if (is_array($mathVoidConfig)) {
+    outputSerializationAssertSame(true, $mathVoidConfig['enableMath'], 'VOIDConfig 保留 true 布尔值');
+    outputSerializationAssertSame(
+        'https://example.test/usr/themes/VOID/assets/libs/mathjax/4.1.3/tex-svg.js',
+        $mathVoidConfig['mathJaxUrl'],
+        '启用公式解析时公开本地 MathJax 入口地址'
+    );
+}
+$GLOBALS['VOIDSetting']['enableMath'] = false;
 
 $GLOBALS['VOIDSetting']['serifincontent'] = true;
 $serifHead = $headWidget->render(dirname(__DIR__, 2) . '/includes/head.php');

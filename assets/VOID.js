@@ -10,6 +10,7 @@ var VOID_Content = {
     littlefootInstance: null,
     littlefootTouchClickGuardBound: false,
     littlefootLastTouchAt: 0,
+    mathJaxLoadPromise: null,
 
     countWords: function () {
         if ($('#totalWordCount').length) {
@@ -596,26 +597,295 @@ var VOID_Content = {
         });
     },
 
-    math: function () {
-        if (!VOIDConfig.enableMath || typeof MathJax === 'undefined') {
-            return;
+    getMathContainer: function () {
+        return document.getElementById('pjax-container') || document.body;
+    },
+
+    isMathDelimiterEscaped: function (text, index) {
+        var slashCount = 0;
+
+        for (index -= 1; index >= 0 && text.charAt(index) === '\\'; index--) {
+            slashCount++;
         }
 
-        var container = document.getElementById('pjax-container') || document.body;
-        if (!MathJax.startup || !MathJax.startup.promise || typeof MathJax.typesetPromise !== 'function') {
-            return;
-        }
+        return slashCount % 2 === 1;
+    },
 
-        MathJax.startup.promise = MathJax.startup.promise
-            .then(function () {
-                if (typeof MathJax.typesetClear === 'function') {
-                    MathJax.typesetClear([container]);
+    hasMathDelimiterPair: function (text, opening, closing) {
+        var openingIndex = text.indexOf(opening);
+        var closingIndex;
+
+        while (openingIndex !== -1) {
+            if (!this.isMathDelimiterEscaped(text, openingIndex)) {
+                closingIndex = text.indexOf(closing, openingIndex + opening.length);
+                while (closingIndex !== -1) {
+                    if (!this.isMathDelimiterEscaped(text, closingIndex)
+                        && text.slice(openingIndex + opening.length, closingIndex).replace(/\s/g, '') !== '') {
+                        return true;
+                    }
+                    closingIndex = text.indexOf(closing, closingIndex + closing.length);
                 }
-                return MathJax.typesetPromise([container]);
-            })
-            .catch(function (err) {
-                console.error('MathJax typeset failed:', err);
-            });
+            }
+            openingIndex = text.indexOf(opening, openingIndex + opening.length);
+        }
+
+        return false;
+    },
+
+    hasDollarMath: function (text) {
+        var delimiterLength;
+        var endIndex;
+        var index;
+
+        for (index = 0; index < text.length; index++) {
+            if (text.charAt(index) !== '$' || this.isMathDelimiterEscaped(text, index)) {
+                continue;
+            }
+
+            delimiterLength = text.charAt(index + 1) === '$' ? 2 : 1;
+            if (delimiterLength === 1 && /\s/.test(text.charAt(index + 1))) {
+                continue;
+            }
+            for (endIndex = index + delimiterLength; endIndex < text.length; endIndex++) {
+                if (text.charAt(endIndex) !== '$' || this.isMathDelimiterEscaped(text, endIndex)) {
+                    continue;
+                }
+
+                if (delimiterLength === 2) {
+                    if (text.charAt(endIndex + 1) !== '$') {
+                        continue;
+                    }
+                } else if (text.charAt(endIndex - 1) === '$'
+                    || text.charAt(endIndex + 1) === '$'
+                    || /\s/.test(text.charAt(endIndex - 1))) {
+                    continue;
+                }
+
+                if (text.slice(index + delimiterLength, endIndex).replace(/\s/g, '') !== '') {
+                    return true;
+                }
+            }
+
+            if (delimiterLength === 2) {
+                index++;
+            }
+        }
+
+        return false;
+    },
+
+    hasMathText: function (text) {
+        var environmentPattern = /\\begin\s*\{[^{}\s]+\}/g;
+        var environmentMatch;
+
+        if (!text) {
+            return false;
+        }
+
+        if (this.hasMathDelimiterPair(text, '\\(', '\\)')
+            || this.hasMathDelimiterPair(text, '\\[', '\\]')
+            || this.hasDollarMath(text)) {
+            return true;
+        }
+
+        while ((environmentMatch = environmentPattern.exec(text)) !== null) {
+            if (!this.isMathDelimiterEscaped(text, environmentMatch.index)) {
+                return true;
+            }
+        }
+
+        return false;
+    },
+
+    hasMath: function (container) {
+        var ignoredElements = {
+            CODE: true,
+            'MJX-CONTAINER': true,
+            NOSCRIPT: true,
+            PRE: true,
+            SCRIPT: true,
+            STYLE: true,
+            TEMPLATE: true,
+            TEXTAREA: true
+        };
+        var self = this;
+
+        function visit(node) {
+            var child;
+            var nodeName;
+
+            if (!node) {
+                return false;
+            }
+
+            if (node.nodeType === 3) {
+                return self.hasMathText(node.nodeValue || node.textContent || '');
+            }
+
+            nodeName = String(node.nodeName || node.tagName || '').toUpperCase();
+            if (ignoredElements[nodeName]) {
+                return false;
+            }
+
+            for (child = node.firstChild; child; child = child.nextSibling) {
+                if (visit(child)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return !!container && visit(container);
+    },
+
+    isMathJaxReady: function () {
+        var mathJax = window.MathJax;
+
+        return !!(mathJax && mathJax.startup && mathJax.startup.promise
+            && typeof mathJax.typesetPromise === 'function');
+    },
+
+    configureMathJax: function () {
+        window.MathJax = {
+            startup: {
+                typeset: false
+            },
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    },
+
+    loadMathJax: function () {
+        var existingScript;
+        var self = this;
+
+        if (!VOIDConfig.enableMath || !VOIDConfig.mathJaxUrl) {
+            return null;
+        }
+
+        if (this.isMathJaxReady()) {
+            return Promise.resolve(window.MathJax);
+        }
+
+        if (this.mathJaxLoadPromise) {
+            return this.mathJaxLoadPromise;
+        }
+
+        existingScript = document.getElementById('MathJax-script');
+        if (existingScript && existingScript.parentNode) {
+            existingScript.parentNode.removeChild(existingScript);
+        }
+
+        this.configureMathJax();
+        this.mathJaxLoadPromise = new Promise(function (resolve) {
+            var parent = document.head || document.documentElement;
+            var script = document.createElement('script');
+
+            script.id = 'MathJax-script';
+            script.async = true;
+            script.src = VOIDConfig.mathJaxUrl;
+            script.setAttribute('data-void-mathjax', '');
+            script.onload = function () {
+                if (self.isMathJaxReady()) {
+                    resolve(window.MathJax);
+                    return;
+                }
+
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+                self.mathJaxLoadPromise = null;
+                window.MathJax = null;
+                console.error('MathJax loaded without the expected typesetting API.');
+                resolve(null);
+            };
+            script.onerror = function () {
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+                self.mathJaxLoadPromise = null;
+                window.MathJax = null;
+                console.error('MathJax failed to load.');
+                resolve(null);
+            };
+
+            parent.appendChild(script);
+        });
+
+        return this.mathJaxLoadPromise;
+    },
+
+    prepareMath: function (container) {
+        if (!VOIDConfig.enableMath || !VOIDConfig.mathJaxUrl || !this.hasMath(container)) {
+            return null;
+        }
+
+        return this.loadMathJax();
+    },
+
+    isCurrentMathContainer: function (container, generation) {
+        if (!container || container.isConnected === false) {
+            return false;
+        }
+
+        if (typeof generation === 'number' && generation !== VOID.typographyGeneration) {
+            return false;
+        }
+
+        return container === this.getMathContainer();
+    },
+
+    math: function (container, generation, loadPromise) {
+        var self = this;
+
+        container = container || this.getMathContainer();
+        if (arguments.length < 3) {
+            loadPromise = this.prepareMath(container);
+        }
+
+        if (!loadPromise || typeof loadPromise.then !== 'function') {
+            return;
+        }
+
+        loadPromise.then(function (mathJax) {
+            if (!mathJax || !self.isCurrentMathContainer(container, generation)) {
+                return;
+            }
+
+            mathJax.startup.promise = mathJax.startup.promise
+                .then(function () {
+                    if (!self.isCurrentMathContainer(container, generation)) {
+                        return;
+                    }
+                    if (typeof mathJax.typesetClear === 'function') {
+                        mathJax.typesetClear([container]);
+                    }
+                    return mathJax.typesetPromise([container]);
+                })
+                .catch(function (err) {
+                    console.error('MathJax typeset failed:', err);
+                });
+        });
+    },
+
+    clearMath: function (container) {
+        if (!container || !this.isMathJaxReady()
+            || typeof window.MathJax.typesetClear !== 'function') {
+            return;
+        }
+
+        try {
+            window.MathJax.typesetClear([container]);
+        } catch (err) {
+            console.error('MathJax clear failed:', err);
+        }
     },
 
     hyphenate: function () {
@@ -3205,6 +3475,8 @@ var VOID = {
 
     scheduleTypography: function () {
         var generation = ++this.typographyGeneration;
+        var container = VOID_Content.getMathContainer();
+        var mathJaxLoadPromise = VOID_Content.prepareMath(container);
         var visibilityChecksRemaining = 120;
         var scheduleFrame = typeof window.requestAnimationFrame === 'function'
             ? window.requestAnimationFrame.bind(window)
@@ -3218,7 +3490,7 @@ var VOID = {
 
             VOID.safeRunPangu();
             VOID_Content.bigfoot();
-            VOID_Content.math();
+            VOID_Content.math(container, generation, mathJaxLoadPromise);
             VOID_Content.hyphenate();
         };
         var runWhenVisible = function () {
@@ -3427,6 +3699,7 @@ var VOID = {
     },
 
     beforePjaxReplace: function () {
+        VOID_Content.clearMath(VOID_Content.getMathContainer());
         VOID_Ui.MasonryCtrler.destroy();
     },
 

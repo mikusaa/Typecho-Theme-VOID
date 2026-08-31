@@ -165,7 +165,17 @@ function loadPjaxEnvironment(options = {}) {
 function loadVoidEnvironment() {
     const handlers = new Map();
     const animationFrames = new Map();
-    const document = {};
+    const mainContainer = {
+        isConnected: true,
+        querySelectorAll: () => []
+    };
+    const document = {
+        body: mainContainer,
+        getElementById(id) {
+            return id === 'pjax-container' ? mainContainer : null;
+        },
+        querySelectorAll: () => []
+    };
     let nextAnimationFrameId = 1;
     const jQuery = () => {
         const api = {
@@ -201,6 +211,10 @@ function loadVoidEnvironment() {
         console: { error() {}, log() {} },
         document,
         jQuery,
+        VOIDConfig: {
+            enableMath: false,
+            mathJaxUrl: ''
+        },
         window
     };
 
@@ -652,7 +666,7 @@ test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', 
     assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'gallery', 'photoSets', 'emotes', 'ui']);
 });
 
-test('main before-replace teardown destroys Masonry synchronously', () => {
+test('main before-replace teardown clears MathJax before destroying Masonry', () => {
     const { context } = loadVoidEnvironment();
     const calls = [];
 
@@ -661,9 +675,10 @@ test('main before-replace teardown destroys Masonry synchronously', () => {
             destroy: () => calls.push('masonry')
         }
     };
+    context.VOID_Content.clearMath = () => calls.push('math');
 
     context.VOID.beforePjaxReplace();
-    assert.deepEqual(calls, ['masonry']);
+    assert.deepEqual(calls, ['math', 'masonry']);
 });
 
 test('initialization defers typography until the entering animation is visible', () => {
@@ -727,6 +742,10 @@ test('typography waits for the entering animation and drops stale work', () => {
     let typographyReady = false;
 
     context.VOID.safeRunPangu = () => calls.push('pangu');
+    context.VOID_Content.prepareMath = () => {
+        calls.push('prepareMath');
+        return null;
+    };
     context.VOID_Content.bigfoot = () => calls.push('littlefoot');
     context.VOID_Content.math = () => calls.push('math');
     context.VOID_Content.hyphenate = () => calls.push('hyphenate');
@@ -754,24 +773,25 @@ test('typography waits for the entering animation and drops stale work', () => {
     context.AjaxComment.init = () => {};
 
     context.VOID.afterPjax();
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls, ['prepareMath']);
 
     flushAnimationFrame();
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls, ['prepareMath']);
 
     flushAnimationFrame();
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls, ['prepareMath']);
 
     typographyReady = true;
     flushAnimationFrame();
-    assert.deepEqual(calls, ['pangu', 'littlefoot', 'math', 'hyphenate']);
+    assert.deepEqual(calls, ['prepareMath', 'pangu', 'littlefoot', 'math', 'hyphenate']);
 
     calls.length = 0;
     context.VOID.scheduleTypography();
+    assert.deepEqual(calls, ['prepareMath']);
     flushAnimationFrame();
     context.VOID.cancelScheduledTypography();
     flushAnimationFrame();
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls, ['prepareMath']);
 });
 
 test('typography uses a two-frame timeout fallback without requestAnimationFrame', () => {

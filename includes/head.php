@@ -82,6 +82,12 @@ if (isset($_POST['void_action'])) {
     ob_start();
     Utils::indexTheme('/assets/libs/emotes/');
     $emotesBase = ob_get_clean();
+    $mathJaxUrl = '';
+    if ($setting['enableMath']) {
+        ob_start();
+        Utils::indexTheme('/assets/libs/mathjax/4.1.3/tex-svg.js');
+        $mathJaxUrl = ob_get_clean();
+    }
     ob_start();
     Utils::index('/action/void?');
     $votePath = ob_get_clean();
@@ -95,6 +101,7 @@ if (isset($_POST['void_action'])) {
         'home' => $homeUrl,
         'buildTime' => $buildTime,
         'enableMath' => (bool) $setting['enableMath'],
+        'mathJaxUrl' => $mathJaxUrl,
         'lazyload' => (bool) $setting['lazyload'],
         'colorScheme' => (int) $setting['colorScheme'],
         'headerMode' => (int) $setting['headerMode'],

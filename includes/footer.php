@@ -393,24 +393,6 @@ $setting = $GLOBALS['VOIDSetting'];
         }());
         </script>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle.js'); ?>"></script>
-        <?php if($setting['enableMath']): ?>
-        <script>
-            window.MathJax = {
-                startup: {
-                    typeset: false
-                },
-                tex: {
-                    inlineMath: [['$', '$'], ['\\(', '\\)']],
-                    displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                    processEscapes: true
-                },
-                svg: {
-                    fontCache: 'global'
-                }
-            };
-        </script>
-        <script id="MathJax-script" src='<?php Utils::indexTheme('/assets/libs/mathjax/4.1.3/tex-svg.js'); ?>'></script>
-        <?php endif; ?>
         <script src="<?php Utils::indexTheme('/assets/VOID.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
