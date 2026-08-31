@@ -392,7 +392,7 @@ $setting = $GLOBALS['VOIDSetting'];
             migrateLegacyWorker(true);
         }());
         </script>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-21eecbb00e.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-bef316003c.js'); ?>"></script>
         <?php if($setting['enableMath']): ?>
         <script>
             window.MathJax = {
