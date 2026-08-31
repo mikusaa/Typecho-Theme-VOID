@@ -34,8 +34,20 @@ $socialWeibo = $setting['weiboId'] !== '' ? $setting['weiboId'] : $socialAuthor;
             <section id="post" class="float-up">
                 <article class="post yue">
 
-                    <?php $postCheck = Utils::isOutdated($this); if($this->is('post') && $postCheck["is"] && Utils::shouldShowOutdatedNotice($this)): ?>
-                        <p class="notice">请注意，本文编写于 <?php echo (int) $postCheck["created"]; ?> 天前，最后修改于 <?php echo (int) $postCheck["updated"]; ?> 天前，其中某些信息可能已经过时。</p>
+                    <?php if($this->is('post')): ?>
+                        <?php $postCheck = Utils::isOutdated($this); if($postCheck["is"] && Utils::shouldShowOutdatedNotice($this)): ?>
+                            <?php $outdatedDate = date('Y-m-d', (int) $postCheck['updatedAt']); ?>
+                            <aside class="article-outdated-notice" aria-labelledby="article-outdated-notice-title">
+                                <p class="article-outdated-notice__title" id="article-outdated-notice-title">
+                                    <svg class="article-outdated-notice__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                        <circle cx="8" cy="8" r="6.5"></circle>
+                                        <path d="M8 4.4v3.9l2.5 1.5"></path>
+                                    </svg>
+                                    <span>内容时效提醒</span>
+                                </p>
+                                <p class="article-outdated-notice__body">本文最后更新于 <time datetime="<?php echo Utils::escapeHtml($outdatedDate); ?>"><?php echo Utils::escapeHtml($outdatedDate); ?></time>。文中涉及的方法、版本、链接或操作步骤可能已经变化，请在参考或操作前确认其是否仍然适用。</p>
+                            </aside>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <div class="articleBody" class="full">

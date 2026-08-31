@@ -747,8 +747,8 @@ var VOID_Editor_Admin = (function ($) {
             offValue: '0'
         },
         showOutdated: {
-            label: '显示过时提示',
-            description: '在文章正文顶部显示过时提醒',
+            label: '显示内容时效提醒',
+            description: '启用后，当文章最后更新时间超过 90 天时，在正文顶部显示时效提醒。',
             onValue: '1',
             offValue: '0'
         }
@@ -1194,10 +1194,14 @@ var VOID_Editor_Admin = (function ($) {
         $.each(VOID_SWITCH_FIELDS, function (fieldName, config) {
             var $field = $scope.find('[data-void-field="' + fieldName + '"]').first();
             var $select = $field.find('select').first();
+            var $label = $field.find('.void-editor-field__label label').first();
+            var $description = $field.find('.void-editor-field__label .void-editor-field__meta').first();
             var controlTitle = normalizeDescription($select.attr('title'));
             var onValue = String(config.onValue || '1');
             var offValue = String(config.offValue || '0');
             var $switchControl;
+            var labelId = 'void-field-label-' + fieldName;
+            var descriptionId = 'void-field-description-' + fieldName;
 
             if (!$field.length || !$select.length || $field.data('voidSwitchReady')) {
                 return;
@@ -1208,6 +1212,18 @@ var VOID_Editor_Admin = (function ($) {
                 '  <span class="void-switch-control__thumb" aria-hidden="true"></span>' +
                 '</button>'
             );
+
+            if ($label.length) {
+                $label.attr('id', labelId);
+                $switchControl.attr('aria-labelledby', labelId);
+            } else {
+                $switchControl.attr('aria-label', config.label || '选项');
+            }
+
+            if ($description.length) {
+                $description.attr('id', descriptionId);
+                $switchControl.attr('aria-describedby', descriptionId);
+            }
 
             if (controlTitle) {
                 $switchControl.attr('title', controlTitle);

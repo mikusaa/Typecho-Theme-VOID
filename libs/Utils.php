@@ -405,17 +405,43 @@ class Utils
 
     /**
      * 判定内容是否过时
-     * 
+     *
+     * @param object $archive
+     * @param int|null $currentTimestamp 可注入的当前时间，仅用于确定性边界测试
      * @return array
      */
-    public static function isOutdated($archive)
+    public static function isOutdated($archive, $currentTimestamp = null)
     {
-        $created = round((time()- $archive->created) / 3600 / 24);
-        $updated = round((time()- $archive->modified) / 3600 / 24);
+        $now = is_numeric($currentTimestamp) && (int) $currentTimestamp > 0
+            ? (int) $currentTimestamp
+            : time();
+        $createdTimestamp = 0;
+        $modifiedTimestamp = 0;
 
-        return array("is" => $created > 90,
+        if (is_object($archive)) {
+            $supportsMagicProperties = method_exists($archive, '__get');
+            $createdValue = property_exists($archive, 'created') || $supportsMagicProperties
+                ? $archive->created
+                : null;
+            $modifiedValue = property_exists($archive, 'modified') || $supportsMagicProperties
+                ? $archive->modified
+                : null;
+            if (is_numeric($createdValue)) {
+                $createdTimestamp = (int) $createdValue;
+            }
+            if (is_numeric($modifiedValue)) {
+                $modifiedTimestamp = (int) $modifiedValue;
+            }
+        }
+
+        $referenceTimestamp = $modifiedTimestamp > 0 ? $modifiedTimestamp : $createdTimestamp;
+        $created = $createdTimestamp > 0 ? round(($now - $createdTimestamp) / 3600 / 24) : 0;
+        $updated = $referenceTimestamp > 0 ? round(($now - $referenceTimestamp) / 3600 / 24) : 0;
+
+        return array("is" => $referenceTimestamp > 0 && ($now - $referenceTimestamp) > (90 * 24 * 3600),
                     "created" => $created,
-                    "updated" => $updated);
+                    "updated" => $updated,
+                    "updatedAt" => $referenceTimestamp);
     }
 
     /**
@@ -429,8 +455,16 @@ class Utils
             return false;
         }
 
+        if (!property_exists($archive, 'fields') && !method_exists($archive, '__get')) {
+            return false;
+        }
+
         $fields = $archive->fields;
         if (!is_object($fields)) {
+            return false;
+        }
+
+        if (!property_exists($fields, 'showOutdated') && !method_exists($fields, '__get')) {
             return false;
         }
 

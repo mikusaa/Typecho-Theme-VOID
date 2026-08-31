@@ -101,6 +101,65 @@ $void-alert-colors: (
     }
 }
 
+// Article freshness notices are restrained reading annotations, separate from GitHub Alerts.
+.yue .article-outdated-notice {
+    --article-outdated-color: #{list.nth(map.get($void-alert-colors, warning), 1)};
+    margin: 0 0 1.55em;
+    padding: 0.125em 0 0.125em 1em;
+    border: 0;
+    border-left: 3px solid var(--article-outdated-color);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: $fadeColor;
+    font-family: $void-font-sans;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+
+    .theme-dark & {
+        --article-outdated-color: #{list.nth(map.get($void-alert-colors, warning), 2)};
+        color: $td-textColor-dark;
+    }
+
+    > p {
+        margin: 0;
+    }
+
+    > .article-outdated-notice__title {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        margin-bottom: 0.45em;
+        color: var(--article-outdated-color);
+        font-size: 0.8em;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    > .article-outdated-notice__title > .article-outdated-notice__icon {
+        flex: 0 0 14px;
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+    }
+
+    > .article-outdated-notice__body {
+        color: inherit;
+    }
+
+    time {
+        white-space: nowrap;
+    }
+
+    @media (max-width: 480px) {
+        padding-left: 0.75em;
+    }
+}
+
 @each $type, $colors in $void-alert-colors {
     .void-alert--#{$type} {
         --void-alert-color: #{list.nth($colors, 1)};
