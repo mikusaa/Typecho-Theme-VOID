@@ -236,9 +236,8 @@ $threeFigures = $twoFigures . Contents::parseImages('<img src="/three.jpg#vwid=1
 $stripSet = Contents::parsePhotoSet('[photos]' . $threeFigures . '[/photos]');
 assertImageContains('data-void-photo-count="3" data-void-photo-layout="strip"', $stripSet, '三张及以上自动分类为 strip');
 assertImageContains('tabindex="0" role="region" aria-label="横向图片集，共 3 张"', $stripSet, '横带容器可聚焦并提供总数标签');
-assertImageSame(3, substr_count($stripSet, 'data-void-photo-position='), '横带为每张图片输出序号');
-assertImageContains('data-void-photo-index="1" data-void-photo-position="1 / 3"', $stripSet, '横带首图序号正确');
-assertImageContains('data-void-photo-index="3" data-void-photo-position="3 / 3"', $stripSet, '横带末图序号正确');
+assertImageNotContains('data-void-photo-position=', $stripSet, '横带不再输出可见序号');
+assertImageNotContains('data-void-photo-index=', $stripSet, '横带不再输出图片序号属性');
 
 $nearMatchFigures = $oneFigure
     . '<figure data-void-image-item-extra><img src="/extra.jpg"></figure>'

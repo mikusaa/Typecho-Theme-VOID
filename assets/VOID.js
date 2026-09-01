@@ -1065,23 +1065,197 @@ var VOID_PhotoSets = {
         set.scrollLeft = nextLeft;
     },
 
+    getScrollPadding: function (set) {
+        var style = window.getComputedStyle && window.getComputedStyle(set);
+        var padding = style ? parseFloat(style.paddingLeft) : NaN;
+
+        return padding >= 0 && isFinite(padding) ? padding : 20;
+    },
+
+    createStripControls: function (set) {
+        var parent = set && set.parentNode;
+        var frame;
+        var controls;
+        var previousButton;
+        var nextButton;
+        var createButton = function (className, attribute, label, iconClass) {
+            var button = document.createElement('button');
+            var icon = document.createElement('i');
+
+            button.className = 'void-photo-strip-control ' + className;
+            button.setAttribute('type', 'button');
+            button.setAttribute(attribute, '');
+            button.setAttribute('aria-label', label);
+            icon.className = iconClass;
+            icon.setAttribute('aria-hidden', 'true');
+            button.appendChild(icon);
+            return button;
+        };
+
+        if (!parent || typeof parent.insertBefore !== 'function' || typeof document.createElement !== 'function') {
+            return null;
+        }
+
+        frame = document.createElement('div');
+        frame.className = 'void-photo-strip-frame';
+        frame.setAttribute('data-void-photo-strip-frame', '');
+        controls = document.createElement('div');
+        controls.className = 'void-photo-strip-controls';
+        previousButton = createButton(
+            'void-photo-strip-control--prev',
+            'data-void-photo-prev',
+            '滚动到上一张图片',
+            'voidicon-left'
+        );
+        nextButton = createButton(
+            'void-photo-strip-control--next',
+            'data-void-photo-next',
+            '滚动到下一张图片',
+            'voidicon-right'
+        );
+
+        parent.insertBefore(frame, set);
+        frame.appendChild(controls);
+        controls.appendChild(previousButton);
+        controls.appendChild(nextButton);
+        frame.appendChild(set);
+
+        return {
+            controls: controls,
+            frame: frame,
+            nextButton: nextButton,
+            previousButton: previousButton
+        };
+    },
+
+    updateStripControls: function (record) {
+        var set = record && record.set;
+        var maxScroll;
+        var scrollLeft;
+        var hasOverflow;
+        var atStart;
+        var atEnd;
+
+        if (!set || !record.previousButton || !record.nextButton) {
+            return;
+        }
+
+        maxScroll = Math.max(0, (parseFloat(set.scrollWidth) || 0) - (parseFloat(set.clientWidth) || 0));
+        scrollLeft = Math.max(0, parseFloat(set.scrollLeft) || 0);
+        hasOverflow = maxScroll > 1;
+        atStart = scrollLeft <= 1;
+        atEnd = scrollLeft >= maxScroll - 1;
+
+        record.previousButton.hidden = !hasOverflow || atStart;
+        record.nextButton.hidden = !hasOverflow || atEnd;
+        record.previousButton.disabled = !hasOverflow || atStart;
+        record.nextButton.disabled = !hasOverflow || atEnd;
+        if (hasOverflow) {
+            record.frame.classList.add('is-overflowing');
+        } else {
+            record.frame.classList.remove('is-overflowing');
+        }
+    },
+
+    scrollToPhoto: function (record, direction) {
+        var set = record && record.set;
+        var figures;
+        var setRect;
+        var current;
+        var padding;
+        var anchor = -1;
+        var targetIndex;
+        var target;
+        var targetRect;
+        var targetStart;
+        var maxScroll;
+        var index;
+        var itemRect;
+        var itemStart;
+        var behavior;
+
+        if (!set || !direction) {
+            return;
+        }
+
+        current = Math.max(0, parseFloat(set.scrollLeft) || 0);
+        maxScroll = Math.max(0, (parseFloat(set.scrollWidth) || 0) - (parseFloat(set.clientWidth) || 0));
+        figures = set.querySelectorAll ? set.querySelectorAll('figure[data-void-image-item]') : [];
+        target = current + (direction > 0 ? Math.max(1, (parseFloat(set.clientWidth) || 320) * 0.85) : -Math.max(1, (parseFloat(set.clientWidth) || 320) * 0.85));
+
+        if (figures.length && typeof set.getBoundingClientRect === 'function') {
+            setRect = set.getBoundingClientRect();
+            padding = this.getScrollPadding(set);
+            for (index = 0; index < figures.length; index++) {
+                itemRect = figures[index].getBoundingClientRect();
+                itemStart = itemRect.left - setRect.left + current;
+                if (itemStart <= current + padding + 4) {
+                    anchor = index;
+                } else {
+                    break;
+                }
+            }
+            if (anchor < 0) {
+                anchor = 0;
+            }
+            targetIndex = direction > 0
+                ? Math.min(figures.length - 1, anchor + 1)
+                : Math.max(0, anchor - 1);
+            if (targetIndex !== anchor) {
+                targetRect = figures[targetIndex].getBoundingClientRect();
+                targetStart = targetRect.left - setRect.left + current;
+                target = targetStart - padding;
+            }
+        }
+
+        target = Math.max(0, Math.min(maxScroll, target));
+        if (Math.abs(target - current) <= 0.5) {
+            this.updateStripControls(record);
+            return;
+        }
+
+        behavior = this.isReducedMotion() ? 'auto' : 'smooth';
+        if (typeof set.scrollTo === 'function') {
+            try {
+                set.scrollTo({ left: target, behavior: behavior });
+            } catch (error) {
+                set.scrollLeft = target;
+            }
+        } else {
+            set.scrollLeft = target;
+        }
+        this.updateStripControls(record);
+    },
+
     enhanceSet: function (set) {
         var self = this;
         var record;
+        var controls;
 
         if (set.getAttribute('data-void-photo-layout') !== 'strip') {
             return;
         }
 
+        controls = this.createStripControls(set);
+
         record = {
             set: set,
+            frame: controls ? controls.frame : null,
+            controls: controls ? controls.controls : null,
+            previousButton: controls ? controls.previousButton : null,
+            nextButton: controls ? controls.nextButton : null,
             active: false,
             dragging: false,
             captured: false,
             pointerId: null,
             startX: 0,
             startScrollLeft: 0,
-            suppressClickUntil: 0
+            suppressClickUntil: 0,
+            onScroll: null,
+            onResize: null,
+            onLoad: null,
+            onPreviousClick: null,
+            onNextClick: null
         };
 
         record.resetPointer = function (releaseCapture) {
@@ -1218,6 +1392,28 @@ var VOID_PhotoSets = {
             event.preventDefault();
         };
 
+        record.onScroll = function () {
+            self.updateStripControls(record);
+        };
+
+        record.onResize = function () {
+            self.updateStripControls(record);
+        };
+
+        record.onLoad = function () {
+            self.updateStripControls(record);
+        };
+
+        record.onPreviousClick = function (event) {
+            event.preventDefault();
+            self.scrollToPhoto(record, -1);
+        };
+
+        record.onNextClick = function (event) {
+            event.preventDefault();
+            self.scrollToPhoto(record, 1);
+        };
+
         set.addEventListener('pointerdown', record.onPointerDown);
         set.addEventListener('pointermove', record.onPointerMove);
         set.addEventListener('pointerup', record.onPointerUp);
@@ -1227,7 +1423,15 @@ var VOID_PhotoSets = {
         set.addEventListener('click', record.onClick, true);
         set.addEventListener('focusin', record.onFocusIn);
         set.addEventListener('dragstart', record.onDragStart);
+        set.addEventListener('scroll', record.onScroll, { passive: true });
+        set.addEventListener('load', record.onLoad, true);
+        window.addEventListener('resize', record.onResize);
+        if (record.previousButton) {
+            record.previousButton.addEventListener('click', record.onPreviousClick);
+            record.nextButton.addEventListener('click', record.onNextClick);
+        }
         this.setBindings.push(record);
+        this.updateStripControls(record);
     },
 
     init: function (root) {
@@ -1276,6 +1480,17 @@ var VOID_PhotoSets = {
             record.set.removeEventListener('click', record.onClick, true);
             record.set.removeEventListener('focusin', record.onFocusIn);
             record.set.removeEventListener('dragstart', record.onDragStart);
+            record.set.removeEventListener('scroll', record.onScroll, { passive: true });
+            record.set.removeEventListener('load', record.onLoad, true);
+            window.removeEventListener('resize', record.onResize);
+            if (record.previousButton) {
+                record.previousButton.removeEventListener('click', record.onPreviousClick);
+                record.nextButton.removeEventListener('click', record.onNextClick);
+            }
+            if (record.frame && record.frame.parentNode) {
+                record.frame.parentNode.insertBefore(record.set, record.frame);
+                record.frame.parentNode.removeChild(record.frame);
+            }
         }
 
         this.imageBindings = [];

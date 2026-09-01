@@ -44,6 +44,7 @@ class FakeElement {
         this.rectProvider = null;
         this.releasePointerCaptureCalls = [];
         this.scrollLeft = 0;
+        this.scrollWidth = 320;
         this.scrollToCalls = [];
         this.setPointerCaptureCalls = [];
         this.styleValues = new Map();
@@ -84,6 +85,23 @@ class FakeElement {
         child.parentNode = this;
         child.assignOwnerDocument(this.ownerDocument || (this.tagName === 'DOCUMENT' ? this : null));
         this.children.push(child);
+        return child;
+    }
+
+    insertBefore(child, reference) {
+        let index;
+
+        if (child.parentNode) {
+            child.parentNode.removeChild(child);
+        }
+        index = this.children.indexOf(reference);
+        child.parentNode = this;
+        child.assignOwnerDocument(this.ownerDocument || (this.tagName === 'DOCUMENT' ? this : null));
+        if (index < 0) {
+            this.children.push(child);
+        } else {
+            this.children.splice(index, 0, child);
+        }
         return child;
     }
 
@@ -157,6 +175,12 @@ class FakeElement {
             }
             if (selector === '[data-void-reward-close]') {
                 return node.hasAttribute('data-void-reward-close');
+            }
+            if (selector === '[data-void-photo-prev]') {
+                return node.hasAttribute('data-void-photo-prev');
+            }
+            if (selector === '[data-void-photo-next]') {
+                return node.hasAttribute('data-void-photo-next');
             }
             return false;
         };
@@ -491,6 +515,38 @@ function createStripFixture(options = {}) {
     return { context, link, root, set };
 }
 
+function createStripControlFixture(options = {}) {
+    const { context } = loadVoid(options);
+    const root = new FakeElement('main');
+    const set = new FakeElement('div');
+    const figures = [];
+    const itemWidth = 220;
+    const gap = 8;
+    const padding = 24;
+
+    set.setAttribute('data-void-photo-layout', 'strip');
+    set.clientWidth = 320;
+    set.scrollWidth = padding * 2 + itemWidth * 4 + gap * 3;
+    set.rect = { left: 0, top: 0, width: set.clientWidth, height: 300 };
+    for (let index = 0; index < 4; index++) {
+        const figure = new FakeElement('figure');
+        figure.setAttribute('data-void-image-item', '');
+        figure.rectProvider = () => ({
+            left: set.rect.left + padding + index * (itemWidth + gap) - set.scrollLeft,
+            top: 0,
+            width: itemWidth,
+            height: 260
+        });
+        figures.push(figure);
+    }
+    set.querySelectorAll = (selector) => selector === 'figure[data-void-image-item]' ? figures : [];
+    root.appendChild(set);
+    root.querySelectorAll = (selector) => selector === '[data-void-photo-set]' ? [set] : [];
+    context.VOID_PhotoSets.init(root);
+
+    return { context, figures, root, set };
+}
+
 function createZoomFixture(options = {}) {
     const { context, document, window } = loadVoid(options);
     const root = new FakeElement('main');
@@ -799,6 +855,64 @@ test('strip pointercancel releases capture without suppressing the next click', 
     context.VOID_PhotoSets.destroy();
 });
 
+test('strip controls progressively expose adjacent photos and restore the source DOM on destroy', () => {
+    const { context, root, set } = createStripControlFixture({ now: () => 1000 });
+    const frame = set.parentNode;
+    const controls = frame.children[0];
+    const previous = controls.querySelector('[data-void-photo-prev]');
+    const next = controls.querySelector('[data-void-photo-next]');
+
+    assert.equal(frame.getAttribute('data-void-photo-strip-frame'), '');
+    assert.equal(previous.hidden, true);
+    assert.equal(next.hidden, false);
+    assert.equal(previous.disabled, true);
+    assert.equal(next.disabled, false);
+
+    next.dispatch('click', preventableEvent({ target: next }));
+    assert.equal(set.scrollToCalls.length, 1);
+    assert.equal(set.scrollToCalls[0].behavior, 'smooth');
+    assert.ok(set.scrollLeft > 0);
+
+    set.dispatch('scroll');
+    assert.equal(previous.hidden, false);
+    assert.equal(previous.disabled, false);
+
+    set.scrollLeft = set.scrollWidth - set.clientWidth;
+    set.dispatch('scroll');
+    assert.equal(next.hidden, true);
+    assert.equal(next.disabled, true);
+
+    context.VOID_PhotoSets.destroy();
+    assert.equal(set.parentNode, root);
+    assert.equal(root.children.includes(frame), false);
+    assert.equal(previous.listenerCount('click'), 0);
+    assert.equal(next.listenerCount('click'), 0);
+});
+
+test('strip controls use instant scrolling when reduced motion is enabled', () => {
+    const { context, set } = createStripControlFixture({ reducedMotion: true });
+    const controls = set.parentNode.children[0];
+    const next = controls.querySelector('[data-void-photo-next]');
+
+    next.dispatch('click', preventableEvent({ target: next }));
+    assert.equal(set.scrollToCalls[0].behavior, 'auto');
+    context.VOID_PhotoSets.destroy();
+});
+
+test('pair and single photo sets do not receive strip controls', () => {
+    const { context } = loadVoid();
+    const root = new FakeElement('main');
+    const pair = new FakeElement('div');
+    pair.setAttribute('data-void-photo-layout', 'pair');
+    root.appendChild(pair);
+    root.querySelectorAll = (selector) => selector === '[data-void-photo-set]' ? [pair] : [];
+
+    context.VOID_PhotoSets.init(root);
+    assert.equal(pair.parentNode, root);
+    assert.equal(root.children.length, 1);
+    context.VOID_PhotoSets.destroy();
+});
+
 test('strip destroy releases active capture once and removes lifecycle listeners', () => {
     const { context, set } = createStripFixture({ now: () => 1000 });
     const lifecycleEvents = [
@@ -868,10 +982,30 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
     );
 
     assert.match(styles, /gap: 8px;/);
+    assert.match(styles, /--void-photo-gap: 6px;/);
+    assert.match(styles, /--void-photo-gap: 4px;/);
+    assert.match(styles, /\.void-photo-strip-frame/);
+    assert.doesNotMatch(styles, /data-void-photo-position/);
     assert.match(styles, /flex: var\(--void-image-ratio, 1\.3333\) 1 0;/);
     assert.match(styles, /min-width: 0;/);
     assert.match(styles, /overflow-x: auto;/);
-    assert.match(styles, /scroll-snap-type: x proximity;/);
+    assert.match(styles, /scroll-snap-type: x mandatory;/);
+    assert.match(styles, /scroll-snap-align: start;/);
+    assert.match(styles, /scroll-snap-stop: normal;/);
+    assert.doesNotMatch(photoSetsSource, /addEventListener\(['"](?:wheel|mousewheel)/);
+    assert.match(styles, /\.void-photo-strip-control[\s\S]*width: 44px;[\s\S]*height: 44px;/);
+    assert.match(styles, /\.void-photo-strip-control[\s\S]*border-radius: 50%;/);
+    assert.match(styles, /&::before \{[\s\S]*inset: 4px;[\s\S]*backdrop-filter: blur\(4px\);/);
+    assert.match(styles, /\.voidicon-left,[\s\S]*\.voidicon-right \{[\s\S]*color: #fff;[\s\S]*font-style: normal;/);
+    assert.match(styles, /\.void-photo-strip-control[\s\S]*box-shadow: none;/);
+    assert.match(
+        styles,
+        /&\[data-void-photo-layout="strip"\][\s\S]*&:focus-visible[\s\S]*outline-offset: -2px;/
+    );
+    assert.match(
+        styles,
+        /&\[data-void-photo-layout="strip"\][\s\S]*\[data-void-image-zoom\]:focus-visible[\s\S]*outline-offset: -3px;/
+    );
     assert.match(
         styles,
         /figure \{\s+flex: 0 0 auto;\s+(?:\/\/[^\n]+\s+)?width: min-content;/
@@ -893,7 +1027,6 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
         fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_image-experience.scss'), 'utf8'),
         /touch-action: pan-y pinch-zoom;/
     );
-    assert.doesNotMatch(photoSetsSource, /addEventListener\(['"](?:wheel|mousewheel)/);
 });
 
 test('large photo-set width remains limited to single and pair layouts', () => {

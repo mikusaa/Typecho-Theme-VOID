@@ -1079,23 +1079,6 @@ Class Contents
         }
         $layout = $count === 2 ? 'pair' : ($count >= 3 ? 'strip' : 'single');
 
-        if ($layout === 'strip') {
-            $index = 0;
-            $content = preg_replace_callback(
-                $figurePattern,
-                function ($figureMatch) use (&$index, $count) {
-                    if (!self::hasHtmlAttribute($figureMatch[0], 'data-void-image-item')) {
-                        return $figureMatch[0];
-                    }
-                    $index++;
-                    return substr($figureMatch[0], 0, -1)
-                        . ' data-void-photo-index="' . $index . '"'
-                        . ' data-void-photo-position="' . $index . ' / ' . $count . '">';
-                },
-                $content
-            );
-        }
-
         $accessibility = $layout === 'strip'
             ? ' tabindex="0" role="region" aria-label="横向图片集，共 ' . $count . ' 张"'
             : '';
