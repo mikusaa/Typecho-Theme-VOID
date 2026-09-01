@@ -311,7 +311,7 @@ article {
                 color: $td-textColor-dark;
             }
             a {
-                text-decoration: none;
+                text-decoration: none!important;
                 color: $fadeColor;
                 .theme-dark & {
                     color: $td-textColor-dark;
@@ -629,6 +629,7 @@ article {
         a {
             color: #eee !important;
             border: none;
+            text-decoration: none!important;
         }
     }
     
@@ -772,6 +773,9 @@ article {
         &, & * {
             border: none !important;
         }
+        a {
+            text-decoration: none!important;
+        }
     }
 }
 .board-list {
@@ -795,6 +799,7 @@ article {
         color: $textColor;
         border: solid 1px rgba(#000, 0.16) !important;
         border-radius: 2px;
+        text-decoration: none;
         .theme-dark & {
             background: $td-bgColor-light;
             color: $td-textColor-light;
@@ -895,6 +900,7 @@ article {
                 padding: 0 !important;
                 color: inherit !important;
                 border: none !important;
+                text-decoration: none!important;
             }
         }
         @media (prefers-reduced-motion: reduce) {

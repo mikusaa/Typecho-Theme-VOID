@@ -99,6 +99,65 @@
         }
     }
 }
+.yue .articleBody a {
+    overflow-wrap: anywhere;
+    word-break: normal;
+
+    &:not(.void-image-link):not(.post-like):not(.edit-button):not(.board-item):not(.littlefoot--print) {
+        border-bottom: 0;
+        color: inherit;
+        text-decoration-line: underline;
+        text-decoration-style: solid;
+        text-decoration-thickness: 1px;
+        text-decoration-color: rgba(#000, 0.28);
+        text-underline-offset: 0.18em;
+        text-decoration-skip-ink: auto;
+        transition: $animationTime $animationTimingFunc color,
+                    $animationTime $animationTimingFunc text-decoration-color,
+                    $animationTime $animationTimingFunc text-decoration-thickness;
+
+        &:hover,
+        &:focus-visible {
+            color: $articleLinkColor;
+            text-decoration-color: currentColor;
+            text-decoration-thickness: 1.5px;
+        }
+
+        &:focus-visible {
+            border-radius: 1px;
+            outline: 2px solid $articleLinkColor;
+            outline-offset: 3px;
+        }
+
+        .theme-dark & {
+            text-decoration-color: rgba(#fff, 0.42);
+
+            &:hover,
+            &:focus-visible {
+                color: $td-articleLinkColor;
+                text-decoration-color: currentColor;
+            }
+
+            &:focus-visible {
+                outline-color: $td-articleLinkColor;
+            }
+        }
+    }
+}
+.yue .articleBody h1 a,
+.yue .articleBody h2 a,
+.yue .articleBody h3 a,
+.yue .articleBody h4 a,
+.yue .articleBody h5 a,
+.yue .articleBody h6 a {
+    text-decoration: none!important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .yue .articleBody a:not(.void-image-link):not(.post-like):not(.edit-button):not(.board-item):not(.littlefoot--print) {
+        transition: none;
+    }
+}
 .yue h1 a,
 .yue h2 a,
 .yue h3 a {
