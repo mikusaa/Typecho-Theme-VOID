@@ -665,6 +665,13 @@
     max-width: 100%;
     margin-bottom: 30px;
 }
+.yue iframe[src*="//player.bilibili.com/"] {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    background: #000;
+}
 .yue figure iframe {
     margin: auto;
 }
