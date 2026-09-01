@@ -867,7 +867,14 @@ article {
                 object-fit: cover;
                 margin: 0;
                 padding: 0;
+                opacity: 1;
                 transition: $animationTime-very-slow ease-in-out opacity;
+                &.loading {
+                    opacity: 0;
+                }
+                &.loaded {
+                    opacity: 1;
+                }
                 &.error {
                     display: none;
                 }

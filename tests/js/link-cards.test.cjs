@@ -16,6 +16,17 @@ class FakeClassList {
             this.element.className = names.join(' ');
         }
     }
+
+    contains(name) {
+        return this.element.className.split(/\s+/).includes(name);
+    }
+
+    remove(name) {
+        this.element.className = this.element.className
+            .split(/\s+/)
+            .filter((candidate) => candidate && candidate !== name)
+            .join(' ');
+    }
 }
 
 class FakeNode {
@@ -92,6 +103,9 @@ class FakeNode {
 
     setAttribute(name, value) {
         this.attributes.set(name, String(value));
+        if (name === 'src') {
+            this.connectedWhenSrcAssigned = Boolean(this.parentNode);
+        }
     }
 }
 
@@ -108,7 +122,8 @@ function createCard(name = 'Velas电波站') {
     return { card, thumb, title };
 }
 
-function loadVoid(card, config) {
+function loadVoid(card, config, options = {}) {
+    let animationFrames = [];
     const document = {
         createElement(tagName) {
             return new FakeNode(tagName);
@@ -129,6 +144,12 @@ function loadVoid(card, config) {
 
     const window = {
         clearTimeout() {},
+        matchMedia() {
+            return { matches: Boolean(options.reducedMotion) };
+        },
+        requestAnimationFrame(callback) {
+            animationFrames.push(callback);
+        },
         setInterval() {},
         setTimeout() {}
     };
@@ -148,12 +169,19 @@ function loadVoid(card, config) {
         context
     );
 
-    return context.VOID_Content;
+    return {
+        content: context.VOID_Content,
+        runAnimationFrame() {
+            const callbacks = animationFrames;
+            animationFrames = [];
+            callbacks.forEach((callback) => callback());
+        }
+    };
 }
 
 test('friend cards render native lazy images and initialize only once', () => {
     const card = createCard();
-    const content = loadVoid(card, { lazyload: true });
+    const { content } = loadVoid(card, { lazyload: true });
 
     content.parseBoardThumbs();
     content.parseBoardThumbs();
@@ -163,15 +191,72 @@ test('friend cards render native lazy images and initialize only once', () => {
     assert.equal(image.getAttribute('src'), 'https://example.test/avatar.png');
     assert.equal(image.getAttribute('loading'), 'lazy');
     assert.equal(image.getAttribute('data-src'), null);
-    assert.equal(image.className, '');
+    assert.equal(image.className, 'loading');
     assert.equal(image.getAttribute('alt'), '');
+    assert.equal(image.connectedWhenSrcAssigned, true);
     assert.equal(card.thumb.children.filter((child) => child.tagName === 'IMG').length, 1);
     assert.equal(card.title.querySelector('.board-title-text').textContent, 'Velas电波站');
 });
 
+test('native lazy friend cards fade in after decoding and two animation frames', async () => {
+    const card = createCard();
+    const runtime = loadVoid(card, { lazyload: true });
+
+    runtime.content.parseBoardThumbs();
+
+    const image = card.thumb.querySelector('img');
+    image.decode = () => Promise.resolve();
+    image.dispatch('load');
+    await Promise.resolve();
+
+    assert.match(image.className, /\bloading\b/);
+    runtime.runAnimationFrame();
+    assert.match(image.className, /\bloading\b/);
+    runtime.runAnimationFrame();
+    assert.doesNotMatch(image.className, /\bloading\b/);
+    assert.match(image.className, /\bloaded\b/);
+});
+
+test('reduced motion reveals decoded friend cards without animation frames', async () => {
+    const card = createCard();
+    const runtime = loadVoid(card, { lazyload: true }, { reducedMotion: true });
+
+    runtime.content.parseBoardThumbs();
+
+    const image = card.thumb.querySelector('img');
+    image.decode = () => Promise.resolve();
+    image.dispatch('load');
+    await Promise.resolve();
+
+    assert.doesNotMatch(image.className, /\bloading\b/);
+    assert.match(image.className, /\bloaded\b/);
+});
+
+test('detached friend cards ignore late decode completion', async () => {
+    const card = createCard();
+    const runtime = loadVoid(card, { lazyload: true });
+    let resolveDecode;
+
+    runtime.content.parseBoardThumbs();
+
+    const image = card.thumb.querySelector('img');
+    image.decode = () => new Promise((resolve) => {
+        resolveDecode = resolve;
+    });
+    image.dispatch('load');
+    image.isConnected = false;
+    resolveDecode();
+    await Promise.resolve();
+    runtime.runAnimationFrame();
+    runtime.runAnimationFrame();
+
+    assert.match(image.className, /\bloading\b/);
+    assert.doesNotMatch(image.className, /\bloaded\b/);
+});
+
 test('native lazy friend cards expose image failures', () => {
     const card = createCard('秋枫微凉');
-    const content = loadVoid(card, { lazyload: true });
+    const { content } = loadVoid(card, { lazyload: true });
 
     content.parseBoardThumbs();
 
@@ -179,13 +264,15 @@ test('native lazy friend cards expose image failures', () => {
     assert.equal(image.getAttribute('src'), 'https://example.test/avatar.png');
     assert.equal(image.getAttribute('loading'), 'lazy');
     image.dispatch('error');
+    assert.doesNotMatch(image.className, /\bloading\b/);
+    assert.doesNotMatch(image.className, /\bloaded\b/);
     assert.match(image.className, /\berror\b/);
     assert.match(card.thumb.className, /\berror\b/);
 });
 
 test('friend cards load immediately when lazy loading is disabled', () => {
     const card = createCard('9bie');
-    const content = loadVoid(card, { lazyload: false });
+    const { content } = loadVoid(card, { lazyload: false });
 
     content.parseBoardThumbs();
 
@@ -203,5 +290,7 @@ test('friend card source includes the dark surface and two-line title contract',
     assert.match(styles, /\.theme-dark & \{\s*background: \$td-bgColor-light;/);
     assert.match(styles, /-webkit-line-clamp: 2;/);
     assert.match(styles, /&\.error::before \{\s*display: flex;/);
+    assert.match(styles, /&\.loading \{\s*opacity: 0;/);
+    assert.match(styles, /&\.loaded \{\s*opacity: 1;/);
     assert.equal((lazyload.match(/\.parent\(\)\.addClass\('error'\)/g) || []).length, 1);
 });

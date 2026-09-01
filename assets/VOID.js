@@ -304,6 +304,69 @@ var VOID_Content = {
         }
     },
 
+    revealBoardThumb: function (image) {
+        var finish = function () {
+            if (!image || image.isConnected === false || image.classList.contains('error')) {
+                return;
+            }
+
+            image.__voidBoardThumbDecodePending = false;
+            image.classList.remove('loading');
+            image.classList.add('loaded');
+        };
+
+        if (window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            finish();
+            return;
+        }
+        if (typeof window.requestAnimationFrame !== 'function') {
+            finish();
+            return;
+        }
+
+        window.requestAnimationFrame(function () {
+            if (!image || image.isConnected === false || image.classList.contains('error')) {
+                return;
+            }
+            window.requestAnimationFrame(finish);
+        });
+    },
+
+    decodeBoardThumb: function (image) {
+        var decodeResult;
+        var settle;
+
+        if (!image
+            || image.classList.contains('error')
+            || image.__voidBoardThumbDecodePending) {
+            return;
+        }
+
+        image.__voidBoardThumbDecodePending = true;
+        settle = function () {
+            VOID_Content.revealBoardThumb(image);
+        };
+
+        if (typeof image.decode !== 'function') {
+            settle();
+            return;
+        }
+
+        try {
+            decodeResult = image.decode();
+        } catch (err) {
+            settle();
+            return;
+        }
+
+        if (decodeResult && typeof decodeResult.then === 'function') {
+            decodeResult.then(settle, settle);
+        } else {
+            settle();
+        }
+    },
+
     // 处理友链列表
     parseBoardThumbs: function () {
         var items = document.querySelectorAll('.board-thumb');
@@ -339,7 +402,13 @@ var VOID_Content = {
             image = document.createElement('img');
             image.setAttribute('alt', '');
             image.setAttribute('decoding', 'async');
+            image.addEventListener('load', function () {
+                VOID_Content.decodeBoardThumb(this);
+            });
             image.addEventListener('error', function () {
+                this.__voidBoardThumbDecodePending = false;
+                this.classList.remove('loading');
+                this.classList.remove('loaded');
                 this.classList.add('error');
                 if (this.parentNode) {
                     this.parentNode.classList.add('error');
@@ -348,10 +417,11 @@ var VOID_Content = {
 
             if (VOIDConfig.lazyload) {
                 image.setAttribute('loading', 'lazy');
+                image.classList.add('loading');
             }
-            image.setAttribute('src', thumb);
 
             item.appendChild(image);
+            image.setAttribute('src', thumb);
         }
     },
 
