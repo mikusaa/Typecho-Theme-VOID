@@ -604,10 +604,10 @@ function openZoom(fixture) {
     return click;
 }
 
-function finishZoomOpening(fixture) {
+function finishZoomOpening(fixture, propertyName = 'transform') {
     fixture.window.flushAnimationFrames();
     fixture.context.VOID_ImageZoom.stage.dispatch('transitionend', {
-        propertyName: 'transform',
+        propertyName,
         target: fixture.context.VOID_ImageZoom.stage
     });
 }
@@ -1084,6 +1084,7 @@ test('image zoom creates body overlay and document stage without a dialog or scr
     assert.equal(stage.style.top, sourceDocumentRect.top + 'px');
     assert.equal(stage.style.width, sourceDocumentRect.width + 'px');
     assert.equal(stage.style.height, sourceDocumentRect.height + 'px');
+    assert.equal(zoom.openTransitionMode, 'transform');
     assert.equal(link.classList.contains('void-image-zoom-source'), true);
     assert.equal(image.classList.contains('void-image-zoom-source'), false);
     assert.equal(zoom.previewImage.getAttribute('src'), '/display.jpg');
@@ -1098,6 +1099,48 @@ test('image zoom creates body overlay and document stage without a dialog or scr
     emptyAlt.image.setAttribute('alt', '');
     openZoom(emptyAlt);
     assert.equal(emptyAlt.context.VOID_ImageZoom.previewButton.getAttribute('aria-label'), '关闭图片预览');
+});
+
+test('image zoom fades cropped thumbnails at the fitted natural ratio', () => {
+    const fixture = createZoomFixture();
+    const { context, image, link, stage, window } = fixture;
+    const zoom = context.VOID_ImageZoom;
+    image.naturalWidth = 1600;
+    image.naturalHeight = 500;
+    const target = zoom.__test.calculateFit(
+        image.naturalWidth,
+        image.naturalHeight,
+        window.innerWidth,
+        window.innerHeight,
+        24
+    );
+
+    const openClick = openZoom(fixture);
+    assert.equal(openClick.defaultPrevented, true);
+    assert.equal(zoom.openTransitionMode, 'opacity');
+    assert.equal(zoom.transitionProperty, 'opacity');
+    assert.equal(stage.style.left, target.left + 'px');
+    assert.equal(stage.style.top, target.top + 'px');
+    assert.equal(stage.style.width, target.width + 'px');
+    assert.equal(stage.style.height, target.height + 'px');
+    assert.equal(stage.style.transform, 'none');
+    assert.equal(stage.style.opacity, '0');
+    assert.equal(link.classList.contains('void-image-zoom-source'), false);
+
+    window.flushAnimationFrames();
+    assert.equal(stage.style.opacity, '1');
+    stage.dispatch('transitionend', { propertyName: 'transform', target: stage });
+    assert.equal(zoom.scrollArmed, false);
+    stage.dispatch('transitionend', { propertyName: 'opacity', target: stage });
+    assert.equal(zoom.scrollArmed, true);
+
+    zoom.previewButton.dispatch('click', { target: zoom.previewImage });
+    assert.equal(zoom.transitionProperty, 'opacity');
+    assert.equal(stage.style.opacity, '0');
+    assert.equal(link.classList.contains('void-image-zoom-source'), false);
+    finishZoomClosing(fixture, 'opacity');
+    assert.equal(zoom.isOpen, false);
+    assert.equal(zoom.openTransitionMode, 'transform');
 });
 
 test('image zoom closes through its image button, Escape, blank overlay, and traps Tab', () => {
@@ -1765,6 +1808,27 @@ test('zoom geometry fits without upscaling and maps source to target centers', (
     assert.equal(documentRect.top, 16);
     assert.equal(documentRect.width, 20);
     assert.equal(documentRect.height, 10);
+
+    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
+        { left: 0, top: 0, width: 320, height: 180 },
+        1600,
+        900
+    ), true);
+    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
+        { left: 0, top: 0, width: 320, height: 181.5 },
+        1600,
+        900
+    ), true);
+    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
+        { left: 0, top: 0, width: 144, height: 90 },
+        1500,
+        500
+    ), false);
+    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
+        { left: 0, top: 0, width: 0, height: 90 },
+        1500,
+        500
+    ), false);
 });
 
 test('reward image button closes by click or keyboard while preserving its scroll lock', () => {

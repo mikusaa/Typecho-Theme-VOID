@@ -2539,6 +2539,7 @@ var VOID_ImageZoom = {
     scrollStart: 0,
     touchY: null,
     openTransform: '',
+    openTransitionMode: 'transform',
     viewportWidth: 0,
     restoreFocusOnClose: true,
     fallbackLink: null,
@@ -2602,6 +2603,20 @@ var VOID_ImageZoom = {
         return !!(rect && isFinite(rect.left) && isFinite(rect.top)
             && isFinite(rect.width) && isFinite(rect.height)
             && rect.width > 0 && rect.height > 0);
+    },
+
+    hasCompatibleAspectRatio: function (rect, width, height) {
+        var naturalRatio;
+        var sourceRatio;
+
+        if (!this.isValidRect(rect) || !isFinite(width) || !isFinite(height)
+            || width <= 0 || height <= 0) {
+            return false;
+        }
+
+        sourceRatio = rect.width / rect.height;
+        naturalRatio = width / height;
+        return Math.abs(sourceRatio - naturalRatio) / naturalRatio <= 0.01;
     },
 
     calculateTransform: function (sourceRect, targetRect) {
@@ -2884,7 +2899,11 @@ var VOID_ImageZoom = {
         this.transitionGeneration = 0;
 
         this.stage.classList.remove('is-preparing');
-        this.stage.style.transform = this.openTransform;
+        if (this.openTransitionMode === 'transform') {
+            this.stage.style.transform = this.openTransform;
+        } else {
+            this.stage.style.opacity = '1';
+        }
         this.overlay.classList.remove('is-closing');
         this.overlay.classList.add('is-visible');
         this.setInputLock(false);
@@ -2906,7 +2925,11 @@ var VOID_ImageZoom = {
 
             self.stage.classList.remove('is-preparing');
             self.overlay.classList.add('is-visible');
-            self.stage.style.transform = self.openTransform;
+            if (self.openTransitionMode === 'transform') {
+                self.stage.style.transform = self.openTransform;
+            } else {
+                self.stage.style.opacity = '1';
+            }
         };
 
         if (this.isReducedMotion()) {
@@ -2917,7 +2940,7 @@ var VOID_ImageZoom = {
 
         this.transitionPhase = 'opening';
         this.transitionGeneration = generation;
-        this.transitionProperty = 'transform';
+        this.transitionProperty = this.openTransitionMode === 'transform' ? 'transform' : 'opacity';
         this.transitionTimer = window.setTimeout(function () {
             self.armScrollClose(generation);
         }, this.transitionFallback);
@@ -2971,7 +2994,13 @@ var VOID_ImageZoom = {
         this.scrollArmed = false;
         this.restoreFocusOnClose = true;
         this.viewportWidth = this.getViewportWidth();
-        this.openTransform = this.calculateTransform(sourceDocumentRect, targetDocumentRect).transform;
+        this.openTransitionMode = this.hasCompatibleAspectRatio(
+            sourceRect,
+            image.naturalWidth,
+            image.naturalHeight
+        ) ? 'transform' : 'opacity';
+        this.openTransform = this.openTransitionMode === 'transform'
+            ? this.calculateTransform(sourceDocumentRect, targetDocumentRect).transform : 'none';
         alt = image.getAttribute('alt') || '';
 
         try {
@@ -2982,16 +3011,19 @@ var VOID_ImageZoom = {
             this.previewButton.setAttribute('aria-label', alt ? '关闭图片预览：' + alt : '关闭图片预览');
 
             this.clearStagePresentation();
-            this.setStageBase(sourceDocumentRect);
+            this.setStageBase(this.openTransitionMode === 'transform'
+                ? sourceDocumentRect : targetDocumentRect);
             this.stage.style.transform = 'none';
-            this.stage.style.opacity = '1';
+            this.stage.style.opacity = this.openTransitionMode === 'transform' ? '1' : '0';
             this.stage.classList.add('is-preparing');
             this.overlay.classList.remove('is-visible');
             this.overlay.classList.remove('is-closing');
             this.overlay.hidden = false;
             this.stage.hidden = false;
             this.setRootOverflowClip(true);
-            link.classList.add('void-image-zoom-source');
+            if (this.openTransitionMode === 'transform') {
+                link.classList.add('void-image-zoom-source');
+            }
             this.setInputLock(true);
             this.focusWithoutScroll(this.previewButton);
             this.forceStageLayout();
@@ -3046,6 +3078,7 @@ var VOID_ImageZoom = {
         this.sourceLink = null;
         this.sourceImage = null;
         this.openTransform = '';
+        this.openTransitionMode = 'transform';
         this.viewportWidth = 0;
         if (restoreFocus) {
             this.focusWithoutScroll(sourceLink);
@@ -3082,10 +3115,16 @@ var VOID_ImageZoom = {
             ? this.sourceImage.getBoundingClientRect() : null;
         stageRect = this.stage && this.stage.getBoundingClientRect
             ? this.stage.getBoundingClientRect() : null;
-        canReturnToSource = !!(this.sourceLink && this.sourceImage && this.root
+        canReturnToSource = !!(this.openTransitionMode === 'transform'
+            && this.sourceLink && this.sourceImage && this.root
             && this.root.contains && this.root.contains(this.sourceLink)
             && this.sourceLink.contains && this.sourceLink.contains(this.sourceImage)
-            && this.isValidRect(sourceRect) && this.isValidRect(stageRect));
+            && this.isValidRect(sourceRect) && this.isValidRect(stageRect)
+            && this.hasCompatibleAspectRatio(
+                sourceRect,
+                this.sourceImage.naturalWidth,
+                this.sourceImage.naturalHeight
+            ));
 
         this.transitionPhase = 'closing';
         this.transitionGeneration = generation;
@@ -3101,8 +3140,12 @@ var VOID_ImageZoom = {
                 stageDocumentRect
             ).transform;
             this.stage.style.opacity = '1';
-        } else {
+        } else if (this.openTransitionMode !== 'opacity') {
             this.stage.style.opacity = '1';
+        }
+
+        if (!canReturnToSource && this.sourceLink && this.sourceLink.classList) {
+            this.sourceLink.classList.remove('void-image-zoom-source');
         }
 
         this.forceStageLayout();
@@ -3473,6 +3516,7 @@ var VOID_ImageZoom = {
         this.scrollArmed = false;
         this.inputLocked = false;
         this.openTransform = '';
+        this.openTransitionMode = 'transform';
         this.viewportWidth = 0;
         this.restoreFocusOnClose = true;
         this.fallbackLink = null;
@@ -3485,6 +3529,9 @@ var VOID_ImageZoom = {
         },
         calculateTransform: function (sourceRect, targetRect) {
             return VOID_ImageZoom.calculateTransform(sourceRect, targetRect);
+        },
+        hasCompatibleAspectRatio: function (rect, width, height) {
+            return VOID_ImageZoom.hasCompatibleAspectRatio(rect, width, height);
         },
         rectToDocument: function (rect) {
             return VOID_ImageZoom.rectToDocument(rect);
