@@ -607,7 +607,7 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
     context.VOID.endPjax = () => calls.push('endPjax');
     context.VOID_Gallery.init = () => calls.push('gallery');
     context.VOID_PhotoSets.init = () => calls.push('photoSets');
-    context.VOID_ImageZoom.init = () => calls.push('imageZoom');
+    context.VOID_PhotoSwipe.init = () => calls.push('photoSwipe');
     context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
     context.AjaxComment.afterPagePjax = () => calls.push('afterPagePjax');
     context.AjaxComment.endPagePjax = () => calls.push('endPagePjax');
@@ -656,14 +656,14 @@ test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', 
 
     context.NProgress = { start: () => calls.push('progress') };
     context.VOID_RewardDialog.destroy = () => calls.push('reward');
-    context.VOID_ImageZoom.destroy = () => calls.push('zoom');
+    context.VOID_PhotoSwipe.destroy = () => calls.push('photoSwipe');
     context.VOID_Gallery.suspend = () => calls.push('gallery');
     context.VOID_PhotoSets.destroy = () => calls.push('photoSets');
     context.VOID.destroyEmotes = () => calls.push('emotes');
     context.VOID_Ui = { reset: () => calls.push('ui') };
 
     context.VOID.beforePjax();
-    assert.deepEqual(calls, ['progress', 'reward', 'zoom', 'gallery', 'photoSets', 'emotes', 'ui']);
+    assert.deepEqual(calls, ['progress', 'reward', 'photoSwipe', 'gallery', 'photoSets', 'emotes', 'ui']);
 });
 
 test('main before-replace teardown clears MathJax before destroying Masonry', () => {
@@ -696,7 +696,7 @@ test('initialization defers typography until the entering animation is visible',
     context.VOID_Content.parseBoardThumbs = () => {};
     context.VOID_Gallery.init = () => {};
     context.VOID_PhotoSets.init = () => {};
-    context.VOID_ImageZoom.init = () => {};
+    context.VOID_PhotoSwipe.init = () => {};
     context.VOID_RewardDialog.init = () => {};
     context.VOID_Content.countWords = () => {};
     context.VOID_Content.parseDetails = () => {};
@@ -754,7 +754,7 @@ test('typography waits for the entering animation and drops stale work', () => {
     context.NProgress = { done() {} };
     context.VOID_Gallery.init = () => {};
     context.VOID_PhotoSets.init = () => {};
-    context.VOID_ImageZoom.init = () => {};
+    context.VOID_PhotoSwipe.init = () => {};
     context.VOID_RewardDialog.init = () => {};
     context.VOID_Ui = {
         MasonryCtrler: { init() {} },

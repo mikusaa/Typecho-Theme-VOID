@@ -15,6 +15,28 @@ var prefixerOptions = {
     overrideBrowserslist: ['last 2 versions']
 };
 
+var dependencyCssSources = [
+    './assets/libs/photoswipe/photoswipe.css',
+    './assets/libs/emotes/emote-picker.css',
+    './assets/libs/littlefoot/littlefoot.css',
+    './assets/libs/pjax/np.css',
+    './assets/libs/tocbot/tocbot.css'
+];
+
+var dependencyJsSources = [
+    './assets/libs/photoswipe/photoswipe.umd.min.js',
+    './assets/libs/photoswipe/photoswipe-lightbox.umd.min.js',
+    './assets/libs/emotes/emote-picker.js',
+    './assets/libs/headroom/headroom.min.js',
+    './assets/libs/hyphen/hyphen.js',
+    './assets/libs/littlefoot/littlefoot.js',
+    './assets/libs/pangu/pangu.js',
+    './assets/libs/pjax/np.js',
+    './assets/libs/pjax/void-pjax.js',
+    './assets/libs/prism/prism.js',
+    './assets/libs/tocbot/tocbot.min.js'
+];
+
 // 删除旧版与临时文件
 gulp.task('clean', function () {
     return del.deleteAsync(['build', 'temp']);
@@ -22,11 +44,7 @@ gulp.task('clean', function () {
 
 // 依赖 CSS minify、打包，除 MathJax
 gulp.task('pack:css:dep', function () {
-    return gulp.src([
-        './assets/libs/**/*.css',
-        '!./assets/libs/mathjax/**/*',
-        '!./assets/libs/owo/**/*'
-    ])
+    return gulp.src(dependencyCssSources)
         .pipe(concat('bundle.css'))
         .pipe(minify())
         .pipe(rev())
@@ -82,12 +100,7 @@ gulp.task('pack:js:header', function () {
 
 // 依赖 JS 压缩混淆，除 Mathjax
 gulp.task('pack:js:dep', function () {
-    return gulp.src([
-        './assets/libs/**/*.js',
-        '!./assets/libs/header/**/*',
-        '!./assets/libs/mathjax/**/*',
-        '!./assets/libs/owo/**/*'
-    ])
+    return gulp.src(dependencyJsSources)
         .pipe(concat('bundle.js'))
         .pipe(uglify())
         .pipe(rev())
@@ -140,6 +153,7 @@ gulp.task('move:libs', function () {
         './assets/libs/mathjax/**/*',
         './assets/libs/octicons/LICENSE',
         './assets/libs/pangu/LICENSE',
+        './assets/libs/photoswipe/LICENSE',
         './assets/libs/tocbot/LICENSE',
         './assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/**/*',
         './assets/libs/emotes/packs.json',
@@ -225,11 +239,7 @@ gulp.task('build', gulp.series('clean', gulp.parallel(
 
 // 开发过程，处理一次依赖
 gulp.task('dev:css', function () {
-    return gulp.src([
-        './assets/libs/**/*.css',
-        '!./assets/libs/mathjax/**/*',
-        '!./assets/libs/owo/**/*'
-    ])
+    return gulp.src(dependencyCssSources)
         .pipe(concat('bundle.css'))
         .pipe(gulp.dest('./assets/'));
 });
@@ -241,12 +251,7 @@ gulp.task('dev:js:header', function () {
 });
 
 gulp.task('dev:js:dep', function () {
-    return gulp.src([
-        './assets/libs/**/*.js',
-        '!./assets/libs/header/**/*',
-        '!./assets/libs/mathjax/**/*',
-        '!./assets/libs/owo/**/*'
-    ])
+    return gulp.src(dependencyJsSources)
         .pipe(concat('bundle.js'))
         .pipe(gulp.dest('./assets/'));
 });

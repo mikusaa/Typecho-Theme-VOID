@@ -159,34 +159,41 @@ class FakeElement {
         }
     }
 
+    matchesSelector(selector) {
+        if (selector === 'img[data-void-image-content]') {
+            return this.tagName === 'IMG' && this.hasAttribute('data-void-image-content');
+        }
+        if (selector === 'a[data-void-image-zoom]') {
+            return this.tagName === 'A' && this.hasAttribute('data-void-image-zoom');
+        }
+        if (selector === 'figure[data-void-image-item]') {
+            return this.tagName === 'FIGURE' && this.hasAttribute('data-void-image-item');
+        }
+        if (selector === '[data-void-gallery-set]') {
+            return this.hasAttribute('data-void-gallery-set');
+        }
+        if (selector === '[data-void-reward-link]') {
+            return this.hasAttribute('data-void-reward-link');
+        }
+        if (selector === 'dialog[data-void-reward-dialog]') {
+            return this.tagName === 'DIALOG' && this.hasAttribute('data-void-reward-dialog');
+        }
+        if (selector === '[data-void-reward-close]') {
+            return this.hasAttribute('data-void-reward-close');
+        }
+        if (selector === '[data-void-photo-prev]') {
+            return this.hasAttribute('data-void-photo-prev');
+        }
+        if (selector === '[data-void-photo-next]') {
+            return this.hasAttribute('data-void-photo-next');
+        }
+        return false;
+    }
+
     querySelector(selector) {
-        const matches = (node) => {
-            if (selector === 'img[data-void-image-content]') {
-                return node.tagName === 'IMG' && node.hasAttribute('data-void-image-content');
-            }
-            if (selector === 'a[data-void-image-zoom]') {
-                return node.tagName === 'A' && node.hasAttribute('data-void-image-zoom');
-            }
-            if (selector === '[data-void-reward-link]') {
-                return node.hasAttribute('data-void-reward-link');
-            }
-            if (selector === 'dialog[data-void-reward-dialog]') {
-                return node.tagName === 'DIALOG' && node.hasAttribute('data-void-reward-dialog');
-            }
-            if (selector === '[data-void-reward-close]') {
-                return node.hasAttribute('data-void-reward-close');
-            }
-            if (selector === '[data-void-photo-prev]') {
-                return node.hasAttribute('data-void-photo-prev');
-            }
-            if (selector === '[data-void-photo-next]') {
-                return node.hasAttribute('data-void-photo-next');
-            }
-            return false;
-        };
         const visit = (node) => {
             for (const child of node.children) {
-                if (matches(child)) {
+                if (child.matchesSelector(selector)) {
                     return child;
                 }
                 const nested = visit(child);
@@ -199,8 +206,18 @@ class FakeElement {
         return visit(this);
     }
 
-    querySelectorAll() {
-        return [];
+    querySelectorAll(selector) {
+        const matches = [];
+        const visit = (node) => {
+            for (const child of node.children) {
+                if (child.matchesSelector(selector)) {
+                    matches.push(child);
+                }
+                visit(child);
+            }
+        };
+        visit(this);
+        return matches;
     }
 
     releasePointerCapture(pointerId) {
@@ -413,9 +430,48 @@ class FakeWindow extends FakeElement {
     }
 }
 
+class FakePhotoSwipeLightbox {
+    constructor(options) {
+        this.destroyCount = 0;
+        this.initCount = 0;
+        this.listeners = new Map();
+        this.openCalls = [];
+        this.options = options;
+        FakePhotoSwipeLightbox.instances.push(this);
+    }
+
+    destroy() {
+        this.destroyCount += 1;
+    }
+
+    init() {
+        this.initCount += 1;
+    }
+
+    on(name, listener) {
+        const listeners = this.listeners.get(name) || [];
+        listeners.push(listener);
+        this.listeners.set(name, listeners);
+    }
+
+    emit(name) {
+        (this.listeners.get(name) || []).forEach((listener) => listener());
+    }
+
+    loadAndOpen(index, dataSource, initialPoint) {
+        this.openCalls.push({ dataSource, index, initialPoint });
+        return true;
+    }
+}
+FakePhotoSwipeLightbox.instances = [];
+
 function loadVoid(options = {}) {
     const document = new FakeDocument(options.dialogMode || 'supported');
     const window = new FakeWindow(document, options.reducedMotion || false);
+    const PhotoSwipeCore = options.photoSwipeCore === false
+        ? undefined : (options.photoSwipeCore || function PhotoSwipe() {});
+    const PhotoSwipeLightbox = options.photoSwipeLightbox === false
+        ? undefined : (options.photoSwipeLightbox || FakePhotoSwipeLightbox);
     const ContextDate = options.now ? class extends Date {
         static now() {
             return options.now();
@@ -430,6 +486,9 @@ function loadVoid(options = {}) {
     };
     jQuery.each = () => {};
     jQuery.trim = (value) => String(value).trim();
+    FakePhotoSwipeLightbox.instances = [];
+    window.PhotoSwipe = PhotoSwipeCore;
+    window.PhotoSwipeLightbox = PhotoSwipeLightbox;
 
     const context = {
         $: jQuery,
@@ -444,7 +503,7 @@ function loadVoid(options = {}) {
         fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8'),
         context
     );
-    return { context, document, window };
+    return { context, document, PhotoSwipeLightbox, window };
 }
 
 function preventableEvent(properties = {}) {
@@ -462,22 +521,35 @@ function preventableEvent(properties = {}) {
     };
 }
 
-function createSource(root) {
+function createSource(root, options = {}) {
+    const figure = new FakeElement('figure');
     const link = new FakeElement('a');
     const image = new FakeElement('img');
+    figure.setAttribute('data-void-image-item', '');
+    if (options.dimensions !== false) {
+        figure.setAttribute('data-void-image-width', String(options.width || 1600));
+        figure.setAttribute('data-void-image-height', String(options.height || 900));
+    }
     link.setAttribute('data-void-image-zoom', '');
-    link.setAttribute('href', '/original.jpg');
+    link.setAttribute('href', options.href || '/original.jpg');
     image.setAttribute('data-void-image-content', '');
-    image.setAttribute('alt', '测试图片');
-    image.setAttribute('src', '/display.jpg');
-    image.complete = true;
-    image.currentSrc = '/display.jpg';
-    image.naturalWidth = 1600;
-    image.naturalHeight = 900;
-    image.rect = { left: 20, top: 30, width: 320, height: 180 };
+    image.setAttribute('alt', options.alt || '测试图片');
+    image.setAttribute('src', options.previewSource === undefined ? '/display.jpg' : options.previewSource);
+    if (options.lazySource) {
+        image.setAttribute('data-src', options.lazySource);
+    }
+    image.complete = options.complete !== false;
+    image.currentSrc = options.previewSource === undefined ? '/display.jpg' : options.previewSource;
+    image.naturalWidth = options.naturalWidth === undefined ? 1600 : options.naturalWidth;
+    image.naturalHeight = options.naturalHeight === undefined ? 900 : options.naturalHeight;
+    image.rect = options.rect || { left: 20, top: 30, width: 320, height: 180 };
+    if (options.objectFit) {
+        image.computedStyle = { objectFit: options.objectFit };
+    }
     link.appendChild(image);
-    root.appendChild(link);
-    return { image, link };
+    figure.appendChild(link);
+    root.appendChild(figure);
+    return { figure, image, link };
 }
 
 function createRewardSource(root, document) {
@@ -545,85 +617,6 @@ function createStripControlFixture(options = {}) {
     context.VOID_PhotoSets.init(root);
 
     return { context, figures, root, set };
-}
-
-function createZoomFixture(options = {}) {
-    const { context, document, window } = loadVoid(options);
-    const root = new FakeElement('main');
-    window.setScrollY(options.scrollY || 0, false);
-    const { image, link } = createSource(root);
-    const sourceDocumentRect = {
-        left: image.rect.left + window.scrollX,
-        top: image.rect.top + window.scrollY,
-        width: image.rect.width,
-        height: image.rect.height
-    };
-    image.rectProvider = () => ({
-        left: sourceDocumentRect.left - window.scrollX,
-        top: sourceDocumentRect.top - window.scrollY,
-        width: sourceDocumentRect.width,
-        height: sourceDocumentRect.height
-    });
-    document.root = root;
-    document.body.appendChild(root);
-    if (options.sidebarOpen) {
-        document.body.classList.add('sidebar-show');
-    }
-    context.VOID_ImageZoom.init(root);
-    const stage = context.VOID_ImageZoom.stage;
-    if (stage) {
-        stage.rectProvider = () => {
-            const left = parseFloat(stage.style.left) || 0;
-            const top = parseFloat(stage.style.top) || 0;
-            const width = parseFloat(stage.style.width) || 0;
-            const height = parseFloat(stage.style.height) || 0;
-            const transform = stage.style.transform || 'none';
-            const match = transform.match(
-                /translate3d\(([-\d.]+)px,\s*([-\d.]+)px,\s*0\)\s*scale\(([-\d.]+),\s*([-\d.]+)\)/
-            );
-            const translateX = match ? Number(match[1]) : 0;
-            const translateY = match ? Number(match[2]) : 0;
-            const scaleX = match ? Number(match[3]) : 1;
-            const scaleY = match ? Number(match[4]) : 1;
-            const scaledWidth = width * scaleX;
-            const scaledHeight = height * scaleY;
-            return {
-                left: left - window.scrollX + translateX + (width - scaledWidth) / 2,
-                top: top - window.scrollY + translateY + (height - scaledHeight) / 2,
-                width: scaledWidth,
-                height: scaledHeight
-            };
-        };
-    }
-    return { context, document, image, link, root, sourceDocumentRect, stage, window };
-}
-
-function openZoom(fixture) {
-    const click = preventableEvent({ target: fixture.image });
-    fixture.document.dispatch('click', click);
-    return click;
-}
-
-function finishZoomOpening(fixture, propertyName = 'transform') {
-    fixture.window.flushAnimationFrames();
-    fixture.context.VOID_ImageZoom.stage.dispatch('transitionend', {
-        propertyName,
-        target: fixture.context.VOID_ImageZoom.stage
-    });
-}
-
-function finishZoomClosing(fixture, propertyName = 'transform') {
-    fixture.window.flushAnimationFrames();
-    fixture.context.VOID_ImageZoom.stage.dispatch('transitionend', {
-        propertyName,
-        target: fixture.context.VOID_ImageZoom.stage
-    });
-}
-
-function assertSinglePassiveListener(target, eventName) {
-    const options = target.listenerOptionsFor(eventName);
-    assert.equal(options.length, 1);
-    assert.equal(options[0] && options[0].passive, true);
 }
 
 test('photo layout classification and dimension priority are deterministic', () => {
@@ -978,7 +971,7 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
     const script = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
     const photoSetsSource = script.slice(
         script.indexOf('var VOID_PhotoSets'),
-        script.indexOf('var VOID_ImageZoom')
+        script.indexOf('var VOID_PhotoSwipe')
     );
 
     assert.match(styles, /gap: 8px;/);
@@ -1023,10 +1016,6 @@ test('photo-set styles keep pair ratios, native strip scrolling, and responsive 
         fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_image-experience.scss'), 'utf8'),
         /\.void-image-link\[data-void-image-zoom\][\s\S]*&:focus-visible[\s\S]*outline: 2px solid \$highlightColor;/
     );
-    assert.match(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_image-experience.scss'), 'utf8'),
-        /touch-action: pan-y pinch-zoom;/
-    );
 });
 
 test('large photo-set width remains limited to single and pair layouts', () => {
@@ -1046,789 +1035,169 @@ test('large photo-set width remains limited to single and pair layouts', () => {
     );
 });
 
-test('image zoom creates body overlay and document stage without a dialog or scroll lock', () => {
-    const fixture = createZoomFixture({ reducedMotion: true, scrollY: 200, sidebarOpen: true });
-    const { context, document, image, link, sourceDocumentRect, stage, window } = fixture;
-    const zoom = context.VOID_ImageZoom;
+test('PhotoSwipe options preserve fit zoom, pan, navigation, and native wheel contracts', () => {
+    const regular = loadVoid();
+    const options = regular.context.VOID_PhotoSwipe.__test.getOptions();
+    const reduced = loadVoid({ reducedMotion: true })
+        .context.VOID_PhotoSwipe.__test.getOptions();
 
-    assert.deepEqual(document.createdTags, ['DIV', 'DIV', 'BUTTON', 'IMG']);
-    assert.equal(document.createdTags.includes('DIALOG'), false);
-    assert.equal(document.body.children.length, 3);
-    assert.equal(fixture.root.parentNode, document.body);
-    assert.equal(zoom.overlay.parentNode, document.body);
-    assert.equal(stage.parentNode, document.body);
-    assert.equal(zoom.overlay.className, 'void-image-zoom-overlay');
-    assert.equal(stage.className, 'void-image-zoom-stage');
-    assert.equal(stage.getAttribute('role'), 'dialog');
-    assert.equal(stage.getAttribute('aria-modal'), 'true');
-    assert.equal(stage.getAttribute('aria-label'), '图片放大预览');
-    assert.equal(zoom.overlay.hidden, true);
-    assert.equal(stage.hidden, true);
-    assert.equal(document.documentElement.classList.contains('void-image-zoom-active'), false);
-    assert.equal(zoom.previewButton.tagName, 'BUTTON');
-    assert.equal(zoom.previewButton.getAttribute('type'), 'button');
-    assert.equal(zoom.previewButton.getAttribute('aria-label'), '关闭图片预览');
-    assert.equal(zoom.previewButton.contains(zoom.previewImage), true);
-    assert.equal(zoom.previewImage.getAttribute('alt'), '');
-    assertSinglePassiveListener(window, 'scroll');
-    ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel']
-        .forEach((eventName) => assertSinglePassiveListener(window, eventName));
-
-    const openClick = openZoom(fixture);
-    assert.equal(openClick.defaultPrevented, true);
-    assert.equal(zoom.isOpen, true);
-    assert.equal(zoom.overlay.hidden, false);
-    assert.equal(stage.hidden, false);
-    assert.equal(document.documentElement.classList.contains('void-image-zoom-active'), true);
-    assert.equal(stage.style.left, sourceDocumentRect.left + 'px');
-    assert.equal(stage.style.top, sourceDocumentRect.top + 'px');
-    assert.equal(stage.style.width, sourceDocumentRect.width + 'px');
-    assert.equal(stage.style.height, sourceDocumentRect.height + 'px');
-    assert.equal(zoom.openTransitionMode, 'transform');
-    assert.equal(link.classList.contains('void-image-zoom-source'), true);
-    assert.equal(image.classList.contains('void-image-zoom-source'), false);
-    assert.equal(zoom.previewImage.getAttribute('src'), '/display.jpg');
-    assert.notEqual(zoom.previewImage.getAttribute('src'), link.getAttribute('href'));
-    assert.equal(zoom.previewButton.getAttribute('aria-label'), '关闭图片预览：测试图片');
-    assert.equal(zoom.previewButton.focusCalls[0].preventScroll, true);
-    assert.equal(document.activeElement, zoom.previewButton);
-    assert.equal(document.body.classList.contains('void-dialog-open'), false);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-
-    const emptyAlt = createZoomFixture({ reducedMotion: true });
-    emptyAlt.image.setAttribute('alt', '');
-    openZoom(emptyAlt);
-    assert.equal(emptyAlt.context.VOID_ImageZoom.previewButton.getAttribute('aria-label'), '关闭图片预览');
+    assert.equal(options.pswpModule, regular.window.PhotoSwipe);
+    assert.equal(options.allowPanToNext, false);
+    assert.equal(options.closeOnVerticalDrag, true);
+    assert.equal(options.pinchToClose, false);
+    assert.equal(options.wheelToZoom, false);
+    assert.equal(options.imageClickAction, 'zoom');
+    assert.equal(options.tapAction, 'zoom');
+    assert.equal(options.doubleTapAction, false);
+    assert.equal(options.bgClickAction, 'close');
+    assert.equal(options.secondaryZoomLevel, 1);
+    assert.equal(options.showAnimationDuration, 300);
+    assert.equal(options.hideAnimationDuration, 300);
+    assert.equal(options.zoomAnimationDuration, 300);
+    assert.equal(reduced.showAnimationDuration, 0);
+    assert.equal(reduced.hideAnimationDuration, 0);
+    assert.equal(reduced.zoomAnimationDuration, 0);
 });
 
-test('image zoom fades cropped thumbnails at the fitted natural ratio', () => {
-    const fixture = createZoomFixture();
-    const { context, image, link, stage, window } = fixture;
-    const zoom = context.VOID_ImageZoom;
-    image.naturalWidth = 1600;
-    image.naturalHeight = 500;
-    const target = zoom.__test.calculateFit(
-        image.naturalWidth,
-        image.naturalHeight,
-        window.innerWidth,
-        window.innerHeight,
-        24
-    );
-
-    const openClick = openZoom(fixture);
-    assert.equal(openClick.defaultPrevented, true);
-    assert.equal(zoom.openTransitionMode, 'opacity');
-    assert.equal(zoom.transitionProperty, 'opacity');
-    assert.equal(stage.style.left, target.left + 'px');
-    assert.equal(stage.style.top, target.top + 'px');
-    assert.equal(stage.style.width, target.width + 'px');
-    assert.equal(stage.style.height, target.height + 'px');
-    assert.equal(stage.style.transform, 'none');
-    assert.equal(stage.style.opacity, '0');
-    assert.equal(link.classList.contains('void-image-zoom-source'), false);
-
-    window.flushAnimationFrames();
-    assert.equal(stage.style.opacity, '1');
-    stage.dispatch('transitionend', { propertyName: 'transform', target: stage });
-    assert.equal(zoom.scrollArmed, false);
-    stage.dispatch('transitionend', { propertyName: 'opacity', target: stage });
-    assert.equal(zoom.scrollArmed, true);
-
-    zoom.previewButton.dispatch('click', { target: zoom.previewImage });
-    assert.equal(zoom.transitionProperty, 'opacity');
-    assert.equal(stage.style.opacity, '0');
-    assert.equal(link.classList.contains('void-image-zoom-source'), false);
-    finishZoomClosing(fixture, 'opacity');
-    assert.equal(zoom.isOpen, false);
-    assert.equal(zoom.openTransitionMode, 'transform');
-});
-
-test('image zoom closes through its image button, Escape, blank overlay, and traps Tab', () => {
-    for (const closeMode of ['click', 'Enter', 'Space', 'Escape', 'overlay']) {
-        const fixture = createZoomFixture({ reducedMotion: true, sidebarOpen: true });
-        const { context, document, link } = fixture;
-        const zoom = context.VOID_ImageZoom;
-        openZoom(fixture);
-
-        const tabEvent = preventableEvent({ key: 'Tab', target: link });
-        document.dispatch('keydown', tabEvent);
-        assert.equal(tabEvent.defaultPrevented, true);
-        assert.equal(document.activeElement, zoom.previewButton);
-
-        if (closeMode === 'click') {
-            zoom.previewButton.dispatch('click', { target: zoom.previewImage });
-        } else if (closeMode === 'Enter') {
-            zoom.previewButton.keyboardActivate('Enter');
-        } else if (closeMode === 'Space') {
-            zoom.previewButton.keyboardActivate(' ');
-        } else if (closeMode === 'Escape') {
-            const escapeEvent = preventableEvent({ key: 'Escape', target: zoom.previewButton });
-            document.dispatch('keydown', escapeEvent);
-            assert.equal(escapeEvent.defaultPrevented, true);
-        } else {
-            zoom.overlay.dispatch('click', { target: zoom.overlay });
-        }
-
-        assert.equal(zoom.isOpen, false);
-        assert.equal(zoom.overlay.hidden, true);
-        assert.equal(zoom.stage.hidden, true);
-        assert.equal(link.classList.contains('void-image-zoom-source'), false);
-        assert.equal(document.documentElement.classList.contains('void-image-zoom-active'), false);
-        assert.equal(link.focusCalls[0].preventScroll, true);
-        assert.equal(document.activeElement, link);
-        assert.equal(document.body.classList.contains('sidebar-show'), true);
-    }
-});
-
-test('image zoom blocks opening input without changing scrollbar ownership', () => {
-    const fixture = createZoomFixture({ scrollY: 100, sidebarOpen: true });
-    const { context, document, stage, window } = fixture;
-    const zoom = context.VOID_ImageZoom;
-    openZoom(fixture);
-
-    assert.equal(zoom.inputLocked, true);
-    assert.equal(zoom.scrollArmed, false);
-    assert.equal(stage.classList.contains('is-preparing'), true);
-    assert.equal(document.body.classList.contains('void-dialog-open'), false);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-    assert.deepEqual(
-        window.listenerOptionsFor('wheel').map((options) => options && options.passive),
-        [true, false]
-    );
-    assert.deepEqual(
-        window.listenerOptionsFor('touchmove').map((options) => options && options.passive),
-        [true, false]
-    );
-
-    const wheelEvent = preventableEvent({ deltaY: 40, target: stage });
-    const touchEvent = preventableEvent({ target: stage, touches: [{ clientY: 40 }] });
-    const keyEvent = preventableEvent({ key: 'ArrowDown', target: stage });
-    window.dispatch('wheel', wheelEvent);
-    window.dispatch('touchmove', touchEvent);
-    document.dispatch('keydown', keyEvent);
-    assert.equal(wheelEvent.defaultPrevented, true);
-    assert.equal(touchEvent.defaultPrevented, true);
-    assert.equal(keyEvent.defaultPrevented, true);
-    assert.equal(window.scrollY, 100);
-
-    window.flushAnimationFrames();
-    stage.dispatch('transitionend', { propertyName: 'opacity', target: stage });
-    assert.equal(zoom.inputLocked, true);
-    finishZoomOpening(fixture);
-    assert.equal(zoom.inputLocked, false);
-    assert.equal(zoom.scrollArmed, true);
-    assertSinglePassiveListener(window, 'wheel');
-    assertSinglePassiveListener(window, 'touchmove');
-});
-
-test('image zoom opening uses a 360ms watchdog and cancels a delayed frame', () => {
-    const fixture = createZoomFixture({ scrollY: 100 });
-    const { context, stage, window } = fixture;
-    openZoom(fixture);
-    const staleFrames = Array.from(window.animationFrames.values());
-
-    window.advanceTime(359);
-    assert.equal(context.VOID_ImageZoom.inputLocked, true);
-    assert.equal(context.VOID_ImageZoom.scrollArmed, false);
-    window.advanceTime(1);
-    assert.equal(context.VOID_ImageZoom.inputLocked, false);
-    assert.equal(context.VOID_ImageZoom.scrollArmed, true);
-    assert.equal(window.animationFrames.size, 0);
-    assert.equal(stage.classList.contains('is-preparing'), false);
-    assert.equal(stage.style.transform, context.VOID_ImageZoom.openTransform);
-    assert.equal(context.VOID_ImageZoom.overlay.classList.contains('is-visible'), true);
-
-    staleFrames.forEach((callback) => callback(window.now));
-    assert.equal(context.VOID_ImageZoom.scrollArmed, true);
-    assert.equal(window.pendingTimerCount(), 0);
-});
-
-test('image zoom stage follows document scrolling from the first pixel through close inertia', () => {
-    const fixture = createZoomFixture({ scrollY: 200, sidebarOpen: true });
-    const { context, document, image, link, stage, window } = fixture;
-    const zoom = context.VOID_ImageZoom;
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-    const initialTop = stage.getBoundingClientRect().top;
-
-    window.setScrollY(201);
-    assert.equal(stage.getBoundingClientRect().top, initialTop - 1);
-    window.setScrollY(220);
-    assert.equal(stage.getBoundingClientRect().top, initialTop - 20);
-    window.setScrollY(239);
-    window.advanceTime(150);
-    assert.equal(zoom.isOpen, true);
-    assert.equal(zoom.isClosing, false);
-
-    window.setScrollY(240);
-    assert.equal(zoom.scrollCloseTimer !== null, true);
-    const thresholdTop = stage.getBoundingClientRect().top;
-    window.advanceTime(100);
-    window.setScrollY(250);
-    assert.equal(stage.getBoundingClientRect().top, thresholdTop - 10);
-    window.advanceTime(49);
-    assert.equal(zoom.isClosing, false);
-    const sourceRect = image.getBoundingClientRect();
-    const stageRect = stage.getBoundingClientRect();
-    const expectedCompensation = zoom.__test.calculateTransform(
-        zoom.__test.rectToDocument(sourceRect),
-        zoom.__test.rectToDocument(stageRect)
-    ).transform;
-    const assignmentStart = stage.styleAssignments.length;
-    window.advanceTime(1);
-    assert.equal(zoom.isOpen, true);
-    assert.equal(zoom.isClosing, true);
-    const closeTransforms = stage.styleAssignments.slice(assignmentStart)
-        .filter((assignment) => assignment.name === 'transform')
-        .map((assignment) => assignment.value);
-    assert.equal(closeTransforms.length, 2);
-    assert.equal(closeTransforms[0], expectedCompensation);
-    assert.equal(closeTransforms[1], 'none');
-    assert.equal(context.VOID_ImageZoom.overlay.classList.contains('is-closing'), true);
-    assert.equal(link.classList.contains('void-image-zoom-source'), true);
-    const closingTop = stage.getBoundingClientRect().top;
-    window.setScrollY(260);
-    assert.equal(stage.getBoundingClientRect().top, closingTop - 10);
-
-    window.advanceTime(299);
-    assert.equal(zoom.isOpen, true);
-    window.advanceTime(1);
-    finishZoomClosing(fixture);
-    assert.equal(zoom.isOpen, false);
-    assert.equal(window.scrollY, 260);
-    assert.equal(link.focusCalls[0].preventScroll, true);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-});
-
-test('image zoom uses 40px net displacement in either direction and after reversals', () => {
-    for (const direction of [1, -1]) {
-        const fixture = createZoomFixture({ scrollY: 200 });
-        const { context, window } = fixture;
-        openZoom(fixture);
-        finishZoomOpening(fixture);
-        window.setScrollY(200 + direction * 39);
-        window.advanceTime(150);
-        assert.equal(context.VOID_ImageZoom.isClosing, false);
-        window.setScrollY(200 + direction * 40);
-        window.advanceTime(149);
-        assert.equal(context.VOID_ImageZoom.isClosing, false);
-        window.advanceTime(1);
-        assert.equal(context.VOID_ImageZoom.isClosing, true);
-    }
-
-    const fixture = createZoomFixture({ scrollY: 200 });
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-    fixture.window.setScrollY(230);
-    fixture.window.setScrollY(180);
-    fixture.window.setScrollY(161);
-    fixture.window.advanceTime(150);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, false);
-    fixture.window.setScrollY(160);
-    fixture.window.advanceTime(150);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, true);
-});
-
-test('image zoom restores focus without losing the new reading position', () => {
-    const fixture = createZoomFixture({ reducedMotion: true, scrollY: 200 });
-    const originalFocus = fixture.link.focus.bind(fixture.link);
-    fixture.link.focus = (options) => {
-        originalFocus(options);
-        fixture.window.setScrollY(0, false);
-    };
-
-    openZoom(fixture);
-    fixture.window.setScrollY(240);
-
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(fixture.window.scrollY, 240);
-    assert.equal(fixture.window.scrollToCalls.length, 1);
-    assert.equal(fixture.window.scrollToCalls[0].left, 0);
-    assert.equal(fixture.window.scrollToCalls[0].top, 240);
-    assert.equal(fixture.window.scrollToCalls[0].behavior, 'auto');
-    assert.equal(fixture.link.focusCalls[0].preventScroll, true);
-});
-
-test('image zoom uses passive wheel and touch intent at page boundaries', () => {
-    const wheelFixture = createZoomFixture({ scrollY: 0 });
-    openZoom(wheelFixture);
-    finishZoomOpening(wheelFixture);
-    const wheelEvent = preventableEvent({ deltaY: -40, target: wheelFixture.stage });
-    wheelFixture.window.dispatch('wheel', wheelEvent);
-    wheelFixture.window.flushAnimationFrames();
-    wheelFixture.window.advanceTime(149);
-    assert.equal(wheelFixture.context.VOID_ImageZoom.isClosing, false);
-    wheelFixture.window.advanceTime(1);
-    assert.equal(wheelEvent.defaultPrevented, false);
-    assert.equal(wheelFixture.window.scrollY, 0);
-    assert.equal(wheelFixture.context.VOID_ImageZoom.isClosing, true);
-
-    const touchFixture = createZoomFixture({ scrollY: 1000 });
-    openZoom(touchFixture);
-    finishZoomOpening(touchFixture);
-    const firstMove = preventableEvent({ target: touchFixture.stage, touches: [{ clientY: 140 }] });
-    touchFixture.window.dispatch('touchstart', {
-        target: touchFixture.stage,
-        touches: [{ clientY: 100 }]
-    });
-    touchFixture.window.dispatch('touchmove', firstMove);
-    touchFixture.window.dispatch('touchcancel', { target: touchFixture.stage, touches: [] });
-    touchFixture.window.flushAnimationFrames();
-    touchFixture.window.advanceTime(150);
-    assert.equal(touchFixture.context.VOID_ImageZoom.isClosing, false);
-
-    touchFixture.window.dispatch('touchstart', {
-        target: touchFixture.stage,
-        touches: [{ clientY: 100 }]
-    });
-    const thresholdMove = preventableEvent({
-        target: touchFixture.stage,
-        touches: [{ clientY: 60 }]
-    });
-    touchFixture.window.dispatch('touchmove', thresholdMove);
-    touchFixture.window.dispatch('touchend', { target: touchFixture.stage, touches: [] });
-    touchFixture.window.flushAnimationFrames();
-    touchFixture.window.advanceTime(150);
-    assert.equal(firstMove.defaultPrevented, false);
-    assert.equal(thresholdMove.defaultPrevented, false);
-    assert.equal(touchFixture.window.scrollY, 1000);
-    assert.equal(touchFixture.context.VOID_ImageZoom.isClosing, true);
-});
-
-test('image zoom combines partial real scroll with only the unconsumed input intent', () => {
-    const fixture = createZoomFixture({ scrollY: 980 });
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-
-    const wheelEvent = preventableEvent({ deltaY: 40, target: fixture.stage });
-    fixture.window.dispatch('wheel', wheelEvent);
-    fixture.window.setScrollY(1000);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, false);
-    fixture.window.flushAnimationFrames();
-    fixture.window.advanceTime(150);
-
-    assert.equal(wheelEvent.defaultPrevented, false);
-    assert.equal(fixture.window.scrollY, 1000);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, true);
-});
-
-test('image zoom ignores touchcancel, ctrl-wheel, and multi-touch gestures', () => {
-    const fixture = createZoomFixture({ scrollY: 100 });
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-
-    fixture.window.dispatch('touchstart', {
-        target: fixture.stage,
-        touches: [{ clientY: 100 }]
-    });
-    fixture.window.dispatch('touchmove', {
-        target: fixture.stage,
-        touches: [{ clientY: 50 }]
-    });
-    fixture.window.dispatch('touchcancel', { target: fixture.stage, touches: [] });
-    fixture.window.flushAnimationFrames();
-    fixture.window.dispatch('wheel', preventableEvent({
-        ctrlKey: true,
-        deltaY: 100,
-        target: fixture.stage
-    }));
-    fixture.window.dispatch('touchstart', {
-        target: fixture.stage,
-        touches: [{ clientY: 100 }, { clientY: 120 }]
-    });
-    fixture.window.dispatch('touchmove', {
-        target: fixture.stage,
-        touches: [{ clientY: 20 }, { clientY: 200 }]
-    });
-    fixture.window.flushAnimationFrames();
-    fixture.window.advanceTime(300);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, true);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, false);
-});
-
-test('image zoom ignores height-only resize and closes on width or orientation changes', () => {
-    const heightFixture = createZoomFixture({ reducedMotion: true, scrollY: 100 });
-    openZoom(heightFixture);
-    heightFixture.window.innerHeight = 700;
-    heightFixture.window.dispatch('resize', { target: heightFixture.window });
-    assert.equal(heightFixture.context.VOID_ImageZoom.isOpen, true);
-
-    heightFixture.window.innerWidth = 900;
-    heightFixture.window.dispatch('resize', { target: heightFixture.window });
-    assert.equal(heightFixture.context.VOID_ImageZoom.isOpen, false);
-
-    const orientationFixture = createZoomFixture({ reducedMotion: true, scrollY: 100 });
-    openZoom(orientationFixture);
-    orientationFixture.window.dispatch('orientationchange', { target: orientationFixture.window });
-    assert.equal(orientationFixture.context.VOID_ImageZoom.isOpen, false);
-});
-
-test('image zoom keeps overlay and stage alive for the synchronized 300ms close', () => {
-    const fixture = createZoomFixture({ scrollY: 200, sidebarOpen: true });
-    const { context, document, link, stage, window } = fixture;
-    const zoom = context.VOID_ImageZoom;
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-
-    zoom.previewButton.dispatch('click', { target: zoom.previewImage });
-    const transitionTimer = zoom.transitionTimer;
-    assert.equal(zoom.isOpen, true);
-    assert.equal(zoom.isClosing, true);
-    assert.equal(zoom.overlay.hidden, false);
-    assert.equal(stage.hidden, false);
-    assert.equal(zoom.overlay.classList.contains('is-visible'), false);
-    assert.equal(zoom.overlay.classList.contains('is-closing'), true);
-    assert.equal(stage.classList.contains('is-closing'), true);
-    assert.equal(stage.style.opacity, '1');
-    assert.equal(link.classList.contains('void-image-zoom-source'), true);
-
-    zoom.previewButton.dispatch('click', { target: zoom.previewImage });
-    document.dispatch('keydown', preventableEvent({ key: 'Escape', target: stage }));
-    window.dispatch('wheel', preventableEvent({ deltaY: 80, target: stage }));
-    assert.equal(zoom.transitionTimer, transitionTimer);
-    window.advanceTime(299);
-    assert.equal(zoom.isOpen, true);
-    window.advanceTime(1);
-    finishZoomClosing(fixture);
-    assert.equal(zoom.isOpen, false);
-    assert.equal(zoom.overlay.hidden, true);
-    assert.equal(stage.hidden, true);
-    assert.equal(link.classList.contains('void-image-zoom-source'), false);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-});
-
-test('image zoom ignores a queued opening transitionend after close starts', () => {
-    const fixture = createZoomFixture({ scrollY: 200 });
-    openZoom(fixture);
-    fixture.window.flushAnimationFrames();
-    fixture.context.VOID_ImageZoom.previewButton.dispatch('click', {
-        target: fixture.context.VOID_ImageZoom.previewImage
-    });
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, true);
-    assert.equal(fixture.context.VOID_ImageZoom.transitionReady, false);
-
-    fixture.stage.dispatch('transitionend', {
-        propertyName: 'transform',
-        target: fixture.stage
-    });
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, true);
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, true);
-
-    fixture.window.flushAnimationFrames();
-    assert.equal(fixture.context.VOID_ImageZoom.transitionReady, true);
-    fixture.window.advanceTime(300);
-    finishZoomClosing(fixture);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
-});
-
-test('image zoom close watchdog finishes after 360ms without transitionend', () => {
-    const fixture = createZoomFixture({ scrollY: 200 });
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-    fixture.context.VOID_ImageZoom.previewButton.dispatch('click', {
-        target: fixture.context.VOID_ImageZoom.previewImage
-    });
-
-    fixture.window.advanceTime(359);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, true);
-    fixture.window.advanceTime(1);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(fixture.context.VOID_ImageZoom.overlay.hidden, true);
-    assert.equal(fixture.stage.hidden, true);
-});
-
-test('image zoom styles define an opaque fixed overlay and absolute 300ms stage', () => {
-    const styles = fs.readFileSync(
-        path.resolve(__dirname, '../../assets/parts/_image-experience.scss'),
-        'utf8'
-    );
-    assert.doesNotMatch(styles, /dialog\.void-image-zoom/);
-    assert.match(styles, /html\.void-image-zoom-active\s*\{[\s\S]*overflow-x: clip;/);
-    assert.match(styles, /\.void-image-zoom-overlay\s*\{[\s\S]*position: fixed;[\s\S]*z-index: 4000;/);
-    assert.match(styles, /\.void-image-zoom-overlay\s*\{[\s\S]*background: \$bgColor;/);
-    assert.match(styles, /\.theme-dark &[\s\S]*background: \$td-bgColor;/);
-    assert.match(styles, /\.void-image-zoom-stage\s*\{[\s\S]*position: absolute;[\s\S]*z-index: 4001;/);
-    assert.match(styles, /transition: opacity 300ms \$animationTimingFunc;/);
-    assert.match(styles, /transition: transform 300ms \$animationTimingFunc, opacity 300ms \$animationTimingFunc;/);
-    assert.match(styles, /&\.is-preparing\s*\{\s*transition: none;/);
-    assert.match(styles, /\.void-image-zoom-source\s*\{\s*visibility: hidden;/);
-});
-
-test('image zoom destroy cancels a pending opening frame and fallback', () => {
-    const fixture = createZoomFixture({ scrollY: 200, sidebarOpen: true });
-    const { context, document, link, window } = fixture;
-    openZoom(fixture);
-    const staleFrames = Array.from(window.animationFrames.values());
-    const staleTimers = Array.from(window.timers.values()).map((timer) => timer.callback);
-
-    assert.equal(staleFrames.length, 1);
-    assert.equal(window.pendingTimerCount(), 1);
-    assert.equal(context.VOID_ImageZoom.inputLocked, true);
-
-    context.VOID_ImageZoom.destroy();
-    context.VOID_ImageZoom.destroy();
-    assert.equal(window.animationFrames.size, 0);
-    assert.equal(window.pendingTimerCount(), 0);
-    assert.equal(document.body.classList.contains('void-dialog-open'), false);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-    assert.equal(link.classList.contains('void-image-zoom-source'), false);
-    assert.equal(link.focusCount, 0);
-    assert.equal(document.body.children.length, 1);
-    assert.equal(fixture.root.parentNode, document.body);
-    assert.equal(document.documentElement.classList.contains('void-image-zoom-active'), false);
-
-    staleFrames.forEach((callback) => callback(window.now));
-    staleTimers.forEach((callback) => callback());
-    window.advanceTime(500);
-    assert.equal(document.body.classList.contains('void-dialog-open'), false);
-    assert.equal(document.body.classList.contains('sidebar-show'), true);
-    assert.equal(link.focusCount, 0);
-});
-
-test('image zoom destroy cancels asynchronous work and removes every listener idempotently', () => {
-    for (const phase of ['scroll-delay', 'closing']) {
-        const fixture = createZoomFixture({ scrollY: 200, sidebarOpen: true });
-        const { context, document, link, stage, window } = fixture;
-        const overlay = context.VOID_ImageZoom.overlay;
-        const previewButton = context.VOID_ImageZoom.previewButton;
-        const previewImage = context.VOID_ImageZoom.previewImage;
-        openZoom(fixture);
-        finishZoomOpening(fixture);
-        if (phase === 'scroll-delay') {
-            window.setScrollY(240);
-        } else {
-            context.VOID_ImageZoom.previewButton.dispatch('click', {
-                target: context.VOID_ImageZoom.previewImage
-            });
-        }
-        const staleTimers = Array.from(window.timers.values()).map((timer) => timer.callback);
-
-        context.VOID_ImageZoom.destroy();
-        context.VOID_ImageZoom.destroy();
-        assert.equal(document.listenerCount('click'), 0);
-        assert.equal(document.listenerCount('keydown'), 0);
-        ['scroll', 'wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'resize',
-            'orientationchange'].forEach((eventName) => assert.equal(window.listenerCount(eventName), 0));
-        assert.equal(overlay.listenerCount('click'), 0);
-        assert.equal(stage.listenerCount('transitionend'), 0);
-        assert.equal(previewButton.listenerCount('click'), 0);
-        assert.equal(previewImage.listenerCount('error'), 0);
-        assert.equal(window.animationFrames.size, 0);
-        assert.equal(window.pendingTimerCount(), 0);
-        assert.equal(document.body.children.length, 1);
-        assert.equal(fixture.root.parentNode, document.body);
-        assert.equal(document.body.classList.contains('sidebar-show'), true);
-        assert.equal(document.body.classList.contains('void-dialog-open'), false);
-        assert.equal(document.documentElement.classList.contains('void-image-zoom-active'), false);
-        assert.equal(link.classList.contains('void-image-zoom-source'), false);
-        assert.equal(link.focusCount, 0);
-
-        assert.doesNotThrow(() => {
-            staleTimers.forEach((callback) => callback());
-            stage.dispatch('transitionend', { propertyName: 'transform', target: stage });
-            window.advanceTime(500);
-            window.flushAnimationFrames();
-        });
-        assert.equal(document.body.classList.contains('sidebar-show'), true);
-        assert.equal(link.focusCount, 0);
-    }
-});
-
-test('image zoom preserves browser behavior for modified, middle, download, blank, and failed images', () => {
-    const { context } = loadVoid();
+test('PhotoSwipe adapter groups article images and preserves item dimensions, alt, and crop data', () => {
+    const { context, document } = loadVoid();
     const root = new FakeElement('main');
-    const { image, link } = createSource(root);
-    context.VOID_ImageZoom.root = root;
-
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent({ ctrlKey: true })), false);
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent({ metaKey: true })), false);
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent({ shiftKey: true })), false);
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent({ altKey: true })), false);
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent({ button: 1 })), false);
-    link.setAttribute('download', '');
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent()), false);
-    link.removeAttribute('download');
-    link.setAttribute('target', '_blank');
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent()), false);
-    link.removeAttribute('target');
-    image.complete = false;
-    image.naturalWidth = 0;
-    assert.equal(context.VOID_ImageZoom.canActivate(link, preventableEvent()), false);
-});
-
-test('image zoom rolls back setup failures and preserves the real link fallback', () => {
-    const invalidGeometry = createZoomFixture({ reducedMotion: true });
-    invalidGeometry.sourceDocumentRect.width = 0;
-    const geometryClick = openZoom(invalidGeometry);
-    assert.equal(geometryClick.defaultPrevented, false);
-    assert.equal(invalidGeometry.context.VOID_ImageZoom.isOpen, false);
-
-    const missingResource = createZoomFixture({ reducedMotion: true });
-    missingResource.image.currentSrc = '';
-    missingResource.image.removeAttribute('src');
-    const missingClick = openZoom(missingResource);
-    assert.equal(missingClick.defaultPrevented, false);
-    assert.equal(missingResource.context.VOID_ImageZoom.isOpen, false);
-
-    const failingSetup = createZoomFixture({ reducedMotion: true, sidebarOpen: true });
-    const originalSetAttribute = failingSetup.context.VOID_ImageZoom.previewImage.setAttribute.bind(
-        failingSetup.context.VOID_ImageZoom.previewImage
-    );
-    failingSetup.context.VOID_ImageZoom.previewImage.setAttribute = (name, value) => {
-        if (name === 'src') {
-            throw new Error('preview setup failed');
-        }
-        originalSetAttribute(name, value);
-    };
-    const failingClick = openZoom(failingSetup);
-    assert.equal(failingClick.defaultPrevented, false);
-    assert.equal(failingSetup.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(failingSetup.context.VOID_ImageZoom.overlay.hidden, true);
-    assert.equal(failingSetup.stage.hidden, true);
-    assert.equal(failingSetup.link.classList.contains('void-image-zoom-source'), false);
-    assert.equal(failingSetup.document.body.classList.contains('sidebar-show'), true);
-
-    const failingLate = createZoomFixture({ sidebarOpen: true });
-    failingLate.stage.rectProvider = () => {
-        throw new Error('layout failed after side effects');
-    };
-    const lateClick = openZoom(failingLate);
-    assert.equal(lateClick.defaultPrevented, false);
-    assert.equal(failingLate.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(failingLate.context.VOID_ImageZoom.inputLocked, false);
-    assertSinglePassiveListener(failingLate.window, 'wheel');
-    assertSinglePassiveListener(failingLate.window, 'touchmove');
-    assert.equal(failingLate.link.classList.contains('void-image-zoom-source'), false);
-    assert.equal(failingLate.document.documentElement.classList.contains('void-image-zoom-active'), false);
-    assert.equal(failingLate.document.body.children.length, 3);
-    assert.equal(failingLate.document.body.classList.contains('sidebar-show'), true);
-});
-
-test('image zoom preview errors restore and activate the real link exactly once', () => {
-    const fixture = createZoomFixture({ reducedMotion: true, sidebarOpen: true });
-    let fallbackClick = null;
-    let fallbackCount = 0;
-    fixture.link.click = () => {
-        fallbackCount += 1;
-        fallbackClick = preventableEvent({ target: fixture.link });
-        fixture.document.dispatch('click', fallbackClick);
-    };
-
-    const openClick = openZoom(fixture);
-    assert.equal(openClick.defaultPrevented, true);
-    fixture.context.VOID_ImageZoom.previewImage.dispatch('error', {
-        target: fixture.context.VOID_ImageZoom.previewImage
+    const firstArticle = new FakeElement('article');
+    const secondArticle = new FakeElement('article');
+    const first = createSource(firstArticle, {
+        alt: '第一张',
+        height: 900,
+        href: '/first.jpg',
+        objectFit: 'cover',
+        width: 1600
     });
-
-    assert.equal(fallbackCount, 1);
-    assert.equal(fallbackClick.defaultPrevented, false);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(fixture.context.VOID_ImageZoom.fallbackLink, null);
-    assert.equal(fixture.link.classList.contains('void-image-zoom-source'), false);
-    assert.equal(fixture.link.focusCount, 0);
-    assert.equal(fixture.context.VOID_ImageZoom.overlay.hidden, true);
-    assert.equal(fixture.stage.hidden, true);
-    assert.equal(fixture.document.documentElement.classList.contains('void-image-zoom-active'), false);
-    assert.equal(fixture.document.body.classList.contains('sidebar-show'), true);
-
-    const detached = createZoomFixture({ reducedMotion: true });
-    let detachedFallbackCount = 0;
-    detached.link.click = () => {
-        detachedFallbackCount += 1;
-    };
-    openZoom(detached);
-    detached.root.removeChild(detached.link);
-    detached.context.VOID_ImageZoom.previewImage.dispatch('error', {
-        target: detached.context.VOID_ImageZoom.previewImage
+    const hidden = createSource(firstArticle, {
+        alt: '隐藏图片',
+        height: 1600,
+        href: '/hidden.jpg',
+        lazySource: '/hidden-thumb.jpg',
+        previewSource: '',
+        width: 900
     });
-    assert.equal(detached.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(detachedFallbackCount, 0);
-    assert.equal(detached.context.VOID_ImageZoom.overlay.hidden, true);
+    const other = createSource(secondArticle, { href: '/other-article.jpg' });
+    root.appendChild(firstArticle);
+    root.appendChild(secondArticle);
+    document.root = root;
+    context.VOID_PhotoSwipe.init(root);
+
+    const dataSource = context.VOID_PhotoSwipe.__test.getDataSource(first.link);
+    assert.equal(context.VOID_PhotoSwipe.__test.getGroupElement(first.link), firstArticle);
+    assert.equal(dataSource.index, 0);
+    assert.equal(dataSource.items.length, 2);
+    assert.equal(dataSource.items[0].src, '/first.jpg');
+    assert.equal(dataSource.items[0].width, 1600);
+    assert.equal(dataSource.items[0].height, 900);
+    assert.equal(dataSource.items[0].alt, '第一张');
+    assert.equal(dataSource.items[0].element, first.link);
+    assert.equal(dataSource.items[0].thumbCropped, true);
+    assert.equal(dataSource.items[1].src, '/hidden.jpg');
+    assert.equal(dataSource.items[1].msrc, undefined);
+    assert.equal(hidden.image.getAttribute('src'), '');
+    assert.equal(hidden.image.getAttribute('data-src'), '/hidden-thumb.jpg');
+    assert.equal(dataSource.items.some((item) => item.element === other.link), false);
 });
 
-test('image zoom fades instead of shrinking toward a detached source', () => {
-    const fixture = createZoomFixture({ scrollY: 200 });
-    openZoom(fixture);
-    finishZoomOpening(fixture);
-    fixture.root.removeChild(fixture.link);
-    fixture.context.VOID_ImageZoom.previewButton.dispatch('click', {
-        target: fixture.context.VOID_ImageZoom.previewImage
-    });
+test('PhotoSwipe adapter keeps Gallery sets separate inside one article', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const article = new FakeElement('article');
+    const firstSet = new FakeElement('div');
+    const secondSet = new FakeElement('div');
+    firstSet.setAttribute('data-void-gallery-set', '');
+    secondSet.setAttribute('data-void-gallery-set', '');
+    const first = createSource(firstSet, { href: '/gallery-1.jpg' });
+    const second = createSource(firstSet, { href: '/gallery-2.jpg' });
+    const third = createSource(secondSet, { href: '/gallery-3.jpg' });
+    article.appendChild(firstSet);
+    article.appendChild(secondSet);
+    root.appendChild(article);
+    document.root = root;
+    context.VOID_PhotoSwipe.init(root);
 
-    assert.equal(fixture.context.VOID_ImageZoom.isClosing, true);
-    assert.equal(fixture.context.VOID_ImageZoom.transitionProperty, 'opacity');
-    assert.equal(fixture.stage.style.opacity, '0');
-    assert.equal(fixture.context.VOID_ImageZoom.overlay.classList.contains('is-closing'), true);
-    finishZoomClosing(fixture, 'opacity');
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
+    const firstDataSource = context.VOID_PhotoSwipe.__test.getDataSource(second.link);
+    const secondDataSource = context.VOID_PhotoSwipe.__test.getDataSource(third.link);
+    assert.equal(context.VOID_PhotoSwipe.__test.getGroupElement(first.link), firstSet);
+    assert.equal(firstDataSource.index, 1);
+    assert.deepEqual(Array.from(firstDataSource.items, (item) => item.src), [
+        '/gallery-1.jpg',
+        '/gallery-2.jpg'
+    ]);
+    assert.deepEqual(Array.from(secondDataSource.items, (item) => item.src), ['/gallery-3.jpg']);
 });
 
-test('image zoom reduced motion opens and closes synchronously at the threshold', () => {
-    const fixture = createZoomFixture({ reducedMotion: true, scrollY: 200 });
-    openZoom(fixture);
-    assert.equal(fixture.context.VOID_ImageZoom.scrollArmed, true);
-    assert.equal(fixture.context.VOID_ImageZoom.inputLocked, false);
-    assert.equal(fixture.window.animationFrames.size, 0);
-    assert.equal(fixture.window.pendingTimerCount(), 0);
-    fixture.window.setScrollY(239);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, true);
-    fixture.window.setScrollY(240);
-    assert.equal(fixture.context.VOID_ImageZoom.isOpen, false);
-    assert.equal(fixture.window.pendingTimerCount(), 0);
-    assert.equal(fixture.window.scrollY, 240);
+test('PhotoSwipe adapter init and destroy are idempotent across PJAX reconstruction', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const article = new FakeElement('article');
+    const source = createSource(article);
+    root.appendChild(article);
+    document.root = root;
+
+    context.VOID_PhotoSwipe.init(root);
+    const firstLightbox = FakePhotoSwipeLightbox.instances[0];
+    context.VOID_PhotoSwipe.init(root);
+    const secondLightbox = FakePhotoSwipeLightbox.instances[1];
+    assert.equal(firstLightbox.destroyCount, 1);
+    assert.equal(secondLightbox.initCount, 1);
+    assert.equal(root.listenerCount('click'), 1);
+
+    const click = preventableEvent({ clientX: 120, clientY: 80, target: source.image });
+    root.dispatch('click', click);
+    assert.equal(click.defaultPrevented, true);
+    assert.equal(secondLightbox.openCalls.length, 1);
+    assert.equal(secondLightbox.openCalls[0].index, 0);
+    assert.equal(secondLightbox.openCalls[0].initialPoint.x, 120);
+    assert.equal(secondLightbox.openCalls[0].initialPoint.y, 80);
+
+    document.activeElement = document.body;
+    secondLightbox.emit('destroy');
+    assert.equal(document.activeElement, source.link);
+
+    context.VOID_PhotoSwipe.destroy();
+    context.VOID_PhotoSwipe.destroy();
+    assert.equal(secondLightbox.destroyCount, 1);
+    assert.equal(root.listenerCount('click'), 0);
 });
 
-test('zoom geometry fits without upscaling and maps source to target centers', () => {
-    const { context } = loadVoid();
-    const fit = context.VOID_ImageZoom.__test.calculateFit(1600, 900, 1000, 700, 20);
-    assert.equal(fit.width, 960);
-    assert.equal(fit.height, 540);
-    assert.equal(fit.left, 20);
-    assert.equal(fit.top, 80);
+test('PhotoSwipe adapter leaves modified, alternate-target, and invalid image links native', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const article = new FakeElement('article');
+    const source = createSource(article);
+    root.appendChild(article);
+    document.root = root;
+    context.VOID_PhotoSwipe.init(root);
+    const lightbox = FakePhotoSwipeLightbox.instances[0];
 
-    const transition = context.VOID_ImageZoom.__test.calculateTransform(
-        { left: 10, top: 20, width: 200, height: 100 },
-        { left: 100, top: 100, width: 800, height: 400 }
-    );
-    assert.equal(transition.scaleX, 4);
-    assert.equal(transition.scaleY, 4);
-    assert.equal(transition.translateX, 390);
-    assert.equal(transition.translateY, 230);
+    for (const eventOptions of [
+        { ctrlKey: true },
+        { metaKey: true },
+        { shiftKey: true },
+        { altKey: true },
+        { button: 1 }
+    ]) {
+        const click = preventableEvent({ ...eventOptions, target: source.image });
+        root.dispatch('click', click);
+        assert.equal(click.defaultPrevented, false);
+    }
 
-    context.window.scrollX = 7;
-    context.window.pageXOffset = 7;
-    context.window.setScrollY(11, false);
-    const documentRect = context.VOID_ImageZoom.__test.rectToDocument({
-        left: 3,
-        top: 5,
-        width: 20,
-        height: 10
-    });
-    assert.equal(documentRect.left, 10);
-    assert.equal(documentRect.top, 16);
-    assert.equal(documentRect.width, 20);
-    assert.equal(documentRect.height, 10);
+    source.link.setAttribute('target', '_blank');
+    const blankClick = preventableEvent({ target: source.image });
+    root.dispatch('click', blankClick);
+    assert.equal(blankClick.defaultPrevented, false);
+    source.link.removeAttribute('target');
 
-    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
-        { left: 0, top: 0, width: 320, height: 180 },
-        1600,
-        900
-    ), true);
-    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
-        { left: 0, top: 0, width: 320, height: 181.5 },
-        1600,
-        900
-    ), true);
-    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
-        { left: 0, top: 0, width: 144, height: 90 },
-        1500,
-        500
-    ), false);
-    assert.equal(context.VOID_ImageZoom.__test.hasCompatibleAspectRatio(
-        { left: 0, top: 0, width: 0, height: 90 },
-        1500,
-        500
-    ), false);
+    source.figure.removeAttribute('data-void-image-width');
+    source.figure.removeAttribute('data-void-image-height');
+    const missingDimensionsClick = preventableEvent({ target: source.image });
+    root.dispatch('click', missingDimensionsClick);
+    assert.equal(missingDimensionsClick.defaultPrevented, false);
+    assert.equal(lightbox.openCalls.length, 0);
 });
 
 test('reward image button closes by click or keyboard while preserving its scroll lock', () => {
@@ -1950,14 +1319,45 @@ test('reward dialog has independent scroll ownership and PJAX-safe teardown', ()
     assert.equal(document.body.classList.contains('void-dialog-open'), false);
 });
 
-test('legacy viewer assets and replacement viewer dependencies are absent', () => {
+test('PhotoSwipe 5.4.4 assets, license, build order, and adapter boundary are fixed', () => {
     const repositoryRoot = path.resolve(__dirname, '../..');
     const runtimeSource = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.js'), 'utf8');
     const packageSource = fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8');
     const gulpSource = fs.readFileSync(path.join(repositoryRoot, 'gulpfile.js'), 'utf8');
+    const viewerStyles = fs.readFileSync(
+        path.join(repositoryRoot, 'assets/parts/_image-experience.scss'),
+        'utf8'
+    );
+    const photoSwipeRoot = path.join(repositoryRoot, 'assets/libs/photoswipe');
+    const coreSource = fs.readFileSync(path.join(photoSwipeRoot, 'photoswipe.umd.min.js'), 'utf8');
+    const lightboxSource = fs.readFileSync(
+        path.join(photoSwipeRoot, 'photoswipe-lightbox.umd.min.js'),
+        'utf8'
+    );
+    const cssSource = fs.readFileSync(path.join(photoSwipeRoot, 'photoswipe.css'), 'utf8');
+    const licenseSource = fs.readFileSync(path.join(photoSwipeRoot, 'LICENSE'), 'utf8');
+    const vendorContext = {};
 
     assert.equal(fs.existsSync(path.join(repositoryRoot, 'assets/libs/fancybox')), false);
     assert.doesNotMatch(runtimeSource, /configureFancybox|data-fancybox|jQuery\.fancybox/);
+    assert.doesNotMatch(runtimeSource, /VOID_ImageZoom|scrollThreshold|requestScrollClose/);
+    assert.match(runtimeSource, /var VOID_PhotoSwipe/);
     assert.doesNotMatch(packageSource, /photoswipe|zoom\.js|fancybox/i);
-    assert.doesNotMatch(gulpSource, /photoswipe|zoom\.js|fancybox/i);
+    assert.match(coreSource, /PhotoSwipe 5\.4\.4/);
+    assert.match(lightboxSource, /PhotoSwipe Lightbox 5\.4\.4/);
+    assert.match(cssSource, /PhotoSwipe main CSS/);
+    assert.match(licenseSource, /MIT License/);
+    vm.runInNewContext(coreSource, vendorContext);
+    vm.runInNewContext(lightboxSource, vendorContext);
+    assert.equal(typeof vendorContext.PhotoSwipe, 'function');
+    assert.equal(typeof vendorContext.PhotoSwipeLightbox, 'function');
+    assert.ok(
+        gulpSource.indexOf("'./assets/libs/photoswipe/photoswipe.umd.min.js'")
+            < gulpSource.indexOf("'./assets/libs/photoswipe/photoswipe-lightbox.umd.min.js'"),
+        'PhotoSwipe core must be bundled before PhotoSwipeLightbox'
+    );
+    assert.match(gulpSource, /\.\/assets\/libs\/photoswipe\/LICENSE/);
+    assert.match(viewerStyles, /\.void-photoswipe\s*\{/);
+    assert.match(viewerStyles, /\.theme-dark \.void-photoswipe\s*\{/);
+    assert.doesNotMatch(viewerStyles, /void-image-zoom-(?:overlay|stage|source)/);
 });

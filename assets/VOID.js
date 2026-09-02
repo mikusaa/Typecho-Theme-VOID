@@ -2581,78 +2581,181 @@ var VOID_Gallery = {
     }
 };
 
-var VOID_ImageZoom = {
+var VOID_PhotoSwipe = {
     root: null,
-    overlay: null,
-    stage: null,
-    previewButton: null,
-    previewImage: null,
-    sourceLink: null,
-    sourceImage: null,
-    isOpen: false,
-    isClosing: false,
-    scrollArmed: false,
-    inputLocked: false,
-    generation: 0,
-    transitionFrame: null,
-    transitionTimer: null,
-    transitionPhase: null,
-    transitionGeneration: 0,
-    transitionProperty: 'transform',
-    transitionReady: false,
-    scrollCloseTimer: null,
-    inputFrame: null,
-    inputResetTimer: null,
-    inputIntent: 0,
-    inputPending: 0,
-    inputStartScrollY: 0,
-    scrollStart: 0,
-    touchY: null,
-    openTransform: '',
-    openTransitionMode: 'transform',
-    viewportWidth: 0,
-    restoreFocusOnClose: true,
-    fallbackLink: null,
+    lightbox: null,
     handlers: null,
-    scrollThreshold: 40,
-    transitionFallback: 360,
+    sourceLink: null,
+    isDestroying: false,
 
     isReducedMotion: function () {
         return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     },
 
     findLink: function (target) {
-        while (target && target !== this.root) {
+        while (target) {
             if (target.getAttribute && target.hasAttribute('data-void-image-zoom')) {
                 return target;
+            }
+            if (target === this.root) {
+                break;
             }
             target = target.parentNode;
         }
         return null;
     },
 
+    findAncestor: function (element, predicate) {
+        while (element) {
+            if (predicate(element)) {
+                return element;
+            }
+            if (element === this.root) {
+                break;
+            }
+            element = element.parentNode;
+        }
+        return null;
+    },
+
+    getGroupElement: function (link) {
+        var gallerySet = this.findAncestor(link, function (element) {
+            return !!(element.hasAttribute && element.hasAttribute('data-void-gallery-set'));
+        });
+        var article;
+
+        if (gallerySet) {
+            return gallerySet;
+        }
+
+        article = this.findAncestor(link, function (element) {
+            return !!(element.tagName && element.tagName.toLowerCase() === 'article');
+        });
+        return article || link;
+    },
+
+    getGroupLinks: function (link) {
+        var group = this.getGroupElement(link);
+
+        if (!group || group === link || typeof group.querySelectorAll !== 'function') {
+            return [link];
+        }
+        return Array.prototype.slice.call(group.querySelectorAll('a[data-void-image-zoom]'));
+    },
+
     getSourceImage: function (link) {
         return link && link.querySelector ? link.querySelector('img[data-void-image-content]') : null;
     },
 
+    getImageFigure: function (link) {
+        return this.findAncestor(link, function (element) {
+            return !!(element.hasAttribute && element.hasAttribute('data-void-image-item'));
+        });
+    },
+
+    parseDimension: function (value) {
+        var dimension = parseInt(value, 10);
+        return isFinite(dimension) && dimension > 0 ? dimension : 0;
+    },
+
+    resolveDimensions: function (link, image) {
+        var figure = this.getImageFigure(link);
+        var width = figure ? this.parseDimension(figure.getAttribute('data-void-image-width')) : 0;
+        var height = figure ? this.parseDimension(figure.getAttribute('data-void-image-height')) : 0;
+
+        if (!width || !height) {
+            width = this.parseDimension(image && image.getAttribute('width'));
+            height = this.parseDimension(image && image.getAttribute('height'));
+        }
+        return width && height ? { width: width, height: height } : null;
+    },
+
     getPreviewSource: function (image) {
-        return (image && (image.currentSrc || image.src || image.getAttribute('src'))) || '';
+        return (image && (image.currentSrc || image.getAttribute('src'))) || '';
+    },
+
+    isCroppedThumbnail: function (image, width, height) {
+        var style = window.getComputedStyle && image ? window.getComputedStyle(image) : null;
+        var rect = image && image.getBoundingClientRect ? image.getBoundingClientRect() : null;
+        var sourceRatio;
+        var thumbnailRatio;
+
+        if (style && style.objectFit === 'cover') {
+            return true;
+        }
+        if (!rect || !isFinite(rect.width) || !isFinite(rect.height)
+            || rect.width <= 0 || rect.height <= 0) {
+            return false;
+        }
+
+        sourceRatio = width / height;
+        thumbnailRatio = rect.width / rect.height;
+        return Math.abs(thumbnailRatio - sourceRatio) / sourceRatio > 0.01;
+    },
+
+    getItemData: function (link) {
+        var image = this.getSourceImage(link);
+        var dimensions = this.resolveDimensions(link, image);
+        var source = link && (link.href || link.getAttribute('href'));
+        var previewSource;
+        var itemData;
+
+        if (!image || !dimensions || !source) {
+            return null;
+        }
+
+        previewSource = this.getPreviewSource(image);
+        if (previewSource && image.complete && image.naturalWidth === 0) {
+            return null;
+        }
+
+        itemData = {
+            src: source,
+            width: dimensions.width,
+            height: dimensions.height,
+            w: dimensions.width,
+            h: dimensions.height,
+            alt: image.getAttribute('alt') || '',
+            element: link,
+            thumbCropped: this.isCroppedThumbnail(image, dimensions.width, dimensions.height)
+        };
+        if (previewSource) {
+            itemData.msrc = previewSource;
+        }
+        return itemData;
+    },
+
+    getDataSource: function (link) {
+        var links = this.getGroupLinks(link);
+        var items = [];
+        var index = -1;
+        var linkIndex;
+
+        for (linkIndex = 0; linkIndex < links.length; linkIndex++) {
+            var itemData = this.getItemData(links[linkIndex]);
+            if (!itemData) {
+                continue;
+            }
+            if (links[linkIndex] === link) {
+                index = items.length;
+            }
+            items.push(itemData);
+        }
+
+        return index >= 0 ? { items: items, index: index } : null;
     },
 
     canActivate: function (link, event) {
         var target;
-        var image;
 
-        if (!link || !event || event.defaultPrevented) {
+        if (!this.lightbox || !link || !event || event.defaultPrevented) {
             return false;
         }
         if (typeof event.button === 'number' && event.button !== 0) {
             return false;
         }
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-            return false;
-        }
-        if (link.hasAttribute('download')) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+            || link.hasAttribute('download')) {
             return false;
         }
 
@@ -2663,948 +2766,149 @@ var VOID_ImageZoom = {
         if (this.root && this.root.contains && !this.root.contains(link)) {
             return false;
         }
-
-        image = this.getSourceImage(link);
-        return !!(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
-            && this.getPreviewSource(image));
+        return !!this.getItemData(link);
     },
 
-    isValidRect: function (rect) {
-        return !!(rect && isFinite(rect.left) && isFinite(rect.top)
-            && isFinite(rect.width) && isFinite(rect.height)
-            && rect.width > 0 && rect.height > 0);
+    getInitialPoint: function (event) {
+        if (!event || (!event.clientX && !event.clientY)) {
+            return null;
+        }
+        return { x: event.clientX, y: event.clientY };
     },
 
-    hasCompatibleAspectRatio: function (rect, width, height) {
-        var naturalRatio;
-        var sourceRatio;
+    open: function (link, event) {
+        var dataSource = this.getDataSource(link);
+        var opened;
 
-        if (!this.isValidRect(rect) || !isFinite(width) || !isFinite(height)
-            || width <= 0 || height <= 0) {
+        if (!dataSource || !this.lightbox) {
             return false;
-        }
-
-        sourceRatio = rect.width / rect.height;
-        naturalRatio = width / height;
-        return Math.abs(sourceRatio - naturalRatio) / naturalRatio <= 0.01;
-    },
-
-    calculateTransform: function (sourceRect, targetRect) {
-        var sourceCenterX = sourceRect.left + sourceRect.width / 2;
-        var sourceCenterY = sourceRect.top + sourceRect.height / 2;
-        var targetCenterX = targetRect.left + targetRect.width / 2;
-        var targetCenterY = targetRect.top + targetRect.height / 2;
-        var scaleX = sourceRect.width > 0 ? targetRect.width / sourceRect.width : 1;
-        var scaleY = sourceRect.height > 0 ? targetRect.height / sourceRect.height : 1;
-        var translateX = targetCenterX - sourceCenterX;
-        var translateY = targetCenterY - sourceCenterY;
-
-        return {
-            scaleX: scaleX,
-            scaleY: scaleY,
-            translateX: translateX,
-            translateY: translateY,
-            transform: 'translate3d(' + translateX + 'px, ' + translateY + 'px, 0) scale('
-                + scaleX + ', ' + scaleY + ')'
-        };
-    },
-
-    calculateFit: function (width, height, viewportWidth, viewportHeight, padding) {
-        var insets = typeof padding === 'number'
-            ? { top: padding, right: padding, bottom: padding, left: padding }
-            : padding;
-        var availableWidth;
-        var availableHeight;
-        var scale;
-        var fittedWidth;
-        var fittedHeight;
-
-        insets = insets || { top: 0, right: 0, bottom: 0, left: 0 };
-        availableWidth = Math.max(0, viewportWidth - insets.left - insets.right);
-        availableHeight = Math.max(0, viewportHeight - insets.top - insets.bottom);
-        scale = Math.min(availableWidth / width, availableHeight / height, 1);
-        fittedWidth = width * scale;
-        fittedHeight = height * scale;
-
-        return {
-            width: fittedWidth,
-            height: fittedHeight,
-            left: insets.left + (availableWidth - fittedWidth) / 2,
-            top: insets.top + (availableHeight - fittedHeight) / 2
-        };
-    },
-
-    getScrollY: function () {
-        if (typeof window.scrollY === 'number') {
-            return window.scrollY;
-        }
-        return typeof window.pageYOffset === 'number' ? window.pageYOffset : 0;
-    },
-
-    getScrollX: function () {
-        if (typeof window.scrollX === 'number') {
-            return window.scrollX;
-        }
-        return typeof window.pageXOffset === 'number' ? window.pageXOffset : 0;
-    },
-
-    getViewportWidth: function () {
-        if (typeof window.innerWidth === 'number') {
-            return window.innerWidth;
-        }
-        return document.documentElement ? document.documentElement.clientWidth : 0;
-    },
-
-    getViewportHeight: function () {
-        if (typeof window.innerHeight === 'number') {
-            return window.innerHeight;
-        }
-        return document.documentElement ? document.documentElement.clientHeight : 0;
-    },
-
-    getOverlayPadding: function () {
-        var style = window.getComputedStyle && this.overlay ? window.getComputedStyle(this.overlay) : null;
-        var readInset = function (name, fallback) {
-            var value = style ? parseFloat(style[name]) : NaN;
-            return isFinite(value) ? value : fallback;
-        };
-
-        return {
-            top: readInset('paddingTop', 24),
-            right: readInset('paddingRight', 24),
-            bottom: readInset('paddingBottom', 24),
-            left: readInset('paddingLeft', 24)
-        };
-    },
-
-    rectToDocument: function (rect) {
-        return {
-            left: rect.left + this.getScrollX(),
-            top: rect.top + this.getScrollY(),
-            width: rect.width,
-            height: rect.height
-        };
-    },
-
-    setStageBase: function (rect) {
-        this.stage.style.left = rect.left + 'px';
-        this.stage.style.top = rect.top + 'px';
-        this.stage.style.width = rect.width + 'px';
-        this.stage.style.height = rect.height + 'px';
-    },
-
-    clearStagePresentation: function () {
-        if (!this.stage) {
-            return;
-        }
-
-        this.stage.style.left = '';
-        this.stage.style.top = '';
-        this.stage.style.width = '';
-        this.stage.style.height = '';
-        this.stage.style.transform = '';
-        this.stage.style.opacity = '';
-        this.stage.classList.remove('is-preparing');
-        this.stage.classList.remove('is-closing');
-        this.stage.classList.remove('is-input-locked');
-    },
-
-    forceStageLayout: function () {
-        if (this.stage && this.stage.getBoundingClientRect) {
-            this.stage.getBoundingClientRect();
-        }
-    },
-
-    focusWithoutScroll: function (element) {
-        if (!element || typeof element.focus !== 'function') {
-            return;
         }
 
         try {
-            element.focus({ preventScroll: true });
+            opened = this.lightbox.loadAndOpen(
+                dataSource.index,
+                dataSource.items,
+                this.getInitialPoint(event)
+            );
         } catch (error) {
-            element.focus();
-        }
-    },
-
-    restoreScrollPosition: function (scrollX, scrollY) {
-        if (typeof window.scrollTo !== 'function'
-            || (Math.abs(this.getScrollX() - scrollX) <= 0.5 && Math.abs(this.getScrollY() - scrollY) <= 0.5)) {
-            return;
-        }
-
-        try {
-            window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
-        } catch (error) {
-            window.scrollTo(scrollX, scrollY);
-        }
-    },
-
-    setRootOverflowClip: function (active) {
-        var root = document.documentElement;
-
-        if (!root || !root.classList) {
-            return;
-        }
-        if (active) {
-            root.classList.add('void-image-zoom-active');
-        } else {
-            root.classList.remove('void-image-zoom-active');
-        }
-    },
-
-    activateFallback: function (link) {
-        if (!link || typeof link.click !== 'function') {
-            return;
-        }
-
-        this.fallbackLink = link;
-        try {
-            link.click();
-        } catch (error) {
-            // The restored real link remains available for a subsequent click.
-        }
-        this.fallbackLink = null;
-    },
-
-    handlePreviewError: function () {
-        var generation = this.generation;
-        var link = this.sourceLink;
-        var canActivateFallback;
-
-        if (!this.isOpen || this.isClosing || !link) {
-            return;
-        }
-
-        canActivateFallback = !!(this.root && this.root.contains && this.root.contains(link));
-        this.finishClose(false, generation);
-        if (canActivateFallback) {
-            this.activateFallback(link);
-        }
-    },
-
-    setInputLock: function (locked) {
-        if (locked === this.inputLocked || !this.handlers) {
-            return;
-        }
-
-        this.inputLocked = locked;
-        if (locked) {
-            window.addEventListener('wheel', this.handlers.blockInput, { passive: false });
-            window.addEventListener('touchmove', this.handlers.blockInput, { passive: false });
-            this.overlay.classList.add('is-input-locked');
-            this.stage.classList.add('is-input-locked');
-        } else {
-            window.removeEventListener('wheel', this.handlers.blockInput, { passive: false });
-            window.removeEventListener('touchmove', this.handlers.blockInput, { passive: false });
-            if (this.overlay) {
-                this.overlay.classList.remove('is-input-locked');
-            }
-            if (this.stage) {
-                this.stage.classList.remove('is-input-locked');
-            }
-        }
-    },
-
-    cancelTransitionWork: function () {
-        if (this.transitionFrame !== null && window.cancelAnimationFrame) {
-            window.cancelAnimationFrame(this.transitionFrame);
-        }
-        this.transitionFrame = null;
-
-        if (this.transitionTimer !== null) {
-            window.clearTimeout(this.transitionTimer);
-            this.transitionTimer = null;
-        }
-
-        this.transitionPhase = null;
-        this.transitionGeneration = 0;
-        this.transitionProperty = 'transform';
-        this.transitionReady = false;
-    },
-
-    clearInputIntent: function () {
-        if (this.inputFrame !== null && window.cancelAnimationFrame) {
-            window.cancelAnimationFrame(this.inputFrame);
-        }
-        this.inputFrame = null;
-        if (this.inputResetTimer !== null) {
-            window.clearTimeout(this.inputResetTimer);
-            this.inputResetTimer = null;
-        }
-
-        this.inputIntent = 0;
-        this.inputPending = 0;
-        this.touchY = null;
-    },
-
-    cancelScrollWork: function () {
-        if (this.scrollCloseTimer !== null) {
-            window.clearTimeout(this.scrollCloseTimer);
-            this.scrollCloseTimer = null;
-        }
-        this.clearInputIntent();
-    },
-
-    cancelAsyncWork: function () {
-        this.cancelTransitionWork();
-        this.cancelScrollWork();
-        this.setInputLock(false);
-    },
-
-    armScrollClose: function (generation) {
-        if (!this.isOpen || this.isClosing || this.scrollArmed || generation !== this.generation) {
-            return;
-        }
-
-        if (this.transitionFrame !== null && window.cancelAnimationFrame) {
-            window.cancelAnimationFrame(this.transitionFrame);
-        }
-        this.transitionFrame = null;
-        if (this.transitionTimer !== null) {
-            window.clearTimeout(this.transitionTimer);
-            this.transitionTimer = null;
-        }
-        this.transitionPhase = null;
-        this.transitionGeneration = 0;
-
-        this.stage.classList.remove('is-preparing');
-        if (this.openTransitionMode === 'transform') {
-            this.stage.style.transform = this.openTransform;
-        } else {
-            this.stage.style.opacity = '1';
-        }
-        this.overlay.classList.remove('is-closing');
-        this.overlay.classList.add('is-visible');
-        this.setInputLock(false);
-
-        this.scrollStart = this.getScrollY();
-        this.inputStartScrollY = this.scrollStart;
-        this.inputIntent = 0;
-        this.inputPending = 0;
-        this.scrollArmed = true;
-    },
-
-    startOpenTransition: function (generation) {
-        var self = this;
-        var start = function () {
-            self.transitionFrame = null;
-            if (!self.isOpen || self.isClosing || generation !== self.generation) {
-                return;
-            }
-
-            self.stage.classList.remove('is-preparing');
-            self.overlay.classList.add('is-visible');
-            if (self.openTransitionMode === 'transform') {
-                self.stage.style.transform = self.openTransform;
-            } else {
-                self.stage.style.opacity = '1';
-            }
-        };
-
-        if (this.isReducedMotion()) {
-            start();
-            this.armScrollClose(generation);
-            return;
-        }
-
-        this.transitionPhase = 'opening';
-        this.transitionGeneration = generation;
-        this.transitionProperty = this.openTransitionMode === 'transform' ? 'transform' : 'opacity';
-        this.transitionTimer = window.setTimeout(function () {
-            self.armScrollClose(generation);
-        }, this.transitionFallback);
-
-        if (window.requestAnimationFrame) {
-            this.transitionFrame = window.requestAnimationFrame(start);
-        } else {
-            start();
-        }
-    },
-
-    open: function (link) {
-        var image = this.getSourceImage(link);
-        var previewSource = this.getPreviewSource(image);
-        var sourceRect;
-        var sourceDocumentRect;
-        var targetRect;
-        var targetDocumentRect;
-        var generation;
-        var alt;
-
-        if (this.isOpen || !image || !previewSource) {
             return false;
         }
-
-        sourceRect = image.getBoundingClientRect ? image.getBoundingClientRect() : null;
-        if (!this.isValidRect(sourceRect)) {
-            return false;
+        if (opened) {
+            this.sourceLink = link;
         }
-
-        targetRect = this.calculateFit(
-            image.naturalWidth,
-            image.naturalHeight,
-            this.getViewportWidth(),
-            this.getViewportHeight(),
-            this.getOverlayPadding()
-        );
-        if (!this.isValidRect(targetRect)) {
-            return false;
-        }
-
-        sourceDocumentRect = this.rectToDocument(sourceRect);
-        targetDocumentRect = this.rectToDocument(targetRect);
-        this.cancelAsyncWork();
-        this.generation++;
-        generation = this.generation;
-        this.sourceLink = link;
-        this.sourceImage = image;
-        this.isOpen = true;
-        this.isClosing = false;
-        this.scrollArmed = false;
-        this.restoreFocusOnClose = true;
-        this.viewportWidth = this.getViewportWidth();
-        this.openTransitionMode = this.hasCompatibleAspectRatio(
-            sourceRect,
-            image.naturalWidth,
-            image.naturalHeight
-        ) ? 'transform' : 'opacity';
-        this.openTransform = this.openTransitionMode === 'transform'
-            ? this.calculateTransform(sourceDocumentRect, targetDocumentRect).transform : 'none';
-        alt = image.getAttribute('alt') || '';
-
-        try {
-            this.previewImage.setAttribute('src', previewSource);
-            this.previewImage.setAttribute('alt', '');
-            this.previewImage.setAttribute('width', String(image.naturalWidth));
-            this.previewImage.setAttribute('height', String(image.naturalHeight));
-            this.previewButton.setAttribute('aria-label', alt ? '关闭图片预览：' + alt : '关闭图片预览');
-
-            this.clearStagePresentation();
-            this.setStageBase(this.openTransitionMode === 'transform'
-                ? sourceDocumentRect : targetDocumentRect);
-            this.stage.style.transform = 'none';
-            this.stage.style.opacity = this.openTransitionMode === 'transform' ? '1' : '0';
-            this.stage.classList.add('is-preparing');
-            this.overlay.classList.remove('is-visible');
-            this.overlay.classList.remove('is-closing');
-            this.overlay.hidden = false;
-            this.stage.hidden = false;
-            this.setRootOverflowClip(true);
-            if (this.openTransitionMode === 'transform') {
-                link.classList.add('void-image-zoom-source');
-            }
-            this.setInputLock(true);
-            this.focusWithoutScroll(this.previewButton);
-            this.forceStageLayout();
-            this.startOpenTransition(generation);
-        } catch (error) {
-            this.finishClose(false, generation);
-            return false;
-        }
-
-        return true;
+        return opened;
     },
 
-    finishClose: function (restoreFocus, generation) {
+    restoreSourceFocus: function () {
         var sourceLink = this.sourceLink;
-        var scrollX;
-        var scrollY;
-
-        if (!this.isOpen || (typeof generation === 'number' && generation !== this.generation)) {
-            return;
-        }
-
-        scrollX = this.getScrollX();
-        scrollY = this.getScrollY();
-        this.cancelAsyncWork();
-        this.isOpen = false;
-        this.isClosing = false;
-        this.scrollArmed = false;
-        this.setRootOverflowClip(false);
-
-        if (sourceLink && sourceLink.classList) {
-            sourceLink.classList.remove('void-image-zoom-source');
-        }
-        if (this.overlay) {
-            this.overlay.classList.remove('is-visible');
-            this.overlay.classList.remove('is-closing');
-            this.overlay.classList.remove('is-input-locked');
-            this.overlay.hidden = true;
-        }
-        if (this.stage) {
-            this.clearStagePresentation();
-            this.stage.hidden = true;
-        }
-        if (this.previewImage) {
-            this.previewImage.removeAttribute('src');
-            this.previewImage.removeAttribute('width');
-            this.previewImage.removeAttribute('height');
-        }
-        if (this.previewButton) {
-            this.previewButton.setAttribute('aria-label', '关闭图片预览');
-        }
 
         this.sourceLink = null;
-        this.sourceImage = null;
-        this.openTransform = '';
-        this.openTransitionMode = 'transform';
-        this.viewportWidth = 0;
-        if (restoreFocus) {
-            this.focusWithoutScroll(sourceLink);
-            this.restoreScrollPosition(scrollX, scrollY);
+        if (this.isDestroying || !sourceLink || !this.root
+            || (this.root.contains && !this.root.contains(sourceLink))
+            || typeof sourceLink.focus !== 'function') {
+            return;
+        }
+
+        try {
+            sourceLink.focus({ preventScroll: true });
+        } catch (error) {
+            sourceLink.focus();
         }
     },
 
-    close: function (immediate, restoreFocus) {
-        var self = this;
-        var sourceRect;
-        var stageRect;
-        var sourceDocumentRect;
-        var stageDocumentRect;
-        var canReturnToSource;
-        var generation;
+    getOptions: function () {
+        var transitionDuration = this.isReducedMotion() ? 0 : 300;
 
-        if (!this.isOpen || this.isClosing) {
-            return;
-        }
-
-        this.restoreFocusOnClose = restoreFocus !== false;
-        this.isClosing = true;
-        this.scrollArmed = false;
-        this.generation++;
-        generation = this.generation;
-        this.cancelAsyncWork();
-
-        if (immediate || this.isReducedMotion()) {
-            this.finishClose(this.restoreFocusOnClose, generation);
-            return;
-        }
-
-        sourceRect = this.sourceImage && this.sourceImage.getBoundingClientRect
-            ? this.sourceImage.getBoundingClientRect() : null;
-        stageRect = this.stage && this.stage.getBoundingClientRect
-            ? this.stage.getBoundingClientRect() : null;
-        canReturnToSource = !!(this.openTransitionMode === 'transform'
-            && this.sourceLink && this.sourceImage && this.root
-            && this.root.contains && this.root.contains(this.sourceLink)
-            && this.sourceLink.contains && this.sourceLink.contains(this.sourceImage)
-            && this.isValidRect(sourceRect) && this.isValidRect(stageRect)
-            && this.hasCompatibleAspectRatio(
-                sourceRect,
-                this.sourceImage.naturalWidth,
-                this.sourceImage.naturalHeight
-            ));
-
-        this.transitionPhase = 'closing';
-        this.transitionGeneration = generation;
-        this.transitionProperty = canReturnToSource ? 'transform' : 'opacity';
-        this.stage.classList.add('is-preparing');
-
-        if (canReturnToSource) {
-            sourceDocumentRect = this.rectToDocument(sourceRect);
-            stageDocumentRect = this.rectToDocument(stageRect);
-            this.setStageBase(sourceDocumentRect);
-            this.stage.style.transform = this.calculateTransform(
-                sourceDocumentRect,
-                stageDocumentRect
-            ).transform;
-            this.stage.style.opacity = '1';
-        } else if (this.openTransitionMode !== 'opacity') {
-            this.stage.style.opacity = '1';
-        }
-
-        if (!canReturnToSource && this.sourceLink && this.sourceLink.classList) {
-            this.sourceLink.classList.remove('void-image-zoom-source');
-        }
-
-        this.forceStageLayout();
-        this.stage.classList.remove('is-preparing');
-        this.stage.classList.add('is-closing');
-        this.overlay.classList.remove('is-visible');
-        this.overlay.classList.add('is-closing');
-
-        if (canReturnToSource) {
-            this.stage.style.transform = 'none';
-        } else {
-            this.stage.style.opacity = '0';
-        }
-
-        if (window.requestAnimationFrame) {
-            this.transitionFrame = window.requestAnimationFrame(function () {
-                self.transitionFrame = null;
-                if (self.isOpen && self.isClosing && generation === self.generation
-                    && self.transitionPhase === 'closing') {
-                    self.transitionReady = true;
-                }
-            });
-        } else {
-            this.transitionReady = true;
-        }
-
-        this.transitionTimer = window.setTimeout(function () {
-            VOID_ImageZoom.finishClose(VOID_ImageZoom.restoreFocusOnClose, generation);
-        }, this.transitionFallback);
-    },
-
-    handleTransitionEnd: function (event) {
-        var phase = this.transitionPhase;
-        var generation = this.transitionGeneration;
-
-        if (!this.isOpen || !event || event.target !== this.stage
-            || (event.propertyName && event.propertyName !== this.transitionProperty)) {
-            return;
-        }
-
-        if (phase === 'opening') {
-            this.armScrollClose(generation);
-        } else if (phase === 'closing' && this.isClosing && this.transitionReady) {
-            this.finishClose(this.restoreFocusOnClose, generation);
-        }
-    },
-
-    requestScrollClose: function () {
-        var self = this;
-        var generation = this.generation;
-
-        if (!this.isOpen || this.isClosing || !this.scrollArmed || this.scrollCloseTimer !== null) {
-            return;
-        }
-
-        this.scrollArmed = false;
-        if (this.isReducedMotion()) {
-            this.close(true, true);
-            return;
-        }
-
-        this.scrollCloseTimer = window.setTimeout(function () {
-            self.scrollCloseTimer = null;
-            if (self.isOpen && !self.isClosing && generation === self.generation) {
-                self.close(false, true);
-            }
-        }, 150);
-    },
-
-    evaluateScroll: function () {
-        if (!this.isOpen || this.isClosing || !this.scrollArmed) {
-            return;
-        }
-
-        if (Math.abs((this.getScrollY() - this.scrollStart) + this.inputIntent) >= this.scrollThreshold) {
-            this.requestScrollClose();
-        }
-    },
-
-    resetInputIntentSoon: function () {
-        var self = this;
-
-        if (!this.isOpen || this.isClosing) {
-            return;
-        }
-
-        if (this.inputResetTimer !== null) {
-            window.clearTimeout(this.inputResetTimer);
-        }
-        this.inputResetTimer = window.setTimeout(function () {
-            self.inputResetTimer = null;
-            self.inputIntent = 0;
-            self.inputPending = 0;
-        }, 220);
-    },
-
-    recordInputIntent: function (delta, resetSoon) {
-        var self = this;
-        var evaluate = function () {
-            var currentScrollY = self.getScrollY();
-            var actualDelta = currentScrollY - self.inputStartScrollY;
-            var unconsumedInput = self.inputPending;
-
-            self.inputFrame = null;
-            if (!self.isOpen || self.isClosing || !self.scrollArmed) {
-                self.inputPending = 0;
-                return;
-            }
-
-            if (unconsumedInput * actualDelta > 0) {
-                if (Math.abs(actualDelta) >= Math.abs(unconsumedInput)) {
-                    unconsumedInput = 0;
-                } else {
-                    unconsumedInput -= actualDelta;
-                }
-            }
-            self.inputIntent += unconsumedInput;
-            self.inputPending = 0;
-            self.evaluateScroll();
+        return {
+            pswpModule: window.PhotoSwipe,
+            mainClass: 'void-photoswipe',
+            allowPanToNext: false,
+            closeOnVerticalDrag: true,
+            pinchToClose: false,
+            wheelToZoom: false,
+            loop: false,
+            bgOpacity: 1,
+            imageClickAction: 'zoom',
+            tapAction: 'zoom',
+            doubleTapAction: false,
+            bgClickAction: 'close',
+            clickToCloseNonZoomable: false,
+            secondaryZoomLevel: 1,
+            showAnimationDuration: transitionDuration,
+            hideAnimationDuration: transitionDuration,
+            zoomAnimationDuration: transitionDuration,
+            easing: 'cubic-bezier(.4,0,.22,1)',
+            closeTitle: '关闭图片预览',
+            zoomTitle: '切换图片缩放',
+            arrowPrevTitle: '上一张图片',
+            arrowNextTitle: '下一张图片',
+            errorMsg: '图片加载失败'
         };
-
-        if (!this.isOpen || this.isClosing || !this.scrollArmed || !isFinite(delta) || delta === 0) {
-            return;
-        }
-
-        if (this.inputFrame === null) {
-            this.inputStartScrollY = this.getScrollY();
-        }
-        this.inputPending += delta;
-        if (resetSoon) {
-            this.resetInputIntentSoon();
-        }
-        if (this.inputFrame !== null) {
-            return;
-        }
-
-        if (window.requestAnimationFrame) {
-            this.inputFrame = window.requestAnimationFrame(evaluate);
-        } else {
-            evaluate();
-        }
-    },
-
-    isOpeningScrollKey: function (event) {
-        var key = event.key;
-        if ((key === ' ' || key === 'Spacebar' || key === 'Enter')
-            && event.target === this.previewButton) {
-            return false;
-        }
-
-        return key === 'ArrowUp' || key === 'ArrowDown' || key === 'PageUp'
-            || key === 'PageDown' || key === 'Home' || key === 'End'
-            || key === ' ' || key === 'Spacebar';
     },
 
     init: function (root) {
         var self = this;
 
         this.destroy();
-        this.generation++;
         this.root = root || document.getElementById('pjax-container') || document;
         if (!this.root || typeof this.root.querySelector !== 'function'
-            || !this.root.querySelector('a[data-void-image-zoom]') || !document.body) {
+            || !this.root.querySelector('a[data-void-image-zoom]')
+            || typeof window.PhotoSwipe !== 'function'
+            || typeof window.PhotoSwipeLightbox !== 'function') {
             return;
         }
 
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'void-image-zoom-overlay';
-        this.overlay.setAttribute('aria-hidden', 'true');
-        this.overlay.hidden = true;
-
-        this.stage = document.createElement('div');
-        this.stage.className = 'void-image-zoom-stage';
-        this.stage.setAttribute('role', 'dialog');
-        this.stage.setAttribute('aria-modal', 'true');
-        this.stage.setAttribute('aria-label', '图片放大预览');
-        this.stage.hidden = true;
-
-        this.previewButton = document.createElement('button');
-        this.previewButton.className = 'void-image-zoom__button';
-        this.previewButton.setAttribute('type', 'button');
-        this.previewButton.setAttribute('aria-label', '关闭图片预览');
-
-        this.previewImage = document.createElement('img');
-        this.previewImage.className = 'void-image-zoom__image';
-        this.previewImage.setAttribute('alt', '');
-        this.previewImage.setAttribute('draggable', 'false');
-        this.previewButton.appendChild(this.previewImage);
-        this.stage.appendChild(this.previewButton);
-        document.body.appendChild(this.overlay);
-        document.body.appendChild(this.stage);
+        try {
+            this.lightbox = new window.PhotoSwipeLightbox(this.getOptions());
+            this.lightbox.on('destroy', function () {
+                self.restoreSourceFocus();
+            });
+            this.lightbox.init();
+        } catch (error) {
+            this.lightbox = null;
+            return;
+        }
 
         this.handlers = {
-            documentClick: function (event) {
+            click: function (event) {
                 var link = self.findLink(event.target);
-                if (link && link === self.fallbackLink) {
-                    return;
-                }
-                if (self.canActivate(link, event) && self.open(link)) {
-                    event.preventDefault();
-                }
-            },
-            overlayClick: function (event) {
-                if (event.target === self.overlay) {
-                    self.close(false, true);
-                }
-            },
-            previewClick: function () {
-                self.close(false, true);
-            },
-            keydown: function (event) {
-                if (!self.isOpen) {
-                    return;
-                }
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    self.close(false, true);
-                    return;
-                }
-                if (event.key === 'Tab') {
-                    event.preventDefault();
-                    self.focusWithoutScroll(self.previewButton);
-                    return;
-                }
-                if (self.inputLocked && self.isOpeningScrollKey(event)) {
-                    event.preventDefault();
-                }
-            },
-            transitionEnd: function (event) {
-                self.handleTransitionEnd(event);
-            },
-            previewError: function () {
-                self.handlePreviewError();
-            },
-            resize: function () {
-                if (self.isOpen && Math.abs(self.getViewportWidth() - self.viewportWidth) > 1) {
-                    self.close(true, true);
-                }
-            },
-            orientationChange: function () {
-                self.close(true, true);
-            },
-            scroll: function () {
-                self.evaluateScroll();
-            },
-            wheel: function (event) {
-                var delta = event.deltaY || 0;
-                if (event.ctrlKey) {
-                    self.clearInputIntent();
-                    return;
-                }
-                if (event.deltaMode === 1) {
-                    delta *= 16;
-                } else if (event.deltaMode === 2) {
-                    delta *= window.innerHeight || 800;
-                }
-                self.recordInputIntent(delta, true);
-            },
-            touchStart: function (event) {
-                var touch = event.touches && event.touches[0];
-                if (!self.isOpen || self.isClosing || !self.scrollArmed) {
-                    return;
-                }
-                self.clearInputIntent();
-                if (!event.touches || event.touches.length !== 1) {
-                    return;
-                }
-                self.touchY = touch ? touch.clientY : null;
-            },
-            touchMove: function (event) {
-                var touch = event.touches && event.touches[0];
-                var nextY;
-                if (!event.touches || event.touches.length !== 1 || !touch) {
-                    self.clearInputIntent();
-                    return;
-                }
-                nextY = touch.clientY;
-                if (self.touchY !== null) {
-                    self.recordInputIntent(self.touchY - nextY, false);
-                }
-                self.touchY = nextY;
-            },
-            touchEnd: function () {
-                self.touchY = null;
-                self.resetInputIntentSoon();
-            },
-            touchCancel: function () {
-                self.clearInputIntent();
-            },
-            blockInput: function (event) {
-                if (self.isOpen && self.inputLocked && event.preventDefault) {
+                if (self.canActivate(link, event) && self.open(link, event)) {
                     event.preventDefault();
                 }
             }
         };
-
-        document.addEventListener('click', this.handlers.documentClick);
-        document.addEventListener('keydown', this.handlers.keydown);
-        this.overlay.addEventListener('click', this.handlers.overlayClick);
-        this.previewButton.addEventListener('click', this.handlers.previewClick);
-        this.previewImage.addEventListener('error', this.handlers.previewError);
-        this.stage.addEventListener('transitionend', this.handlers.transitionEnd);
-        window.addEventListener('scroll', this.handlers.scroll, { passive: true });
-        window.addEventListener('wheel', this.handlers.wheel, { passive: true });
-        window.addEventListener('touchstart', this.handlers.touchStart, { passive: true });
-        window.addEventListener('touchmove', this.handlers.touchMove, { passive: true });
-        window.addEventListener('touchend', this.handlers.touchEnd, { passive: true });
-        window.addEventListener('touchcancel', this.handlers.touchCancel, { passive: true });
-        window.addEventListener('resize', this.handlers.resize);
-        window.addEventListener('orientationchange', this.handlers.orientationChange);
+        this.root.addEventListener('click', this.handlers.click, false);
     },
 
     destroy: function () {
-        this.generation++;
-        if (this.isOpen) {
-            this.finishClose(false, this.generation);
-        } else {
-            this.cancelAsyncWork();
-            this.setRootOverflowClip(false);
-            if (this.sourceLink && this.sourceLink.classList) {
-                this.sourceLink.classList.remove('void-image-zoom-source');
-            }
+        if (this.root && this.handlers) {
+            this.root.removeEventListener('click', this.handlers.click, false);
+        }
+        if (this.lightbox) {
+            this.isDestroying = true;
+            this.lightbox.destroy();
+            this.isDestroying = false;
         }
 
-        if (this.handlers) {
-            document.removeEventListener('click', this.handlers.documentClick);
-            document.removeEventListener('keydown', this.handlers.keydown);
-            if (this.overlay) {
-                this.overlay.removeEventListener('click', this.handlers.overlayClick);
-            }
-            if (this.previewButton) {
-                this.previewButton.removeEventListener('click', this.handlers.previewClick);
-            }
-            if (this.previewImage) {
-                this.previewImage.removeEventListener('error', this.handlers.previewError);
-            }
-            if (this.stage) {
-                this.stage.removeEventListener('transitionend', this.handlers.transitionEnd);
-            }
-            window.removeEventListener('scroll', this.handlers.scroll, { passive: true });
-            window.removeEventListener('wheel', this.handlers.wheel, { passive: true });
-            window.removeEventListener('touchstart', this.handlers.touchStart, { passive: true });
-            window.removeEventListener('touchmove', this.handlers.touchMove, { passive: true });
-            window.removeEventListener('touchend', this.handlers.touchEnd, { passive: true });
-            window.removeEventListener('touchcancel', this.handlers.touchCancel, { passive: true });
-            window.removeEventListener('resize', this.handlers.resize);
-            window.removeEventListener('orientationchange', this.handlers.orientationChange);
-            window.removeEventListener('wheel', this.handlers.blockInput, { passive: false });
-            window.removeEventListener('touchmove', this.handlers.blockInput, { passive: false });
-        }
-
-        if (this.overlay && this.overlay.parentNode) {
-            this.overlay.parentNode.removeChild(this.overlay);
-        }
-        if (this.stage && this.stage.parentNode) {
-            this.stage.parentNode.removeChild(this.stage);
-        }
-
-        this.handlers = null;
-        this.overlay = null;
-        this.stage = null;
-        this.previewButton = null;
-        this.previewImage = null;
-        this.sourceLink = null;
-        this.sourceImage = null;
-        this.isOpen = false;
-        this.isClosing = false;
-        this.scrollArmed = false;
-        this.inputLocked = false;
-        this.openTransform = '';
-        this.openTransitionMode = 'transform';
-        this.viewportWidth = 0;
-        this.restoreFocusOnClose = true;
-        this.fallbackLink = null;
         this.root = null;
+        this.lightbox = null;
+        this.handlers = null;
+        this.sourceLink = null;
+        this.isDestroying = false;
     },
 
     __test: {
-        calculateFit: function (width, height, viewportWidth, viewportHeight, padding) {
-            return VOID_ImageZoom.calculateFit(width, height, viewportWidth, viewportHeight, padding);
+        getGroupElement: function (link) {
+            return VOID_PhotoSwipe.getGroupElement(link);
         },
-        calculateTransform: function (sourceRect, targetRect) {
-            return VOID_ImageZoom.calculateTransform(sourceRect, targetRect);
+        getDataSource: function (link) {
+            return VOID_PhotoSwipe.getDataSource(link);
         },
-        hasCompatibleAspectRatio: function (rect, width, height) {
-            return VOID_ImageZoom.hasCompatibleAspectRatio(rect, width, height);
+        getItemData: function (link) {
+            return VOID_PhotoSwipe.getItemData(link);
         },
-        rectToDocument: function (rect) {
-            return VOID_ImageZoom.rectToDocument(rect);
+        getOptions: function () {
+            return VOID_PhotoSwipe.getOptions();
         }
     }
 };
@@ -3940,7 +3244,7 @@ var VOID = {
         VOID_Content.parseBoardThumbs();
         VOID_Gallery.init();
         VOID_PhotoSets.init();
-        VOID_ImageZoom.init();
+        VOID_PhotoSwipe.init();
         VOID_RewardDialog.init();
         VOID_Ui.lazyload();
         VOID_Ui.headroom();
@@ -4023,7 +3327,7 @@ var VOID = {
         VOID.cancelScheduledTypography();
         NProgress.start();
         VOID_RewardDialog.destroy();
-        VOID_ImageZoom.destroy();
+        VOID_PhotoSwipe.destroy();
         VOID_Gallery.suspend();
         VOID_PhotoSets.destroy();
         VOID.destroyEmotes();
@@ -4043,7 +3347,7 @@ var VOID = {
 
         VOID_Gallery.init();
         VOID_PhotoSets.init();
-        VOID_ImageZoom.init();
+        VOID_PhotoSwipe.init();
         VOID_RewardDialog.init();
 
         if ($('#loggin-form').length) {

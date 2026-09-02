@@ -987,7 +987,7 @@ test('gallery sources use the current image contract without Fancybox fallbacks'
     const template = fs.readFileSync(path.resolve(__dirname, '../../Gallery.php'), 'utf8');
     const gallerySource = script.slice(
         script.indexOf('var VOID_Gallery'),
-        script.indexOf('var VOID_ImageZoom')
+        script.indexOf('var VOID_PhotoSwipe')
     );
 
     assert.match(gallerySource, /VOID_PhotoSets\.resolveDimensions\(figure, image\)/);
@@ -1020,11 +1020,11 @@ test('gallery sources use the current image contract without Fancybox fallbacks'
     assert.match(template, /<\?php \$this->content\(\); \?>/);
     assert.match(
         script,
-        /VOID_Gallery\.init\(\);\s*VOID_PhotoSets\.init\(\);\s*VOID_ImageZoom\.init\(\);/
+        /VOID_Gallery\.init\(\);\s*VOID_PhotoSets\.init\(\);\s*VOID_PhotoSwipe\.init\(\);/
     );
     assert.match(
         script,
-        /VOID_ImageZoom\.destroy\(\);\s*VOID_Gallery\.suspend\(\);\s*VOID_PhotoSets\.destroy\(\);/
+        /VOID_PhotoSwipe\.destroy\(\);\s*VOID_Gallery\.suspend\(\);\s*VOID_PhotoSets\.destroy\(\);/
     );
     assert.doesNotMatch(
         gallerySource,
