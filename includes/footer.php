@@ -392,8 +392,8 @@ $setting = $GLOBALS['VOIDSetting'];
             migrateLegacyWorker(true);
         }());
         </script>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-bef316003c.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-60829fa4f5.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-6da030345d.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-62dfc717d7.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){
