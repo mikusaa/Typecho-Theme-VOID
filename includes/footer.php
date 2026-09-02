@@ -393,7 +393,7 @@ $setting = $GLOBALS['VOIDSetting'];
         }());
         </script>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle-6da030345d.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-62dfc717d7.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-9e831f3928.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             $(document).on('pjax:complete', function(event, xhr, status, options){
