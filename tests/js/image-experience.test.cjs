@@ -377,13 +377,15 @@ class FakeWindow extends FakeElement {
     }
 
     getComputedStyle(element) {
-        return {
+        const computedStyle = {
             paddingTop: '24px',
             paddingRight: '24px',
             paddingBottom: '24px',
             paddingLeft: '24px',
             ...(element.computedStyle || {})
         };
+        computedStyle.getPropertyValue = (name) => computedStyle[name] || '';
+        return computedStyle;
     }
 
     pendingTimerCount() {
@@ -454,8 +456,8 @@ class FakePhotoSwipeLightbox {
         this.listeners.set(name, listeners);
     }
 
-    emit(name) {
-        (this.listeners.get(name) || []).forEach((listener) => listener());
+    emit(name, event) {
+        (this.listeners.get(name) || []).forEach((listener) => listener(event));
     }
 
     loadAndOpen(index, dataSource, initialPoint) {
@@ -1035,28 +1037,125 @@ test('large photo-set width remains limited to single and pair layouts', () => {
     );
 });
 
-test('PhotoSwipe options preserve fit zoom, pan, navigation, and native wheel contracts', () => {
+test('PhotoSwipe adapter only overrides explicit VOID integration options', () => {
     const regular = loadVoid();
     const options = regular.context.VOID_PhotoSwipe.__test.getOptions();
-    const reduced = loadVoid({ reducedMotion: true })
-        .context.VOID_PhotoSwipe.__test.getOptions();
+    const nativeOptionNames = [
+        'allowPanToNext',
+        'closeOnVerticalDrag',
+        'pinchToClose',
+        'wheelToZoom',
+        'loop',
+        'imageClickAction',
+        'tapAction',
+        'doubleTapAction',
+        'bgClickAction',
+        'clickToCloseNonZoomable',
+        'secondaryZoomLevel',
+        'showAnimationDuration',
+        'hideAnimationDuration',
+        'zoomAnimationDuration',
+        'easing'
+    ];
 
     assert.equal(options.pswpModule, regular.window.PhotoSwipe);
-    assert.equal(options.allowPanToNext, false);
-    assert.equal(options.closeOnVerticalDrag, true);
-    assert.equal(options.pinchToClose, false);
-    assert.equal(options.wheelToZoom, false);
-    assert.equal(options.imageClickAction, 'zoom');
-    assert.equal(options.tapAction, 'zoom');
-    assert.equal(options.doubleTapAction, false);
-    assert.equal(options.bgClickAction, 'close');
-    assert.equal(options.secondaryZoomLevel, 1);
-    assert.equal(options.showAnimationDuration, 300);
-    assert.equal(options.hideAnimationDuration, 300);
-    assert.equal(options.zoomAnimationDuration, 300);
-    assert.equal(reduced.showAnimationDuration, 0);
-    assert.equal(reduced.hideAnimationDuration, 0);
-    assert.equal(reduced.zoomAnimationDuration, 0);
+    assert.equal(options.mainClass, 'void-photoswipe');
+    assert.equal(options.bgOpacity, 1);
+    assert.equal(options.returnFocus, false);
+    assert.equal(typeof options.paddingFn, 'function');
+    assert.equal(options.closeTitle, '关闭图片预览');
+    assert.equal(options.zoomTitle, '切换图片缩放');
+    assert.equal(options.arrowPrevTitle, '上一张图片');
+    assert.equal(options.arrowNextTitle, '下一张图片');
+    assert.equal(options.errorMsg, '图片加载失败');
+    nativeOptionNames.forEach((name) => {
+        assert.equal(Object.prototype.hasOwnProperty.call(options, name), false, name);
+    });
+});
+
+test('PhotoSwipe padding combines responsive spacing with valid safe-area insets', () => {
+    const { context, window } = loadVoid();
+    const photoSwipeRoot = new FakeElement('div');
+    window.pswp = { element: photoSwipeRoot };
+
+    assert.deepEqual(
+        { ...context.VOID_PhotoSwipe.__test.getPadding({ x: 1280, y: 800 }) },
+        { top: 24, right: 24, bottom: 24, left: 24 }
+    );
+    assert.deepEqual(
+        { ...context.VOID_PhotoSwipe.__test.getPadding({ x: 390, y: 844 }) },
+        { top: 16, right: 12, bottom: 16, left: 12 }
+    );
+
+    photoSwipeRoot.computedStyle = {
+        '--void-pswp-safe-top': '47px',
+        '--void-pswp-safe-right': '21.5px',
+        '--void-pswp-safe-bottom': '34px',
+        '--void-pswp-safe-left': 'invalid'
+    };
+    assert.deepEqual(
+        { ...context.VOID_PhotoSwipe.__test.getPadding({ x: 390, y: 844 }) },
+        { top: 47, right: 21.5, bottom: 34, left: 12 }
+    );
+
+    photoSwipeRoot.computedStyle = {
+        '--void-pswp-safe-top': '-10px',
+        '--void-pswp-safe-right': 'NaN',
+        '--void-pswp-safe-bottom': '',
+        '--void-pswp-safe-left': '-0.5px'
+    };
+    assert.deepEqual(
+        { ...context.VOID_PhotoSwipe.__test.getPadding({ x: 390, y: 844 }) },
+        { top: 16, right: 12, bottom: 16, left: 12 }
+    );
+});
+
+test('PhotoSwipe keeps VOID Space and Enter closing without overriding viewer controls', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const article = new FakeElement('article');
+    const source = createSource(article);
+    const viewer = new FakeElement('div');
+    const viewerImage = new FakeElement('img');
+    const closeButton = new FakeElement('button');
+    root.appendChild(article);
+    viewer.appendChild(viewerImage);
+    viewer.appendChild(closeButton);
+    document.body.appendChild(viewer);
+    document.root = root;
+    context.VOID_PhotoSwipe.init(root);
+
+    const lightbox = FakePhotoSwipeLightbox.instances[0];
+    let closeCount = 0;
+    lightbox.pswp = {
+        close() {
+            closeCount += 1;
+        },
+        element: viewer
+    };
+
+    for (const [key, target] of [[' ', source.link], ['Spacebar', viewerImage], ['Enter', viewer]]) {
+        const originalEvent = preventableEvent({ key, target });
+        const photoSwipeEvent = preventableEvent({ originalEvent });
+        lightbox.emit('keydown', photoSwipeEvent);
+        assert.equal(originalEvent.defaultPrevented, true, key);
+        assert.equal(photoSwipeEvent.defaultPrevented, true, key);
+    }
+    assert.equal(closeCount, 3);
+
+    for (const key of [' ', 'Enter']) {
+        const originalEvent = preventableEvent({ key, target: closeButton });
+        const photoSwipeEvent = preventableEvent({ originalEvent });
+        lightbox.emit('keydown', photoSwipeEvent);
+        assert.equal(originalEvent.defaultPrevented, false, key);
+        assert.equal(photoSwipeEvent.defaultPrevented, false, key);
+    }
+    assert.equal(closeCount, 3);
+
+    const modifiedEvent = preventableEvent({ ctrlKey: true, key: ' ', target: viewerImage });
+    lightbox.emit('keydown', preventableEvent({ originalEvent: modifiedEvent }));
+    assert.equal(modifiedEvent.defaultPrevented, false);
+    assert.equal(closeCount, 3);
 });
 
 test('PhotoSwipe adapter groups article images and preserves item dimensions, alt, and crop data', () => {
@@ -1156,7 +1255,9 @@ test('PhotoSwipe adapter init and destroy are idempotent across PJAX reconstruct
 
     document.activeElement = document.body;
     secondLightbox.emit('destroy');
+    secondLightbox.emit('destroy');
     assert.equal(document.activeElement, source.link);
+    assert.equal(source.link.focusCount, 1);
 
     context.VOID_PhotoSwipe.destroy();
     context.VOID_PhotoSwipe.destroy();
@@ -1336,7 +1437,16 @@ test('PhotoSwipe 5.4.4 assets, license, build order, and adapter boundary are fi
     );
     const cssSource = fs.readFileSync(path.join(photoSwipeRoot, 'photoswipe.css'), 'utf8');
     const licenseSource = fs.readFileSync(path.join(photoSwipeRoot, 'LICENSE'), 'utf8');
-    const vendorContext = {};
+    const vendorDocument = new FakeDocument();
+    const vendorWindow = new FakeWindow(vendorDocument);
+    const vendorNavigator = { maxTouchPoints: 2, userAgent: '', vendor: '' };
+    const vendorContext = {
+        document: vendorDocument,
+        navigator: vendorNavigator,
+        window: vendorWindow
+    };
+    vendorWindow.navigator = vendorNavigator;
+    vendorWindow.PointerEvent = function PointerEvent() {};
 
     assert.equal(fs.existsSync(path.join(repositoryRoot, 'assets/libs/fancybox')), false);
     assert.doesNotMatch(runtimeSource, /configureFancybox|data-fancybox|jQuery\.fancybox/);
@@ -1351,6 +1461,34 @@ test('PhotoSwipe 5.4.4 assets, license, build order, and adapter boundary are fi
     vm.runInNewContext(lightboxSource, vendorContext);
     assert.equal(typeof vendorContext.PhotoSwipe, 'function');
     assert.equal(typeof vendorContext.PhotoSwipeLightbox, 'function');
+    const photoSwipe = new vendorContext.PhotoSwipe();
+    assert.equal(photoSwipe.options.allowPanToNext, true);
+    assert.equal(photoSwipe.options.pinchToClose, true);
+    assert.equal(photoSwipe.options.loop, true);
+    assert.equal(photoSwipe.options.imageClickAction, 'zoom-or-close');
+    assert.equal(photoSwipe.options.tapAction, 'toggle-controls');
+    assert.equal(photoSwipe.options.doubleTapAction, 'zoom');
+    assert.equal(photoSwipe.options.clickToCloseNonZoomable, true);
+    assert.equal(photoSwipe.options.showAnimationDuration, 333);
+    assert.equal(photoSwipe.options.hideAnimationDuration, 333);
+    assert.equal(photoSwipe.options.zoomAnimationDuration, 333);
+    assert.equal(new vendorContext.PhotoSwipe({ dataSource: [{}, {}] }).canLoop(), false);
+    assert.equal(new vendorContext.PhotoSwipe({ dataSource: [{}, {}, {}] }).canLoop(), true);
+    vendorWindow.reducedMotion = true;
+    const reducedPhotoSwipe = new vendorContext.PhotoSwipe();
+    assert.equal(reducedPhotoSwipe.options.showHideAnimationType, 'none');
+    assert.equal(reducedPhotoSwipe.options.zoomAnimationDuration, 0);
+    assert.match(
+        coreSource,
+        /allowPanToNext:!0[\s\S]*loop:!0[\s\S]*pinchToClose:!0[\s\S]*hideAnimationDuration:333[\s\S]*showAnimationDuration:333[\s\S]*zoomAnimationDuration:333/
+    );
+    assert.match(
+        coreSource,
+        /clickToCloseNonZoomable:!0[\s\S]*imageClickAction:"zoom-or-close"[\s\S]*bgClickAction:"close"[\s\S]*tapAction:"toggle-controls"[\s\S]*doubleTapAction:"zoom"/
+    );
+    assert.match(coreSource, /Math\.min\(1,3\*this\.fit\)/);
+    assert.match(coreSource, />4e3/);
+    assert.match(coreSource, /canLoop\(\)\{return this\.options\.loop&&this\.getNumItems\(\)>2\}/);
     assert.ok(
         gulpSource.indexOf("'./assets/libs/photoswipe/photoswipe.umd.min.js'")
             < gulpSource.indexOf("'./assets/libs/photoswipe/photoswipe-lightbox.umd.min.js'"),
@@ -1359,5 +1497,13 @@ test('PhotoSwipe 5.4.4 assets, license, build order, and adapter boundary are fi
     assert.match(gulpSource, /\.\/assets\/libs\/photoswipe\/LICENSE/);
     assert.match(viewerStyles, /\.void-photoswipe\s*\{/);
     assert.match(viewerStyles, /\.theme-dark \.void-photoswipe\s*\{/);
+    assert.doesNotMatch(viewerStyles, /--pswp-root-z-index/);
+    assert.match(viewerStyles, /--void-pswp-safe-top: env\(safe-area-inset-top, 0px\);/);
+    assert.match(viewerStyles, /--void-pswp-safe-right: env\(safe-area-inset-right, 0px\);/);
+    assert.match(viewerStyles, /--void-pswp-safe-bottom: env\(safe-area-inset-bottom, 0px\);/);
+    assert.match(viewerStyles, /--void-pswp-safe-left: env\(safe-area-inset-left, 0px\);/);
+    assert.match(viewerStyles, /\.pswp__top-bar[\s\S]*top: var\(--void-pswp-safe-top\);/);
+    assert.match(viewerStyles, /\.pswp__button--arrow--prev[\s\S]*left: var\(--void-pswp-safe-left\);/);
+    assert.match(viewerStyles, /\.pswp__button--arrow--next[\s\S]*right: var\(--void-pswp-safe-right\);/);
     assert.doesNotMatch(viewerStyles, /void-image-zoom-(?:overlay|stage|source)/);
 });

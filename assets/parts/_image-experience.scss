@@ -21,12 +21,29 @@ body.void-dialog-open {
 .void-photoswipe {
     --pswp-bg: #{$bgColor};
     --pswp-placeholder-bg: #{rgba(#000, 0.08)};
-    --pswp-root-z-index: 4000;
     --pswp-icon-color: #{$textColor};
     --pswp-icon-color-secondary: #{$bgColor};
     --pswp-icon-stroke-color: #{$bgColor};
     --pswp-preloader-color: #{rgba(#000, 0.35)};
     --pswp-preloader-color-secondary: #{rgba(#000, 0.72)};
+    --void-pswp-safe-top: env(safe-area-inset-top, 0px);
+    --void-pswp-safe-right: env(safe-area-inset-right, 0px);
+    --void-pswp-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --void-pswp-safe-left: env(safe-area-inset-left, 0px);
+
+    .pswp__top-bar {
+        top: var(--void-pswp-safe-top);
+        left: var(--void-pswp-safe-left);
+        width: calc(100% - var(--void-pswp-safe-left) - var(--void-pswp-safe-right));
+    }
+
+    .pswp__button--arrow--prev {
+        left: var(--void-pswp-safe-left);
+    }
+
+    .pswp__button--arrow--next {
+        right: var(--void-pswp-safe-right);
+    }
 
     .pswp__button:focus-visible {
         outline: 2px solid $highlightColor;

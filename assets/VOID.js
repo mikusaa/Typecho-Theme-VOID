@@ -2588,8 +2588,36 @@ var VOID_PhotoSwipe = {
     sourceLink: null,
     isDestroying: false,
 
-    isReducedMotion: function () {
-        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    getSafeAreaInset: function (side) {
+        var element = window.pswp && window.pswp.element;
+        var style;
+        var value;
+
+        if (!element && document.querySelector) {
+            element = document.querySelector('.void-photoswipe');
+        }
+        if (!element || !window.getComputedStyle) {
+            return 0;
+        }
+
+        style = window.getComputedStyle(element);
+        value = style && style.getPropertyValue
+            ? parseFloat(style.getPropertyValue('--void-pswp-safe-' + side))
+            : NaN;
+        return Number.isFinite(value) && value >= 0 ? value : 0;
+    },
+
+    getPadding: function (viewportSize) {
+        var isMobile = viewportSize && viewportSize.x <= 600;
+        var verticalPadding = isMobile ? 16 : 24;
+        var horizontalPadding = isMobile ? 12 : 24;
+
+        return {
+            top: Math.max(verticalPadding, this.getSafeAreaInset('top')),
+            right: Math.max(horizontalPadding, this.getSafeAreaInset('right')),
+            bottom: Math.max(verticalPadding, this.getSafeAreaInset('bottom')),
+            left: Math.max(horizontalPadding, this.getSafeAreaInset('left'))
+        };
     },
 
     findLink: function (target) {
@@ -2816,28 +2844,59 @@ var VOID_PhotoSwipe = {
         }
     },
 
-    getOptions: function () {
-        var transitionDuration = this.isReducedMotion() ? 0 : 300;
+    isViewerControlTarget: function (target, viewer) {
+        var tagName;
 
+        if (!target || !viewer || !viewer.contains || !viewer.contains(target)) {
+            return false;
+        }
+
+        while (target && target !== viewer) {
+            tagName = target.tagName ? target.tagName.toLowerCase() : '';
+            if (tagName === 'button' || tagName === 'a' || tagName === 'input'
+                || tagName === 'select' || tagName === 'textarea'
+                || target.isContentEditable
+                || (target.getAttribute
+                    && target.getAttribute('contenteditable') === 'true')) {
+                return true;
+            }
+            target = target.parentNode;
+        }
+        return false;
+    },
+
+    handleKeydown: function (event) {
+        var originalEvent = event && event.originalEvent;
+        var pswp = this.lightbox && this.lightbox.pswp;
+        var key = originalEvent && originalEvent.key;
+
+        if (!originalEvent || !pswp
+            || (key !== ' ' && key !== 'Spacebar' && key !== 'Enter')
+            || originalEvent.ctrlKey || originalEvent.metaKey
+            || originalEvent.altKey || originalEvent.shiftKey
+            || this.isViewerControlTarget(originalEvent.target, pswp.element)) {
+            return false;
+        }
+
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+        if (originalEvent.preventDefault) {
+            originalEvent.preventDefault();
+        }
+        pswp.close();
+        return true;
+    },
+
+    getOptions: function () {
         return {
             pswpModule: window.PhotoSwipe,
             mainClass: 'void-photoswipe',
-            allowPanToNext: false,
-            closeOnVerticalDrag: true,
-            pinchToClose: false,
-            wheelToZoom: false,
-            loop: false,
             bgOpacity: 1,
-            imageClickAction: 'zoom',
-            tapAction: 'zoom',
-            doubleTapAction: false,
-            bgClickAction: 'close',
-            clickToCloseNonZoomable: false,
-            secondaryZoomLevel: 1,
-            showAnimationDuration: transitionDuration,
-            hideAnimationDuration: transitionDuration,
-            zoomAnimationDuration: transitionDuration,
-            easing: 'cubic-bezier(.4,0,.22,1)',
+            paddingFn: function (viewportSize) {
+                return VOID_PhotoSwipe.getPadding(viewportSize);
+            },
+            returnFocus: false,
             closeTitle: '关闭图片预览',
             zoomTitle: '切换图片缩放',
             arrowPrevTitle: '上一张图片',
@@ -2862,6 +2921,9 @@ var VOID_PhotoSwipe = {
             this.lightbox = new window.PhotoSwipeLightbox(this.getOptions());
             this.lightbox.on('destroy', function () {
                 self.restoreSourceFocus();
+            });
+            this.lightbox.on('keydown', function (event) {
+                self.handleKeydown(event);
             });
             this.lightbox.init();
         } catch (error) {
@@ -2906,6 +2968,12 @@ var VOID_PhotoSwipe = {
         },
         getItemData: function (link) {
             return VOID_PhotoSwipe.getItemData(link);
+        },
+        getPadding: function (viewportSize) {
+            return VOID_PhotoSwipe.getPadding(viewportSize);
+        },
+        handleKeydown: function (event) {
+            return VOID_PhotoSwipe.handleKeydown(event);
         },
         getOptions: function () {
             return VOID_PhotoSwipe.getOptions();
