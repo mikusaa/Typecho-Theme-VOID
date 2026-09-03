@@ -1,183 +1,149 @@
-# Repository Guidelines
+# 仓库开发规范
 
-## Scope
+## 适用范围
 
-This file defines durable development rules for the Typecho Theme VOID
-repository. It applies to the whole repository unless a more specific
-`AGENTS.md` exists in a subdirectory.
+本文件定义 Typecho Theme VOID 仓库长期适用的开发规则。除非某个子目录中
+存在更具体的 `AGENTS.md`，否则这些规则适用于整个仓库。
 
-Write user-facing documentation, change notes, and delivery summaries in
-Chinese unless the surrounding file or the user requests another language.
-Keep code identifiers, commands, paths, and protocol names unchanged. Preserve
-the language and formatting of existing files and avoid unrelated rewrites.
+除非所在文件或用户另有语言要求，否则面向用户的文档、变更说明和交付总结
+均使用中文。代码标识符、命令、路径和协议名称保持不变。保留现有文件的语言
+和格式，避免无关改写。
 
-## Sources of Truth
+## 事实来源
 
-Use evidence in this order when determining current behavior:
+判断当前行为时，按以下优先级采用证据：
 
-1. The user's current request and explicit decisions.
-2. The applicable `AGENTS.md` instructions.
-3. Current source, tests, package scripts, CI, and Git history.
-4. Versioned repository documentation.
-5. External plans, handoffs, and remembered context.
+1. 用户当前的请求和明确决定。
+2. 适用的 `AGENTS.md` 指令。
+3. 当前源码、测试、包脚本、CI 和 Git 历史。
+4. 已纳入版本控制的仓库文档。
+5. 外部计划、交接记录和记忆上下文。
 
-Do not record transient commit IDs, worktree state, deployment state, or
-one-time task status in this file. Put detailed architecture and long-form
-design rationale in versioned project documentation.
+不要在本文件中记录临时提交 ID、工作区状态、部署状态或一次性任务状态。
+详细架构和长篇设计理由应写入已纳入版本控制的项目文档。
 
-## Project Boundaries
+## 项目边界
 
-VOID is a Typecho theme. Keep these layers distinct:
+VOID 是 Typecho 主题。必须明确区分以下各层：
 
 ```text
-repository source -> generated build/ -> deployed runtime copy
+仓库源文件 -> 生成的 build/ -> 已部署的运行副本
 ```
 
-- Maintain code only in the source repository.
-- Treat `build/` as the complete and only deployable theme unit.
-- Treat a deployed theme directory as a replaceable runtime copy, never as a
-  source of truth.
-- Do not replace a full build with ad hoc copies of individual source files.
-- Do not mix PHP, bundles, manifests, hashed assets, or service workers from
-  different builds.
-- A successful source edit or build is not browser verification. Runtime
-  claims require checking the deployed copy and the assets actually loaded by
-  the browser.
+- 只在源码仓库中维护代码。
+- 将 `build/` 视为完整且唯一可部署的主题单元。
+- 将已部署的主题目录视为可替换的运行副本，绝不能视为事实来源。
+- 不要用临时复制的个别源文件代替完整构建产物。
+- 不要混用来自不同构建的 PHP、打包文件、清单、哈希资源或 Service Worker。
+- 成功修改源码或完成构建不等于完成浏览器验证。涉及运行时行为的结论必须
+  检查已部署副本和浏览器实际加载的资源。
 
-The `master` branch contains source. CI publishes the complete `build/` output
-to `nightly`. Do not maintain generated `nightly` content directly or use it as
-a source branch.
+`master` 分支保存源码。CI 会将完整的 `build/` 输出发布到 `nightly`。
+不要直接维护生成的 `nightly` 内容，也不要将其用作源代码分支。
 
-Do not modify Typecho core, companion plugins, the web server, the database, or
-production infrastructure unless the task explicitly includes that component.
-For cross-repository issues, identify ownership before editing.
+除非任务明确包含相应组件，否则不要修改 Typecho 核心、配套插件、Web
+服务器、数据库或生产基础设施。跨仓库问题必须先确认归属再编辑。
 
-## Starting Work
+## 开始工作
 
-Before editing, inspect the current state:
+编辑前先检查当前状态：
 
 ```bash
 git status -sb
 git log --oneline -5
 ```
 
-- Read the files that own the behavior before choosing an implementation.
-- Inspect adjacent code and reuse established Typecho, PHP, JavaScript, and
-  SCSS patterns.
-- Preserve unrelated user changes in a dirty worktree.
-- Do not reset, revert, overwrite, or format unrelated content.
-- Keep each task focused on one independently verifiable problem.
-- For diagnosis, review, or design-only requests, remain read-only unless the
-  user also requests implementation.
+- 选择实现方案前，先阅读负责相应行为的文件。
+- 检查相邻代码并复用项目既有的 Typecho、PHP、JavaScript 和 SCSS 模式。
+- 工作区存在未提交改动时，保留用户的无关改动。
+- 不要重置、还原、覆盖或格式化无关内容。
+- 每个任务应聚焦于一个可以独立验证的问题。
+- 对于诊断、审查或纯设计请求，除非用户同时要求实现，否则只进行只读操作。
 
-Do not commit, push, create tags or releases, publish, deploy, or change an
-external service without explicit authorization. An implementation or test
-request does not imply permission to commit or deploy.
+未经明确授权，不要提交、推送、创建标签或发布版本、发布内容、部署或更改
+外部服务。实现或测试请求不代表用户允许提交或部署。
 
-## Typecho and PHP Compatibility
+## Typecho 与 PHP 兼容性
 
-- Preserve the PHP compatibility baseline documented by the project. Do not
-  silently raise the minimum version or introduce newer-only syntax.
-- Preserve Typecho 1.3 behavior and existing compatibility layers where
-  practical.
-- Prefer Typecho APIs, widgets, helpers, hooks, and routing over changes to
-  Typecho core.
-- Keep `__TYPECHO_ROOT_DIR__` direct-access guards in PHP entry and include
-  files.
-- Treat post, page, index, archive, search, comment, and 404 as distinct
-  runtime contexts.
-- Before reading post-only properties such as permalink, author, custom fields,
-  created, or modified, verify that a content record exists and the context is
-  a post or page.
-- Empty archives and 404 responses must render without calling post-only APIs.
-- Keep VOID's 404 handling in Typecho routing and theme templates. Do not add a
-  root static `404.html` or replace the theme flow with a web-server error page.
-- Do not treat a PHP CLI simulation as final proof of request, cookie, routing,
-  archive, or template behavior. Verify those through the actual HTTP stack.
-- Missing or outdated companion plugins should cause controlled degradation,
-  not a blank page.
+- 保持项目文档规定的 PHP 兼容性基线。不要在未说明的情况下提高最低版本，
+  或引入仅受更新版本支持的语法。
+- 在可行范围内保持 Typecho 1.3 的行为和现有兼容层。
+- 优先使用 Typecho API、组件、辅助函数、钩子和路由，不要修改 Typecho 核心。
+- PHP 入口文件和引入文件中必须保留 `__TYPECHO_ROOT_DIR__` 直接访问保护。
+- 将文章、独立页面、首页、归档、搜索、评论和 404 视为不同的运行上下文。
+- 读取永久链接、作者、自定义字段、创建时间或修改时间等文章专属属性前，
+  必须确认内容记录存在，且当前上下文是文章或独立页面。
+- 空归档和 404 响应在不调用文章专属 API 的情况下也必须能够正常渲染。
+- VOID 的 404 处理应保留在 Typecho 路由和主题模板中。不要添加根目录静态
+  `404.html`，也不要用 Web 服务器错误页取代主题流程。
+- 不要将 PHP CLI 模拟视为请求、Cookie、路由、归档或模板行为的最终证明。
+  必须通过实际 HTTP 技术栈验证这些行为。
+- 配套插件缺失或版本过旧时应可控降级，不能导致空白页面。
 
-## Output and Security
+## 输出与安全
 
-- Escape visitor input, request data, content, and configuration for the
-  destination context.
-- For ordinary HTML attributes, use
-  `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')` unless a stricter existing helper
-  applies.
-- Serialize PHP data into JavaScript or structured data with `json_encode()`;
-  never interpolate unescaped data into quoted JavaScript.
-- Validate URLs and schemes before outputting links or asset URLs.
-- Never derive filesystem or asset paths directly from visitor input,
-  shortcodes, request parameters, or untrusted manifest fields.
-- Preserve the administrator-controlled HTML behavior of the existing `head`
-  and `footer` extension points, but do not extend that exception elsewhere.
-- Keep JSON-LD and metadata valid on content and non-content pages. Emit
-  post-specific metadata only for real posts and pages.
-- Never add credentials, tokens, private keys, personal infrastructure details,
-  or production-only data to source, fixtures, documentation, or build output.
+- 按目标上下文对访客输入、请求数据、内容和配置进行转义。
+- 普通 HTML 属性应使用 `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`，除非
+  已有更严格的辅助函数适用。
+- 使用 `json_encode()` 将 PHP 数据序列化到 JavaScript 或结构化数据中；
+  绝不能把未经转义的数据插入带引号的 JavaScript 字符串。
+- 输出链接或资源 URL 前，验证 URL 和协议。
+- 绝不能根据访客输入、短代码、请求参数或不可信的清单字段直接生成文件系统
+  路径或资源路径。
+- 保留现有 `head` 和 `footer` 扩展点允许管理员控制 HTML 的行为，但不要将
+  这一例外扩展到其他位置。
+- 确保 JSON-LD 和元数据在内容页与非内容页上都有效。仅为真实文章和独立页面
+  输出文章专属元数据。
+- 绝不能把凭据、令牌、私钥、个人基础设施详情或仅限生产环境的数据加入源码、
+  固定测试数据、文档或构建产物。
 
-## Settings and Backward Compatibility
+## 设置与向后兼容性
 
-Theme settings and advanced-setting keys are persistent user data and public
-compatibility contracts.
+主题设置和高级设置键是持久化用户数据，也是公开兼容性契约。
 
-- Do not rename, remove, repurpose, or change the type of an existing setting
-  without a migration or compatibility fallback.
-- Preserve existing site behavior after an upgrade unless migration is an
-  explicit product decision.
-- Give new settings safe defaults so older saved configurations continue to
-  work when the key is absent.
-- For public or advanced-setting changes, review and update all affected parts
-  of `functions.php`, `libs/Utils.php`, `advanceSetting.sample.json`, README,
-  frontend configuration output, and tests or manual acceptance steps.
-- Treat companion-plugin minimum versions and version comparisons as public
-  compatibility behavior.
+- 未提供迁移或兼容回退方案时，不要重命名、删除、改变用途或更改现有设置的类型。
+- 除非迁移是明确的产品决定，否则升级后应保持网站原有行为。
+- 新设置必须提供安全的默认值，确保旧配置缺少该键时仍能继续工作。
+- 更改公开设置或高级设置时，检查并更新 `functions.php`、`libs/Utils.php`、
+  `advanceSetting.sample.json`、README、前端配置输出，以及测试或人工验收步骤中
+  所有受影响的部分。
+- 将配套插件的最低版本和版本比较规则视为公开兼容行为。
 
-## Frontend JavaScript
+## 前端 JavaScript
 
-- Continue the framework-free, jQuery-compatible architecture unless an
-  explicit architecture decision changes it.
-- Use syntax supported by the current runtime code and Gulp minification chain.
-- Every DOM initializer must support first load and reconstruction after PJAX
-  replacement.
-- Repeated initialization must not duplicate DOM, listeners, observers, timers,
-  requests, or global state.
-- Prefer event delegation for replaceable DOM. Namespace handlers or retain
-  function references when teardown is required.
-- Components that own global listeners, observers, timers, asynchronous work,
-  or dynamic DOM need an idempotent destroy path.
-- Prevent stale asynchronous work from writing into a closed, destroyed, or
-  PJAX-replaced component.
-- Preserve focus, selection, scroll position, and mobile-keyboard behavior for
-  interactions that depend on them.
-- Respect `prefers-reduced-motion`; disabled motion must not continue decorative
-  animation or fetch animated media.
-- Prefer existing `voidicon-*` glyphs and established controls.
-- Do not pass untrusted or remote values to `innerHTML`; build safe DOM or
-  escape for the destination context.
+- 除非明确的架构决定要求改变，否则继续采用无框架且兼容 jQuery 的架构。
+- 使用当前运行时代码和 Gulp 压缩链支持的语法。
+- 每个 DOM 初始化器都必须支持首次加载，以及 PJAX 替换后的重建。
+- 重复初始化不得重复创建 DOM、监听器、观察器、定时器、请求或全局状态。
+- 对可替换 DOM 优先使用事件委托。需要销毁时，应为处理程序添加命名空间，
+  或保留函数引用。
+- 持有全局监听器、观察器、定时器、异步任务或动态 DOM 的组件，必须提供幂等的
+  销毁路径。
+- 防止过期异步任务写入已经关闭、销毁或被 PJAX 替换的组件。
+- 对依赖焦点、选区、滚动位置或移动端键盘状态的交互，必须保留这些状态。
+- 遵守 `prefers-reduced-motion`；禁用动效时，不得继续装饰性动画或获取动画媒体。
+- 优先使用现有 `voidicon-*` 字形和既有控件。
+- 不要把不可信值或远程值传给 `innerHTML`；应构建安全 DOM，或按目标上下文
+  转义。
 
-## SCSS and UI
+## SCSS 与界面
 
-- Edit `assets/VOID.scss` or the owning partial under `assets/parts/`.
-- Reuse existing variables, breakpoints, typography, spacing, colors, and dark
-  mode conventions.
-- Scope selectors to the owning component or content region.
-- Do not hand-edit generated CSS, source maps, or bundles.
-- Support both light and dark themes for every changed UI.
-- Preserve keyboard operation, visible focus, accessible names, and adequate
-  touch targets.
-- Reserve stable dimensions for images and fixed-format controls where
-  practical to avoid layout shift.
-- Keep truly above-the-fold media eager or high priority and other media lazy.
-  Do not change all media to one loading policy without measurement.
-- For global layout or typography changes, test long Chinese text, long URLs and
-  code, narrow screens, and horizontal overflow.
+- 编辑 `assets/VOID.scss` 或 `assets/parts/` 下负责相应样式的分部文件。
+- 复用现有变量、断点、字体排版、间距、颜色和深色模式约定。
+- 将选择器限定在所属组件或内容区域内。
+- 不要手动编辑生成的 CSS、源映射或打包文件。
+- 每项界面改动都必须同时支持浅色和深色主题。
+- 保留键盘操作、可见焦点、无障碍名称和足够大的触控目标。
+- 在可行情况下，为图片和固定格式控件预留稳定尺寸，避免布局偏移。
+- 首屏内确实需要的媒体应立即或高优先级加载，其他媒体应延迟加载。未经测量，
+  不要把所有媒体改成同一种加载策略。
+- 全局布局或字体排版发生变更时，测试长中文、长 URL 和代码、窄屏以及水平溢出。
 
-## Generated Files and Build Inputs
+## 生成文件与构建输入
 
-Edit maintained source, not ignored development output.
+编辑受维护的源码，不要编辑被忽略的开发输出。
 
-Ignored generated output includes:
+被忽略的生成输出包括：
 
 ```text
 assets/VOID.css
@@ -188,111 +154,98 @@ build/
 temp/
 ```
 
-- Do not edit or commit those ignored outputs.
-- `tests/` is maintained source and must remain versioned.
-- Gulp owns minification, content hashes, PHP reference rewriting, and asset
-  copying. Never hard-code a generated hashed filename.
-- `make build` does not implicitly run `npm run emotes:build`; rebuild emote data
-  first when its maintained inputs change.
-- Preserve binary mode when Gulp copies images, WebP, GIF, and font files.
-- Treat filename and manifest-path case as a Linux-sensitive contract. Record
-  case-only renames explicitly in Git and confirm them in Linux CI.
+- 不要编辑或提交上述被忽略的输出。
+- `tests/` 是受维护的源码，必须始终纳入版本控制。
+- 压缩、内容哈希、PHP 引用改写和资源复制均由 Gulp 负责。绝不能硬编码生成的
+  哈希文件名。
+- `make build` 不会隐式运行 `npm run emotes:build`；表情数据的受维护输入发生
+  变化时，必须先重新构建表情数据。
+- Gulp 复制图片、WebP、GIF 和字体文件时必须保持二进制模式。
+- 将文件名和清单路径的大小写视为 Linux 敏感契约。仅更改大小写的重命名必须
+  在 Git 中明确记录，并在 Linux CI 中确认。
 
-## Mature Feature Contracts
+## 成熟功能契约
 
-Keep implementation details in code, tests, and architecture documentation.
-The following externally observable contracts must not change accidentally.
+实现细节应保留在代码、测试和架构文档中。以下外部可观察契约不得意外改变。
 
-### PJAX and Dynamic Lifecycles
+### PJAX 与动态生命周期
 
-- Keep one native `CustomEvent` lifecycle dispatch. jQuery listeners receive
-  the bubbling native event; do not explicitly fire a duplicate jQuery event.
-- Preserve `detail.args`, `detail.options`, and the legacy trailing-options
-  fallback.
-- Keep main-container `#pjax-container` and comment-container `#comments`
-  lifecycles separate.
-- When changing an event contract, search every native, jQuery, inline, theme,
-  and third-party consumer, not only the dispatch site.
-- Cover direct entry, main PJAX navigation, browser back/forward, and any
-  related local AJAX path.
-- Update `tests/js/void-pjax-events.test.cjs` with contract changes.
+- 只保留一次原生 `CustomEvent` 生命周期派发。jQuery 监听器会收到冒泡的原生
+  事件；不要再显式触发重复的 jQuery 事件。
+- 保留 `detail.args`、`detail.options` 和旧版末尾 `options` 回退行为。
+- 将主容器 `#pjax-container` 与评论容器 `#comments` 的生命周期分开处理。
+- 更改事件契约时，搜索每一个原生、jQuery、内联、主题和第三方使用方，不要
+  只检查派发位置。
+- 覆盖直接进入、主 PJAX 导航、浏览器前进/后退，以及所有相关的本地 AJAX 路径。
+- 事件契约发生变化时，更新 `tests/js/void-pjax-events.test.cjs`。
 
-### Emotes and Shortcodes
+### 表情与短代码
 
-- Maintained inputs are `scripts/emotes/bangumi-sources.json`,
-  `scripts/emotes/legacy-packs.json`, numbered Bangumi GIFs, static PNGs under
-  `assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/`, and
-  `scripts/build-emotes.mjs`.
-- `assets/libs/emotes/packs.json`, `packs/*.json`, and Bangumi posters are
-  generated runtime assets that remain versioned. Do not edit them manually.
-- Published IDs, tokens, and their emote mappings are compatibility contracts.
-  Preserve unknown or malformed shortcodes as source text.
-- Static manifest asset names are relative to their package directory. The
-  retired `assets/libs/owo/biaoqing/` URLs are not a compatibility surface.
-- A user shortcode payload may only be a manifest lookup key; never use it in
-  path construction.
-- Do not restore `::(...)` parsing, Emoji/Bubble groups, or search without a new
-  product requirement and migration plan.
-- Do not mix new assets into a source directory and run a full import until the
-  data model has explicit stable IDs and labels.
-- Treat a Sharp upgrade as an asset migration: rebuild and review all poster
-  binary diffs and deliberately update reproducibility expectations.
-- Confirm redistribution, modification, attribution, and commercial-use terms
-  before adding third-party assets.
+- 受维护的输入包括 `scripts/emotes/bangumi-sources.json`、
+  `scripts/emotes/legacy-packs.json`、带编号的 Bangumi GIF、
+  `assets/libs/emotes/{quyin,bilibili,mihoyo,aru}/` 下的静态 PNG，以及
+  `scripts/build-emotes.mjs`。
+- `assets/libs/emotes/packs.json`、`packs/*.json` 和 Bangumi 海报是仍需纳入
+  版本控制的生成运行资源。不要手动编辑它们。
+- 已发布的 ID、令牌及其表情映射都是兼容性契约。未知或格式错误的短代码必须
+  保留为源文本。
+- 静态清单中的资源名相对于其包目录。已停用的 `assets/libs/owo/biaoqing/` URL
+  不属于兼容性范围。
+- 用户短代码负载只能用作清单查询键；绝不能用它构造路径。
+- 没有新的产品需求和迁移计划时，不要恢复 `::(...)` 解析、Emoji/Bubble 分组
+  或搜索功能。
+- 在数据模型具备明确且稳定的 ID 和标签之前，不要把新资源混入源目录后执行
+  全量导入。
+- 将 Sharp 升级视为资源迁移：重新构建并审查所有海报的二进制差异，并有意
+  更新可复现性预期。
+- 添加第三方资源前，确认其再分发、修改、署名和商业使用条款。
 
-### Theme Color
+### 主题颜色
 
-- Preserve device-following, fixed-light, and fixed-dark behavior. Treat the
-  removed scheduled mode value `0` and invalid saved values as device-following
-  mode `3`; never repurpose the old numeric value.
-- Keep first-paint logic in `includes/head.php` aligned with runtime state in
-  `assets/header.js` to avoid flashes and divergent state.
-- Keep the frontend cycle `auto -> manual light -> manual dark -> auto` unless a
-  new product decision changes it.
-- Use the existing dotted version comparison and historical `3.54`
-  normalization; do not replace it with `parseFloat`.
-- Reduced-motion mode changes state directly without decorative transition.
+- 保持跟随设备、固定浅色和固定深色行为。已删除的定时模式值 `0` 和无效的
+  已保存值应视为跟随设备模式 `3`；绝不能重新利用旧数值。
+- 保持 `includes/head.php` 中的首次绘制逻辑与 `assets/header.js` 中的运行时
+  状态一致，避免闪烁和状态分歧。
+- 除非新的产品决定要求改变，否则保持前端循环
+  `auto -> manual light -> manual dark -> auto`。
+- 使用现有的点分版本比较和历史 `3.54` 归一化；不要替换为 `parseFloat`。
+- 减少动态效果模式应直接改变状态，不执行装饰性过渡。
 
-### Service Worker and Caching
+### Service Worker 与缓存
 
-- The deployed theme and site-root `VOIDCacheRule.js` must come from the same
-  build.
-- Preserve route ordering when a resource class must be handled before the
-  general static rule.
-- Do not cache failed responses as successful static assets.
-- After changing cache versions or manifest strategy, verify worker install and
-  activation, loaded asset versions, and retirement of old caches in a real
-  browser.
-- Update service-worker contract tests with cache-policy or limit changes.
+- 已部署主题与站点根目录的 `VOIDCacheRule.js` 必须来自同一次构建。
+- 某类资源需要先于通用静态规则处理时，必须保留相应路由顺序。
+- 不要将失败响应作为成功的静态资源缓存。
+- 更改缓存版本或清单策略后，在真实浏览器中验证 Worker 安装与激活、已加载的
+  资源版本，以及旧缓存的清退。
+- 缓存策略或限制发生变化时，更新 Service Worker 契约测试。
 
-## Dependencies and Toolchain
+## 依赖与工具链
 
-CI uses Node.js 26. Use the lockfile for normal setup and verification:
+CI 使用 Node.js 26。常规环境准备和验证应使用锁文件：
 
 ```bash
 npm ci
 ```
 
-- Use `npm ci` for routine environment preparation.
-- Change `package.json` and `package-lock.json` together only when dependency
-  changes are part of the task.
-- Do not include broad dependency upgrades in unrelated work.
-- Keep the pinned Sharp version unless the task is an explicit poster or asset
-  migration.
-- Prefer repository scripts and `make build`; do not depend on a global Gulp.
+- 日常环境准备使用 `npm ci`。
+- 只有依赖变更属于当前任务时，才同时修改 `package.json` 和 `package-lock.json`。
+- 不要在无关任务中夹带大范围依赖升级。
+- 除非任务明确是海报或资源迁移，否则保持锁定的 Sharp 版本。
+- 优先使用仓库脚本和 `make build`，不要依赖全局 Gulp。
 
-## Verification
+## 验证
 
-Scale verification with risk. Run the smallest useful checks while iterating,
-then all applicable gates before delivery.
+验证范围应与风险相匹配。迭代期间运行足以发现问题的最小检查，交付前再运行
+所有适用的质量门禁。
 
-For every change:
+每次变更都运行：
 
 ```bash
 git diff --check
 ```
 
-For JavaScript, SCSS, build logic, or frontend assets:
+JavaScript、SCSS、构建逻辑或前端资源发生变更时运行：
 
 ```bash
 npm run lint
@@ -300,21 +253,19 @@ npm test
 make build
 ```
 
-`npm test` covers emote generation and contracts, emote behavior, PJAX events,
-and service-worker emote caching. It is not proof that unrelated templates,
-settings, layout, or browser flows work.
+`npm test` 覆盖表情生成及其契约、表情行为、PJAX 事件和 Service Worker
+表情缓存。它不能证明无关模板、设置、布局或浏览器流程工作正常。
 
-For PHP changes:
+PHP 发生变更时：
 
-- Run `php -l` on every changed PHP source file.
-- If no host PHP CLI is available, use a compatible PHP CLI container.
-- For changes to `libs/Contents.php`, emote parsing, manifests, shortcodes, the
-  HTML tokenizer, or related output contracts, run `npm run test:php`.
+- 对每个有改动的 PHP 源文件运行 `php -l`。
+- 如果宿主机没有可用的 PHP CLI，使用兼容的 PHP CLI 容器。
+- `libs/Contents.php`、表情解析、清单、短代码、HTML 分词器或相关输出契约
+  发生变更时，运行 `npm run test:php`。
 
-The PHP tests are intentionally narrow and do not validate every Typecho route
-or template.
+PHP 测试范围有意保持精简，不会验证每条 Typecho 路由或每个模板。
 
-For emote data or assets:
+表情数据或资源发生变更时运行：
 
 ```bash
 npm run emotes:build
@@ -324,13 +275,13 @@ npm run test:php
 make build
 ```
 
-Run a full source import only after verifying the exact source directory:
+只有在确认准确的源目录后，才能执行全量源数据导入：
 
 ```bash
 npm run emotes:import -- <verified-source-directory>
 ```
 
-Before release or after shared-architecture changes:
+发布前或共享架构发生变更后运行：
 
 ```bash
 npm ci
@@ -341,77 +292,65 @@ make build
 git diff --check
 ```
 
-### Browser and HTTP Verification
+### 浏览器与 HTTP 验证
 
-Build and deploy one complete runtime unit before browser verification. Select
-checks according to the affected behavior:
+浏览器验证前，先构建并部署一个完整的运行单元。根据受影响的行为选择检查项：
 
-- Direct page load and relevant PJAX entry and exit.
-- Browser back and forward.
-- Affected index, post/page, archive/search, comments, and dynamic 404 routes.
-- Both HTTP status and complete response body.
-- Desktop and approximately `390px` mobile widths.
-- Light and dark themes.
-- Reduced-motion behavior for animation changes.
-- Logged-out and logged-in states for authentication-sensitive controls.
-- No unintended horizontal overflow.
-- No new console errors or warnings.
-- Network requests load the current hashed build assets without unexpected
-  duplicate requests or eager-loading regressions.
+- 直接加载页面，以及相关 PJAX 的进入与退出。
+- 浏览器前进与后退。
+- 受影响的首页、文章/独立页面、归档/搜索、评论和动态 404 路由。
+- 同时检查 HTTP 状态和完整响应正文。
+- 桌面端和约 `390px` 宽的移动端。
+- 浅色和深色主题。
+- 动画变更时检查减少动态效果模式的行为。
+- 对身份验证敏感的控件，检查未登录和已登录状态。
+- 不应出现意外的水平溢出。
+- 不应出现新的控制台错误或警告。
+- 网络请求应加载当前构建的哈希资源，不得出现意外的重复请求或立即加载回归。
 
-For broad responsive changes, also test tablet/intermediate widths and the
-narrowest supported phone. For keyboard or accessibility changes, complete the
-keyboard flow and verify focus restoration.
+大范围响应式变更还应测试平板/中间宽度和支持的最窄手机。键盘或无障碍变更
+必须完成整个键盘操作流程并验证焦点恢复。
 
-## Documentation, Versions, and Releases
+## 文档、版本与发布
 
-- Add user-visible changes to the unreleased section of `change-log.md`.
-- Update README for installation, configuration, compatibility, public
-  behavior, or usage changes.
-- Update `advanceSetting.sample.json` for advanced-setting changes.
-- Put durable cross-module contract changes in versioned architecture
-  documentation.
-- Keep plans and handoffs concise and mark completed or superseded material.
-  Released architecture must not exist only in external context.
+- 将用户可见变更加入 `change-log.md` 的未发布章节。
+- 安装、配置、兼容性、公开行为或使用方式发生变化时更新 README。
+- 高级设置发生变化时更新 `advanceSetting.sample.json`。
+- 将长期有效的跨模块契约变更写入已纳入版本控制的架构文档。
+- 保持计划和交接记录简洁，并标明已完成或已被取代的材料。已发布架构不能只
+  存在于外部上下文中。
 
-When changing the theme version, review at least:
+更改主题版本时，至少检查：
 
-- The Typecho theme-header version in `index.php`.
-- `$GLOBALS['VOIDVersion']` in `functions.php`.
-- README release/version text.
-- The matching entry in `change-log.md`.
-- Tags and packages only when the user explicitly requests a release.
+- `index.php` 中 Typecho 主题头部的版本。
+- `functions.php` 中的 `$GLOBALS['VOIDVersion']`。
+- README 中的发布/版本说明。
+- `change-log.md` 中对应的条目。
+- 只有用户明确要求发布时，才处理标签和软件包。
 
-Do not claim release readiness from historical test results. Re-run the full
-gate for the exact release commit and build from a clean, immutable commit or
-tag rather than an unknown worktree.
+不要根据历史测试结果宣称已可发布。必须针对确切的发布提交重新运行完整门禁，
+并从干净、不可变的提交或标签构建，不要从状态不明的工作区构建。
 
-## Git Hygiene
+## Git 规范
 
-- Preserve existing line endings and encodings unless normalization is part of
-  the task.
-- Record case-only asset renames so Git sees the intended spelling.
-- Add regression coverage for confirmed defects when a reasonable test entry
-  exists.
-- Do not delete compatibility code, assets, settings, or shortcodes merely
-  because the current page appears not to use them.
-- Do not commit ignored build output. When authoritative inputs change, commit
-  the maintained source, tests, and any intentionally versioned emote runtime
-  assets.
-- Keep requested commits focused and exclude unrelated worktree changes.
-- Never rewrite history, force-push, tag, or publish a release without explicit
-  authorization.
+- 除非任务包含规范化，否则保留现有换行符和编码。
+- 仅更改资源文件名大小写时，确保 Git 能记录预期拼写。
+- 已确认缺陷存在合理测试入口时，添加回归覆盖。
+- 不要仅仅因为当前页面似乎没有使用某项兼容代码、资源、设置或短代码就删除它。
+- 不要提交被忽略的构建输出。权威输入发生变化时，应提交受维护的源码、测试，
+  以及所有有意纳入版本控制的表情运行资源。
+- 用户要求的提交应保持聚焦，并排除工作区中的无关改动。
+- 未经明确授权，绝不能改写历史、强制推送、创建标签或发布版本。
 
-## Completion Criteria
+## 完成标准
 
-Before reporting completion:
+报告完成前：
 
-1. Re-read the request and confirm the implementation stayed in scope.
-2. Review the final diff and generated-file boundaries.
-3. Run all applicable verification gates.
-4. Confirm source, build output, and runtime deployment were not confused.
-5. Report behavior changes, key files, tests actually run, browser or runtime
-   validation actually completed, and any residual risk or unverified area.
+1. 重新阅读请求，确认实现未超出范围。
+2. 审查最终差异和生成文件边界。
+3. 运行所有适用的验证门禁。
+4. 确认没有混淆源码、构建输出和运行时部署。
+5. 报告行为变化、关键文件、实际运行的测试、实际完成的浏览器或运行时验证，
+   以及任何剩余风险或未验证部分。
 
-Never claim an unexecuted check passed or substitute historical context for
-verification of the current diff.
+绝不能声称未执行的检查已经通过，也不能用历史上下文代替对当前差异的验证。
