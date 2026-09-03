@@ -440,9 +440,9 @@
                 .theme-dark &{
                     color: rgba(#fff, 0.54);
                 }
-                &.is-collapsed{
+                &.is-thread-footer-collapsed{
                     margin-top: 0;
-                    padding-bottom: 1.8rem;
+                    padding-bottom: 0.5rem;
                 }
                 .comment-thread-total{
                     white-space: nowrap;
@@ -516,5 +516,22 @@
                 }
             }
         }
+    }
+}
+
+html.void-anchor-scrolling {
+    overflow-anchor: none;
+
+    body,
+    #pjax-container,
+    #comments,
+    .comment-thread-panel {
+        overflow-anchor: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #comments.float-up {
+        animation: none;
     }
 }

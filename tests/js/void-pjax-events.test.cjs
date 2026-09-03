@@ -627,6 +627,28 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
     ]);
 });
 
+test('comment PJAX restores a comment anchor only for history navigation', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID_Content.parseUrl = () => {};
+    context.VOID_Content.highlight = () => {};
+    context.VOID_Vote.reload = () => {};
+    context.VOID.initEmotes = () => {};
+    context.AjaxComment.init = () => calls.push('comments');
+    context.AjaxComment.getHashCommentSelector = () => '#comment-12';
+    context.VOID_Ui = {
+        checkScrollTop: () => calls.push('scroll')
+    };
+
+    context.AjaxComment.afterPagePjax({ fromPopstate: false });
+    assert.deepEqual(calls, ['comments']);
+
+    calls.length = 0;
+    context.AjaxComment.afterPagePjax({ fromPopstate: true });
+    assert.deepEqual(calls, ['comments', 'scroll']);
+});
+
 test('main-container PJAX events do not run the comment lifecycle', () => {
     const { context, handlers } = loadVoidEnvironment();
     const calls = [];
@@ -689,7 +711,7 @@ test('initialization defers typography until the entering animation is visible',
         DarkModeSwitcher: { checkColorScheme() {} },
         MasonryCtrler: { init() {} },
         checkHeader() {},
-        checkScrollTop() {},
+        checkScrollTop() { calls.push('scroll'); },
         headroom() {},
         lazyload() {}
     };
@@ -710,11 +732,11 @@ test('initialization defers typography until the entering animation is visible',
     context.VOID_Content.hyphenate = () => calls.push('hyphenate');
     context.VOID_Vote.reload = () => {};
     context.VOID.initEmotes = () => {};
-    context.AjaxComment.init = () => {};
+    context.AjaxComment.init = () => calls.push('comments');
 
     context.VOID.init();
 
-    assert.deepEqual(calls, ['typography']);
+    assert.deepEqual(calls, ['typography', 'comments', 'scroll']);
 });
 
 test('typography readiness follows the opacity of entering content', () => {
@@ -758,7 +780,7 @@ test('typography waits for the entering animation and drops stale work', () => {
     context.VOID_RewardDialog.init = () => {};
     context.VOID_Ui = {
         MasonryCtrler: { init() {} },
-        checkScrollTop() {},
+        checkScrollTop() { calls.push('scroll'); },
         lazyload() {}
     };
     context.VOID_Content.parseBoardThumbs = () => {};
@@ -770,20 +792,20 @@ test('typography waits for the entering animation and drops stale work', () => {
     context.loadClipboard = () => {};
     context.VOID_Vote.reload = () => {};
     context.VOID.initEmotes = () => {};
-    context.AjaxComment.init = () => {};
+    context.AjaxComment.init = () => calls.push('comments');
 
     context.VOID.afterPjax();
-    assert.deepEqual(calls, ['prepareMath']);
+    assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll']);
 
     flushAnimationFrame();
-    assert.deepEqual(calls, ['prepareMath']);
+    assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll']);
 
     flushAnimationFrame();
-    assert.deepEqual(calls, ['prepareMath']);
+    assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll']);
 
     typographyReady = true;
     flushAnimationFrame();
-    assert.deepEqual(calls, ['prepareMath', 'pangu', 'littlefoot', 'math', 'hyphenate']);
+    assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll', 'pangu', 'littlefoot', 'math', 'hyphenate']);
 
     calls.length = 0;
     context.VOID.scheduleTypography();

@@ -5,6 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+const commentStyles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_comments.scss'), 'utf8');
 const ajaxCommentStart = voidSource.indexOf('var AjaxComment = {');
 const ajaxCommentEnd = voidSource.indexOf('\n};\n\n(function ()', ajaxCommentStart);
 
@@ -103,6 +104,83 @@ test('new root and direct reply insertion follows ASC or DESC order', () => {
     };
     ajaxComment.insertNewestComment(list, comment);
     assert.deepEqual(calls.pop(), ['before-footer', comment]);
+});
+
+test('comment hashes expand only replies hidden by the collapsed preview', () => {
+    const ajaxComment = loadAjaxComment(() => ({}));
+
+    assert.deepEqual(
+        { ...ajaxComment.resolveThreadFocusState(3, 2, true, -1, true) },
+        { currentPage: 1, handled: true, isExpanded: false }
+    );
+    assert.deepEqual(
+        { ...ajaxComment.resolveThreadFocusState(3, 1, false, 0, false) },
+        { currentPage: 1, handled: true, isExpanded: false }
+    );
+    assert.deepEqual(
+        { ...ajaxComment.resolveThreadFocusState(3, 1, false, 1, false) },
+        { currentPage: 1, handled: true, isExpanded: true }
+    );
+    assert.deepEqual(
+        { ...ajaxComment.resolveThreadFocusState(10, 1, false, 9, false) },
+        { currentPage: 2, handled: true, isExpanded: true }
+    );
+});
+
+test('thread controls restore focus without scrolling and expose their panel state', () => {
+    const ajaxComment = loadAjaxComment(() => ({}));
+    const focusOptions = [];
+    const control = {
+        focus(options) {
+            focusOptions.push(options);
+        }
+    };
+    const children = {
+        find() {
+            return {
+                first() {
+                    return {
+                        get() {
+                            return control;
+                        }
+                    };
+                }
+            };
+        }
+    };
+
+    ajaxComment.focusThreadControl(children, '.comment-thread-expand');
+    assert.equal(focusOptions.length, 1);
+    assert.equal(focusOptions[0].preventScroll, true);
+    assert.match(voidSource, /\.attr\('aria-expanded', 'false'\)/);
+    assert.match(voidSource, /\.attr\('aria-expanded', 'true'\)/);
+    assert.match(voidSource, /\.attr\('aria-controls', panelId\)/);
+});
+
+test('collapsing a comment thread preserves its visual position without anchor scrolling', () => {
+    const collapseHandler = voidSource.match(
+        /\$footer\.find\('\.comment-thread-collapse'\)\.on\('click', function \(\) \{([\s\S]*?)\n        \}\);/
+    );
+
+    assert.ok(collapseHandler, 'collapse handler should exist');
+    assert.match(collapseHandler[1], /AjaxComment\.updateThreadLayout\(/);
+    assert.match(collapseHandler[1], /data-thread-expanded', 'false'/);
+    assert.doesNotMatch(collapseHandler[1], /scrollToWithHeader/);
+});
+
+test('comment thread spacing and reduced-motion entry remain stable', () => {
+    assert.match(
+        commentStyles,
+        /&\.is-thread-footer-collapsed\s*\{[\s\S]*?padding-bottom:\s*0\.5rem;/
+    );
+    assert.doesNotMatch(voidSource, /addClass\('is-collapsed'\)/);
+    assert.doesNotMatch(commentStyles, /&\.is-collapsed\s*\{/);
+    assert.doesNotMatch(commentStyles, /padding-bottom:\s*1\.8rem;/);
+    assert.match(commentStyles, /html\.void-anchor-scrolling[\s\S]*?overflow-anchor:\s*none;/);
+    assert.match(
+        commentStyles,
+        /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#comments\.float-up[\s\S]*?animation:\s*none;/
+    );
 });
 
 function createAntiSpamEnvironment() {

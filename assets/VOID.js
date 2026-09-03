@@ -3268,12 +3268,12 @@ var VOID = {
             var options = VOID.resolvePjaxOptions(arguments);
 
             if (AjaxComment.isCommentPjaxRequest(options)) {
-                AjaxComment.afterPagePjax();
+                AjaxComment.afterPagePjax(options);
                 return;
             }
 
             if (VOID.isMainPjaxRequest(options)) {
-                VOID.afterPjax();
+                VOID.afterPjax(options);
             }
         });
 
@@ -3308,7 +3308,6 @@ var VOID = {
         }
         VOID_Ui.MasonryCtrler.init();
         VOID_Ui.DarkModeSwitcher.checkColorScheme();
-        VOID_Ui.checkScrollTop();
         VOID_Content.parseBoardThumbs();
         VOID_Gallery.init();
         VOID_PhotoSets.init();
@@ -3331,6 +3330,7 @@ var VOID = {
         VOID_Vote.reload();
         VOID.initEmotes();
         AjaxComment.init();
+        VOID_Ui.checkScrollTop();
 
         $('body').on('click', function (e) {
             if (!VOID_Util.clickIn(e, '.mobile-search-form') && !VOID_Util.clickIn(e, '#toggle-mobile-search')) {
@@ -3393,6 +3393,9 @@ var VOID = {
     // PJAX 开始前
     beforePjax: function () {
         VOID.cancelScheduledTypography();
+        if (typeof VOID_AnchorScroller !== 'undefined') {
+            VOID_AnchorScroller.stop();
+        }
         NProgress.start();
         VOID_RewardDialog.destroy();
         VOID_PhotoSwipe.destroy();
@@ -3428,7 +3431,6 @@ var VOID = {
         VOID_Ui.MasonryCtrler.init();
         VOID_Ui.lazyload();
 
-        VOID_Ui.checkScrollTop();
         VOID_Content.countWords();
         VOID_Content.parseDetails();
         VOID_Content.parseTables(document.getElementById('pjax-container') || document);
@@ -3444,6 +3446,7 @@ var VOID = {
         VOID_Vote.reload();
         VOID.initEmotes();
         AjaxComment.init();
+        VOID_Ui.checkScrollTop();
     },
 
     endPjax: function () {
@@ -3888,12 +3891,15 @@ var AjaxComment = {
         });
     },
 
-    afterPagePjax: function () {
+    afterPagePjax: function (options) {
         VOID_Content.parseUrl();
         VOID_Content.highlight();
         VOID_Vote.reload();
         VOID.initEmotes();
         AjaxComment.init();
+        if (options && options.fromPopstate && AjaxComment.getHashCommentSelector()) {
+            VOID_Ui.checkScrollTop({ ignoreSavedPosition: true });
+        }
     },
 
     endPagePjax: function () {
@@ -4031,29 +4037,7 @@ var AjaxComment = {
         return selector ? selector.replace(/^#comment-/, '') : '';
     },
 
-    scheduleHashCommentScroll: function () {
-        var selector = AjaxComment.getHashCommentSelector();
-        var scroll = function () {
-            if (!selector || $(selector).length === 0) {
-                return;
-            }
-
-            VOID_Ui.scrollToWithHeader(selector);
-        };
-
-        if (!selector) {
-            return;
-        }
-
-        if (typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(scroll);
-            return;
-        }
-
-        window.setTimeout(scroll, 0);
-    },
-
-    syncThreadFocusFromHash: function (shouldScroll) {
+    syncThreadFocusFromHash: function () {
         var hashCommentId = AjaxComment.getHashCommentId();
 
         if (hashCommentId) {
@@ -4061,16 +4045,13 @@ var AjaxComment = {
         }
 
         AjaxComment.applyThreadPanels();
-
-        if (hashCommentId && shouldScroll !== false) {
-            AjaxComment.scheduleHashCommentScroll();
-        }
     },
 
     bindHashChange: function () {
         $(window).off('hashchange.ajaxComment');
         $(window).on('hashchange.ajaxComment', function () {
-            AjaxComment.syncThreadFocusFromHash(true);
+            AjaxComment.syncThreadFocusFromHash();
+            VOID_Ui.checkScrollTop({ ignoreSavedPosition: true });
         });
     },
 
@@ -4306,12 +4287,74 @@ var AjaxComment = {
         return pages;
     },
 
+    resolveThreadFocusState: function (totalItems, currentPage, isExpanded, focusIndex, isParentFocus) {
+        var canCollapse = totalItems > AjaxComment.threadPreviewSize;
+        var shouldPaginate = totalItems > AjaxComment.threadPaginationThreshold;
+        var preferredPage = focusIndex >= 0 && shouldPaginate
+            ? Math.ceil((focusIndex + 1) / AjaxComment.threadPageSize)
+            : 1;
+
+        if (!canCollapse) {
+            isExpanded = true;
+        } else if (isParentFocus) {
+            isExpanded = false;
+            currentPage = 1;
+        } else if (focusIndex >= 0) {
+            if (focusIndex >= AjaxComment.threadPreviewSize) {
+                isExpanded = true;
+            }
+            if (isExpanded) {
+                currentPage = preferredPage;
+            } else {
+                currentPage = 1;
+            }
+        }
+
+        return {
+            currentPage: currentPage,
+            handled: isParentFocus || focusIndex >= 0,
+            isExpanded: isExpanded
+        };
+    },
+
+    getThreadPanelId: function ($children) {
+        var parentId = String($children.parent().attr('id') || '').replace(/^comment-/, '');
+        var panelId = parentId ? 'comment-thread-' + parentId : '';
+
+        if (panelId) {
+            $children.attr('id', panelId);
+        }
+        return panelId;
+    },
+
+    focusThreadControl: function ($children, selector) {
+        var control = $children.find(selector).first().get(0);
+        if (!control || typeof control.focus !== 'function') return;
+
+        try {
+            control.focus({ preventScroll: true });
+        } catch (err) {
+            control.focus();
+        }
+    },
+
+    updateThreadLayout: function ($children, callback, options) {
+        var root = $children.parent().get(0);
+        if (typeof VOID_AnchorScroller !== 'undefined'
+            && typeof VOID_AnchorScroller.preserveElement === 'function') {
+            VOID_AnchorScroller.preserveElement(root, callback, options);
+            return;
+        }
+        callback();
+    },
+
     renderThreadFooter: function ($children, totalItems, currentPage, totalPages, shouldPaginate) {
         var $list = $children.children('.comment-thread-list');
         var $footer = $list.children('.comment-thread-footer');
         var $pagination;
         var pages;
         var isExpanded = $children.attr('data-thread-expanded') === 'true';
+        var panelId = AjaxComment.getThreadPanelId($children);
 
         if ($footer.length === 0) {
             $footer = $('<div class="comment-thread-footer"></div>');
@@ -4320,18 +4363,27 @@ var AjaxComment = {
 
         $footer.empty();
         if (!isExpanded) {
+            var $expand = $('<button type="button" class="comment-thread-expand"></button>');
+            $expand
+                .text('查看全部 ' + totalItems + ' 条回复')
+                .attr('aria-expanded', 'false');
+            if (panelId) $expand.attr('aria-controls', panelId);
             $footer
-                .addClass('is-collapsed')
-                .append('<button type="button" class="comment-thread-expand">查看全部 ' + totalItems + ' 条回复</button>');
+                .removeClass('is-collapsed')
+                .addClass('is-thread-footer-collapsed')
+                .append($expand);
 
             $footer.find('.comment-thread-expand').on('click', function () {
-                $children.attr('data-thread-expanded', 'true');
-                AjaxComment.renderThreadPage($children, currentPage);
+                AjaxComment.updateThreadLayout($children, function () {
+                    $children.attr('data-thread-expanded', 'true');
+                    AjaxComment.renderThreadPage($children, currentPage);
+                    AjaxComment.focusThreadControl($children, '.comment-thread-collapse');
+                });
             });
             return;
         }
 
-        $footer.removeClass('is-collapsed');
+        $footer.removeClass('is-collapsed is-thread-footer-collapsed');
         $footer.append('<span class="comment-thread-total">共 ' + totalItems + ' 条回复</span>');
         $pagination = $('<div class="comment-thread-pagination"></div>');
 
@@ -4366,19 +4418,26 @@ var AjaxComment = {
             }
         }
 
-        $pagination.append('<button type="button" class="comment-thread-collapse">收起</button>');
+        var $collapse = $('<button type="button" class="comment-thread-collapse">收起</button>')
+            .attr('aria-expanded', 'true');
+        if (panelId) $collapse.attr('aria-controls', panelId);
+        $pagination.append($collapse);
         $footer.append($pagination);
 
         $footer.find('button[data-thread-page]').on('click', function () {
-            AjaxComment.renderThreadPage($children, parseInt($(this).attr('data-thread-page'), 10));
+            var targetPage = parseInt($(this).attr('data-thread-page'), 10);
+            AjaxComment.updateThreadLayout($children, function () {
+                AjaxComment.renderThreadPage($children, targetPage);
+                AjaxComment.focusThreadControl($children, '.comment-thread-page.is-active');
+            });
         });
 
         $footer.find('.comment-thread-collapse').on('click', function () {
-            $children.attr('data-thread-expanded', 'false');
-            AjaxComment.renderThreadPage($children, 1);
-            if ($children.parent().attr('id')) {
-                VOID_Ui.scrollToWithHeader('#' + $children.parent().attr('id'));
-            }
+            AjaxComment.updateThreadLayout($children, function () {
+                $children.attr('data-thread-expanded', 'false');
+                AjaxComment.renderThreadPage($children, 1);
+                AjaxComment.focusThreadControl($children, '.comment-thread-expand');
+            }, { trackFrames: false });
         });
     },
 
@@ -4387,7 +4446,7 @@ var AjaxComment = {
         var $items = $list.children('.comment-thread-item');
         var focusCommentId = String(AjaxComment.threadFocusPendingId || '');
         var parentCommentId = String($children.parent().attr('id') || '').replace(/^comment-/, '');
-        var $newComment = focusCommentId ? $children.find('#comment-' + focusCommentId).first() : $();
+        var $focusComment = focusCommentId ? $children.find('#comment-' + focusCommentId).first() : $();
         var totalItems = $items.length;
         var previewSize = AjaxComment.threadPreviewSize;
         var pageSize = AjaxComment.threadPageSize;
@@ -4397,29 +4456,23 @@ var AjaxComment = {
         var totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalItems / pageSize)) : 1;
         var shouldShowThreadFooter = canCollapseThread;
         var currentPage = targetPage || parseInt($children.attr('data-thread-page'), 10) || 1;
-        var preferredPage = 0;
         var isExpanded = $children.attr('data-thread-expanded') === 'true';
-        var shouldExpandForFocus = !!focusCommentId && (focusCommentId === parentCommentId || $newComment.length > 0);
+        var isParentFocus = !!focusCommentId && focusCommentId === parentCommentId;
+        var focusIndex = $focusComment.length > 0 ? $items.index($focusComment) : -1;
+        var focusState = AjaxComment.resolveThreadFocusState(
+            totalItems,
+            currentPage,
+            isExpanded,
+            focusIndex,
+            isParentFocus
+        );
         var startIndex;
         var endIndex;
 
-        if ($newComment.length > 0) {
-            preferredPage = shouldPaginate ? Math.ceil(($items.index($newComment) + 1) / pageSize) : 1;
-        }
-
-        if (shouldExpandForFocus) {
-            isExpanded = true;
+        isExpanded = focusState.isExpanded;
+        currentPage = focusState.currentPage;
+        if (focusState.handled) {
             AjaxComment.threadFocusPendingId = '';
-        }
-
-        if (preferredPage > 0) {
-            currentPage = preferredPage;
-        }
-
-        if (!canCollapseThread) {
-            isExpanded = true;
-        } else if (totalPages > 1 && !$children.attr('data-thread-expanded') && !shouldExpandForFocus) {
-            isExpanded = false;
         }
 
         if (!isExpanded) {
@@ -4487,18 +4540,24 @@ var AjaxComment = {
     },
 
     finish: function () {
+        var newCommentId = AjaxComment.newID;
         AjaxComment.cancelActiveReply();
         $(AjaxComment.submitBtn).html('提交评论');
         $(AjaxComment.textarea).val('');
         $(AjaxComment.submitBtn).attr('disabled', false);
-        if ($('#comment-' + AjaxComment.newID).length > 0) {
-            VOID_Ui.scrollToWithHeader('#comment-' + AjaxComment.newID);
-            $('#comment-' + AjaxComment.newID).fadeTo(500, 1);
+        if ($('#comment-' + newCommentId).length > 0) {
+            $('#comment-' + newCommentId).fadeTo(500, 1);
         }
         $('.comment-num .num').html(parseInt($('.comment-num .num').html()) + 1);
-        AjaxComment.threadFocusPendingId = AjaxComment.newID;
+        AjaxComment.threadFocusPendingId = newCommentId;
         AjaxComment.bindClick();
         AjaxComment.applyThreadPanels();
+        if ($('#comment-' + newCommentId).length > 0) {
+            VOID_Ui.scrollToWithHeader('#comment-' + newCommentId, 0, {
+                behavior: 'smooth',
+                stabilize: true
+            });
+        }
         VOID_Content.highlight();
         VOID.initEmoteContent();
     },
@@ -4508,7 +4567,7 @@ var AjaxComment = {
         AjaxComment.bindPager();
         AjaxComment.bindHashChange();
         AjaxComment.bindClick();
-        AjaxComment.syncThreadFocusFromHash(true);
+        AjaxComment.syncThreadFocusFromHash();
         $(AjaxComment.commentForm).off('submit').on('submit', function () { // 提交事件
             $(AjaxComment.submitBtn).attr('disabled', true);
 
