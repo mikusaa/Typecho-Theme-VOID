@@ -138,6 +138,8 @@ var VOID_Editor_Menu = (function ($) {
 
     function applyToField(field, type) {
         var result;
+        var textTop;
+        var documentTop;
 
         if (!field || typeof field.selectionStart !== 'number'
             || typeof field.selectionEnd !== 'number') {
@@ -149,9 +151,17 @@ var VOID_Editor_Menu = (function ($) {
             return false;
         }
 
+        textTop = field.scrollTop;
+        documentTop = document.documentElement.scrollTop;
         field.value = result.value;
-        field.focus();
+        try {
+            field.focus({ preventScroll: true });
+        } catch (error) {
+            field.focus();
+        }
         field.setSelectionRange(result.selectionStart, result.selectionEnd);
+        field.scrollTop = textTop;
+        document.documentElement.scrollTop = documentTop;
         $(field).trigger('input');
         return true;
     }

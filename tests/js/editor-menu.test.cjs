@@ -346,6 +346,45 @@ test('inserts the existing photos template and all Alert types from the menu', (
     }
 });
 
+test('preserves editor and document scroll when inserting an Alert into existing content', () => {
+    const environment = createEnvironment();
+    const field = environment.field;
+    let value = '';
+    let focusOptions = null;
+
+    Object.defineProperty(field, 'value', {
+        configurable: true,
+        get() {
+            return value;
+        },
+        set(nextValue) {
+            value = String(nextValue);
+            this.selectionStart = value.length;
+            this.selectionEnd = value.length;
+            this.scrollTop = 9999;
+        }
+    });
+    field.focus = function (options) {
+        focusOptions = options;
+        environment.document.activeElement = this;
+        environment.document.documentElement.scrollTop = 9999;
+    };
+
+    field.value = Array.from({ length: 200 }, (_, index) => `第 ${index} 行`).join('\n');
+    field.selectionStart = field.value.indexOf('第 80 行');
+    field.selectionEnd = field.selectionStart;
+    field.scrollTop = 480;
+    environment.document.documentElement.scrollTop = 240;
+
+    environment.menu.init();
+    menuItems(environment.document)[2].click();
+
+    assert.equal(field.scrollTop, 480);
+    assert.equal(environment.document.documentElement.scrollTop, 240);
+    assert.equal(focusOptions.preventScroll, true);
+    assert.equal(field.value.slice(field.selectionStart, field.selectionEnd), '提示内容');
+});
+
 test('supports trigger and menu keyboard navigation, Tab closing and focus restoration', () => {
     const environment = createEnvironment();
     environment.menu.init();
