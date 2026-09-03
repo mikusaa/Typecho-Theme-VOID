@@ -169,6 +169,16 @@ test('collapsing a comment thread preserves its visual position without anchor s
 });
 
 test('comment thread spacing and reduced-motion entry remain stable', () => {
+    const collapsedContentStart = commentStyles.indexOf('.comment-thread-panel.is-thread-collapsed');
+    const collapsedInnerStart = commentStyles.indexOf('.comment-content-inner{', collapsedContentStart);
+    const collapsedContentRule = commentStyles.slice(
+        collapsedContentStart,
+        collapsedInnerStart
+    );
+
+    assert.notEqual(collapsedContentStart, -1);
+    assert.ok(collapsedInnerStart > collapsedContentStart);
+    assert.doesNotMatch(collapsedContentRule, /line-height:/);
     assert.match(
         commentStyles,
         /&\.is-thread-footer-collapsed\s*\{[\s\S]*?padding-bottom:\s*0\.5rem;/
