@@ -388,7 +388,7 @@ class Utils
             . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
         ob_start();
-        self::indexTheme('/assets/editor-fce9724b95.js');
+        self::indexTheme('/assets/editor-88bc362f2e.js');
         $editorUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
