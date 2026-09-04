@@ -162,8 +162,10 @@ function loadPjaxEnvironment(options = {}) {
     };
 }
 
-function loadVoidEnvironment() {
+function loadVoidEnvironment(options = {}) {
     const handlers = new Map();
+    const bindingCounts = new Map();
+    const loginFormClasses = new Set();
     const animationFrames = new Map();
     const mainContainer = {
         isConnected: true,
@@ -177,10 +179,18 @@ function loadVoidEnvironment() {
         querySelectorAll: () => []
     };
     let nextAnimationFrameId = 1;
-    const jQuery = () => {
+    const jQuery = (selector) => {
         const api = {
+            length: selector === '#loggin-form' && options.loginForm ? 1 : 0,
+            addClass(name) {
+                if (selector === '#loggin-form' && options.loginForm) {
+                    loginFormClasses.add(name);
+                }
+                return api;
+            },
             on(name, listener) {
                 handlers.set(name, listener);
+                bindingCounts.set(name, (bindingCounts.get(name) || 0) + 1);
                 return api;
             },
             ready() {
@@ -224,13 +234,15 @@ function loadVoidEnvironment() {
     );
 
     return {
+        bindingCounts,
         context,
         flushAnimationFrame() {
             const callbacks = Array.from(animationFrames.values());
             animationFrames.clear();
             callbacks.forEach((callback) => callback());
         },
-        handlers
+        handlers,
+        loginFormClasses
     };
 }
 
@@ -627,6 +639,25 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
     ]);
 });
 
+test('PJAX lifecycle binding stays idempotent across repeated initialization', () => {
+    const { bindingCounts, context } = loadVoidEnvironment();
+
+    context.VOIDConfig = { PJAX: true };
+    context.VOID.bindPjaxLifecycle();
+    context.VOID.bindPjaxLifecycle();
+
+    assert.deepEqual(
+        Object.fromEntries(bindingCounts),
+        {
+            'pjax:abort': 1,
+            'pjax:beforeReplace': 1,
+            'pjax:complete': 1,
+            'pjax:end': 1,
+            'pjax:send': 1
+        }
+    );
+});
+
 test('comment PJAX restores a comment anchor only for history navigation', () => {
     const { context } = loadVoidEnvironment();
     const calls = [];
@@ -703,6 +734,42 @@ test('main before-replace teardown clears MathJax before destroying Masonry', ()
     assert.deepEqual(calls, ['math', 'masonry']);
 });
 
+test('main PJAX completion reinitializes Masonry once on the replaced DOM', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.NProgress = { done() {} };
+    context.VOID_Content.clearMath = () => calls.push('clear-math');
+    context.VOID_Content.parseBoardThumbs = () => {};
+    context.VOID_Content.countWords = () => {};
+    context.VOID_Content.parseDetails = () => {};
+    context.VOID_Content.parseTOC = () => {};
+    context.VOID_Content.parseUrl = () => {};
+    context.VOID_Content.highlight = () => {};
+    context.VOID_Gallery.init = () => {};
+    context.VOID_PhotoSets.init = () => {};
+    context.VOID_PhotoSwipe.init = () => {};
+    context.VOID_RewardDialog.init = () => {};
+    context.VOID_Ui = {
+        MasonryCtrler: {
+            destroy: () => calls.push('destroy-masonry'),
+            init: () => calls.push('init-masonry')
+        },
+        checkScrollTop() {},
+        lazyload() {}
+    };
+    context.VOID.scheduleTypography = () => {};
+    context.VOID_Vote.reload = () => {};
+    context.VOID.initEmotes = () => {};
+    context.AjaxComment.init = () => {};
+    context.loadClipboard = () => {};
+
+    context.VOID.beforePjaxReplace();
+    context.VOID.afterPjax();
+
+    assert.deepEqual(calls, ['clear-math', 'destroy-masonry', 'init-masonry']);
+});
+
 test('initialization defers typography until the entering animation is visible', () => {
     const { context } = loadVoidEnvironment();
     const calls = [];
@@ -758,8 +825,8 @@ test('typography readiness follows the opacity of entering content', () => {
     assert.equal(context.VOID.isTypographyReady(), true);
 });
 
-test('typography waits for the entering animation and drops stale work', () => {
-    const { context, flushAnimationFrame } = loadVoidEnvironment();
+test('PJAX rebuild marks login action stale while typography drops stale work', () => {
+    const { context, flushAnimationFrame, loginFormClasses } = loadVoidEnvironment({ loginForm: true });
     const calls = [];
     let typographyReady = false;
 
@@ -796,6 +863,7 @@ test('typography waits for the entering animation and drops stale work', () => {
 
     context.VOID.afterPjax();
     assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll']);
+    assert.equal(loginFormClasses.has('need-refresh'), true);
 
     flushAnimationFrame();
     assert.deepEqual(calls, ['prepareMath', 'comments', 'scroll']);

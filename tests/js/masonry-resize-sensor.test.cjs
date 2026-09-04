@@ -291,7 +291,7 @@ test('Masonry follows both directions across the mobile breakpoint', () => {
     assert.equal(environment.controller.active, true);
 });
 
-test('Masonry teardown destroys layout and global listeners once', () => {
+test('Masonry teardown and PJAX DOM replacement rebuild the layout once', () => {
     const environment = loadMasonryEnvironment({ indexStyle: 0 });
     const element = environment.createElement('p-4');
     const replacementElement = environment.createElement('p-4');
@@ -319,6 +319,22 @@ test('Masonry teardown destroys layout and global listeners once', () => {
     assert.equal(environment.controller.sensors.length, 1);
     assert.equal(environment.controller.sensors[0].element, replacementElement);
     assert.equal(environment.controller.active, true);
+});
+
+test('an observed item size change relayouts only an active desktop Masonry grid', () => {
+    const environment = loadMasonryEnvironment({ indexStyle: 0 });
+    const element = environment.createElement('p-5');
+
+    environment.elements.push(element);
+    environment.controller.init();
+    assert.equal(environment.masonryCalls.length, 1);
+
+    environment.sensorInstances[0].callback();
+    assert.equal(environment.masonryCalls.length, 2);
+
+    environment.window.innerWidth = 767;
+    environment.sensorInstances[0].callback();
+    assert.equal(environment.masonryCalls.length, 2);
 });
 
 test('large background waits for success and ignores failed or stale loads', () => {
