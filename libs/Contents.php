@@ -1695,7 +1695,7 @@ Class Contents
     }
 
     /**
-     * 从保存流程写入的 vwid/vhei 参数读取一组可信图片尺寸。
+     * 从保存流程写入的 vwid/vhei 参数读取调用方声明的显示尺寸。
      */
     static private function getImageDimensions($src)
     {
@@ -1789,13 +1789,13 @@ Class Contents
 
         $alt = self::getHtmlAttribute($tag, 'alt');
         $alt = null === $alt ? '' : $alt;
-        $dimensions = self::getImageDimensions($srcOriginal);
+        $displayDimensions = self::getImageDimensions($srcOriginal);
         $dimensionAttributes = '';
         $figureAttributes = '';
 
-        if (null !== $dimensions) {
-            $width = $dimensions[0];
-            $height = $dimensions[1];
+        if (null !== $displayDimensions) {
+            $width = $displayDimensions[0];
+            $height = $displayDimensions[1];
             $ratio = rtrim(rtrim(number_format($width / $height, 4, '.', ''), '0'), '.');
             $dimensionAttributes = ' width="' . $width . '" height="' . $height . '"';
             $figureAttributes = ' data-void-image-width="' . $width . '" data-void-image-height="' . $height
