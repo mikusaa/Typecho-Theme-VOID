@@ -148,7 +148,6 @@ gulp.task('md5', function () {
 // 无需处理的依赖资源
 gulp.task('move:libs', function () {
     return gulp.src([
-        './assets/libs/header/ResizeSensor/LICENSE',
         './assets/libs/littlefoot/LICENSE',
         './assets/libs/mathjax/**/*',
         './assets/libs/octicons/LICENSE',

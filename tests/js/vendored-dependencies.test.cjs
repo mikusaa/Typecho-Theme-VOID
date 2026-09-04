@@ -38,7 +38,6 @@ function listFiles(directory) {
 
 test('vendored release files match the pinned official npm artifacts', () => {
     const expectedHashes = {
-        'assets/libs/header/ResizeSensor/LICENSE': '39bae37cadf50a0a400b982bb3e4b2d2c907f95a531236b62fa4cdf0d6029a67',
         'assets/libs/littlefoot/LICENSE': '27dd58a18d0a0d12c035cb40badfb47805eb7f3053f33ce53c2186e9739ae9d2',
         'assets/libs/littlefoot/littlefoot.js': '7ee71129ae558229f1d4eb35ee16f60e0e58e401bee900a50b27727cd63f26f8',
         'assets/libs/mathjax/4.1.3/LICENSE': 'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30',
@@ -70,7 +69,6 @@ test('vendored licenses are included in the distributable build', () => {
     const gulpfile = read('gulpfile.js');
 
     for (const licensePath of [
-        './assets/libs/header/ResizeSensor/LICENSE',
         './assets/libs/littlefoot/LICENSE',
         './assets/libs/mathjax/**/*',
         './assets/libs/pangu/LICENSE',

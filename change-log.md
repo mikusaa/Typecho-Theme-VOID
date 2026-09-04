@@ -2,6 +2,8 @@
 
 **开发中 | Unreleased**
 
+* 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并清理已停用的 ResizeSensor 依赖。
+
 **🖼️ 2026-09-04 Version 3.6.2**
 
 > **升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。

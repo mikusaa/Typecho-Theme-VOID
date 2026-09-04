@@ -7,31 +7,53 @@ const vm = require('node:vm');
 
 function loadMasonryEnvironment(options = {}) {
     const elements = [];
-    const masonryCalls = [];
-    const sensorInstances = [];
+    const masonryInstances = [];
+    const observerInstances = [];
     const windowListeners = new Map();
-    const masonryContainer = createElement('masonry');
+    const frameCallbacks = new Map();
+    const cancelledFrames = [];
+    let nextFrameId = 1;
+    let masonryContainer = options.masonryContainer === false ? null : createElement('masonry');
 
-    function createElement(id) {
+    function createElement(id, images = []) {
         const classes = new Set();
+        const listeners = new Map();
         return {
             id,
             classes,
+            images,
             isConnected: true,
             style: {},
+            addEventListener(type, listener) {
+                if (!listeners.has(type)) {
+                    listeners.set(type, new Set());
+                }
+                listeners.get(type).add(listener);
+            },
             classList: {
                 add(className) { classes.add(className); },
                 contains(className) { return classes.has(className); },
                 remove(className) { classes.delete(className); }
+            },
+            dispatch(type) {
+                const handlers = listeners.get(type) || [];
+                Array.from(handlers).forEach((handler) => handler({ target: this, type }));
+            },
+            listenerCount(type) {
+                return listeners.has(type) ? listeners.get(type).size : 0;
+            },
+            querySelectorAll(selector) {
+                if (id === 'masonry' && selector === '.masonry-item') {
+                    return elements.slice();
+                }
+                return selector === 'img' ? images.slice() : [];
+            },
+            removeEventListener(type, listener) {
+                if (listeners.has(type)) {
+                    listeners.get(type).delete(listener);
+                }
             }
         };
-    }
-
-    function getClasses(element) {
-        if (!element.classes) {
-            element.classes = new Set();
-        }
-        return element.classes;
     }
 
     const bodyClasses = new Set();
@@ -53,6 +75,9 @@ function loadMasonryEnvironment(options = {}) {
         },
         documentElement: {},
         getElementById(id) {
+            if (id === 'masonry') {
+                return masonryContainer;
+            }
             return elements.find((element) => element.id === id) || null;
         },
         querySelector() {
@@ -63,66 +88,45 @@ function loadMasonryEnvironment(options = {}) {
         }
     };
 
-    function jQuery(selector) {
-        let items = [];
-        if (selector === '.masonry-item') {
-            items = elements.slice();
-        } else if (selector === '#masonry' && options.masonryContainer !== false) {
-            items = [masonryContainer];
-        }
-
-        const api = {
-            items,
-            length: items.length,
-            addClass(className) {
-                items.forEach((item) => getClasses(item).add(className));
-                return api;
-            },
-            css() { return api; },
-            fadeOut() { return api; },
-            has() { return api; },
-            hasClass(className) {
-                return items.length > 0 && getClasses(items[0]).has(className);
-            },
-            hide() { return api; },
-            masonry(argument) {
-                masonryCalls.push(argument);
-                if (argument === 'destroy') {
-                    masonryContainer.style = {};
-                    elements.forEach((item) => { item.style = {}; });
-                } else {
-                    masonryContainer.style.height = '320px';
-                    masonryContainer.style.position = 'relative';
-                    elements.forEach((item) => { item.style.position = 'absolute'; });
-                }
-                return api;
-            },
-            on() { return api; },
-            removeClass(className) {
-                items.forEach((item) => getClasses(item).delete(className));
-                return api;
-            }
+    function Masonry(element, masonryOptions) {
+        this.element = element;
+        this.options = masonryOptions;
+        this.destroyCount = 0;
+        this.layoutCount = 1;
+        element.style.height = '320px';
+        element.style.position = 'relative';
+        elements.forEach((item) => { item.style.position = 'absolute'; });
+        this.destroy = () => {
+            this.destroyCount += 1;
+            element.style = {};
+            elements.forEach((item) => { item.style = {}; });
         };
-        return api;
+        this.layout = () => {
+            this.layoutCount += 1;
+        };
+        masonryInstances.push(this);
     }
 
-    jQuery.each = (collection, callback) => {
-        const items = collection.items || collection;
-        for (let i = 0; i < items.length; i += 1) {
-            callback(i, items[i]);
+    class ResizeObserver {
+        constructor(callback) {
+            this.callback = callback;
+            this.disconnectCount = 0;
+            this.targets = new Set();
+            observerInstances.push(this);
         }
-    };
 
-    function ResizeSensor(element, callback) {
-        this.element = element;
-        this.callback = callback;
-        this.detachedCallback = null;
-        this.detachCount = 0;
-        this.detach = (detachedCallback) => {
-            this.detachCount += 1;
-            this.detachedCallback = detachedCallback;
-        };
-        sensorInstances.push(this);
+        disconnect() {
+            this.disconnectCount += 1;
+            this.targets.clear();
+        }
+
+        observe(element) {
+            this.targets.add(element);
+        }
+
+        unobserve(element) {
+            this.targets.delete(element);
+        }
     }
 
     function Image() {
@@ -151,25 +155,41 @@ function loadMasonryEnvironment(options = {}) {
             }
             windowListeners.get(type).add(listener);
         },
-        clearTimeout() {},
+        cancelAnimationFrame(id) {
+            cancelledFrames.push(id);
+            frameCallbacks.delete(id);
+        },
+        clearTimeout(id) {
+            frameCallbacks.delete(id);
+        },
         innerWidth: options.innerWidth || 1024,
         removeEventListener(type, listener) {
             if (windowListeners.has(type)) {
                 windowListeners.get(type).delete(listener);
             }
         },
-        setTimeout() {}
+        requestAnimationFrame: options.withoutAnimationFrame ? undefined : function (callback) {
+            const id = nextFrameId;
+            nextFrameId += 1;
+            frameCallbacks.set(id, callback);
+            return id;
+        },
+        ResizeObserver: options.withoutResizeObserver ? undefined : ResizeObserver,
+        setTimeout(callback) {
+            const id = nextFrameId;
+            nextFrameId += 1;
+            frameCallbacks.set(id, callback);
+            return id;
+        }
     };
     window.window = window;
 
     const context = {
-        $: jQuery,
         Image,
-        ResizeSensor,
-        VOIDConfig: { indexStyle: options.indexStyle === undefined ? 1 : options.indexStyle },
+        Masonry,
+        VOIDConfig: { indexStyle: options.indexStyle === undefined ? 0 : options.indexStyle },
         console,
         document,
-        jQuery,
         window
     };
 
@@ -181,17 +201,46 @@ function loadMasonryEnvironment(options = {}) {
     return {
         controller: context.VOID_Ui.MasonryCtrler,
         createElement,
+        createImage(complete = false) {
+            const image = createElement('');
+            image.complete = complete;
+            return image;
+        },
+        cancelledFrames,
         dispatchWindowEvent(type) {
             const listeners = windowListeners.get(type) || [];
             Array.from(listeners).forEach((listener) => listener());
         },
         elements,
+        flushFrames() {
+            while (frameCallbacks.size > 0) {
+                const callbacks = Array.from(frameCallbacks.values());
+                frameCallbacks.clear();
+                callbacks.forEach((callback) => callback());
+            }
+        },
+        frameCount() {
+            return frameCallbacks.size;
+        },
         listenerCount(type) {
             return windowListeners.has(type) ? windowListeners.get(type).size : 0;
         },
-        masonryCalls,
-        masonryContainer,
-        sensorInstances,
+        masonryInstances,
+        get masonryContainer() {
+            return masonryContainer;
+        },
+        observerInstances,
+        replaceContainer() {
+            masonryContainer = createElement('masonry');
+            return masonryContainer;
+        },
+        triggerResize(element) {
+            observerInstances.forEach((observer) => {
+                if (observer.targets.has(element)) {
+                    observer.callback([{ target: element }]);
+                }
+            });
+        },
         ui: context.VOID_Ui,
         window
     };
@@ -206,49 +255,55 @@ test('Masonry has a visible desktop two-column fallback before JavaScript takes 
     assert.match(stylesheet, /@media screen and \(min-width: 768px\) \{\s*\.wrapper\.wide section#index-list > ul:not\(\.masonry\) \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);\s*gap: 30px;\s*\}\s*\.wrapper\.wide section#index-list > ul:not\(\.masonry\) > li \{\s*width: auto;\s*margin-bottom: 0;\s*\}\s*\}/);
 });
 
-test('Masonry resize sensors stay idempotent and follow replaced DOM nodes', () => {
+test('Masonry ResizeObserver watches stay idempotent and follow replaced DOM nodes', () => {
     const environment = loadMasonryEnvironment();
-    const firstElement = { id: 'p-1' };
-    const replacementElement = { id: 'p-1' };
+    const firstImage = environment.createImage();
+    const replacementImage = environment.createImage();
+    const firstElement = environment.createElement('p-1', [firstImage]);
+    const replacementElement = environment.createElement('p-1', [replacementImage]);
 
     environment.elements.push(firstElement);
     environment.controller.watch('p-1');
     environment.controller.watch('p-1');
 
-    assert.equal(environment.sensorInstances.length, 1);
-    assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.observerInstances.length, 1);
+    assert.equal(environment.observerInstances[0].targets.size, 1);
+    assert.equal(environment.controller.watchedItems.length, 1);
+    assert.equal(firstImage.listenerCount('load'), 1);
+    assert.equal(firstImage.listenerCount('error'), 1);
 
     environment.elements[0] = replacementElement;
     environment.controller.watch('p-1');
 
-    assert.equal(environment.sensorInstances.length, 2);
-    assert.equal(environment.sensorInstances[0].detachCount, 1);
-    assert.equal(
-        environment.sensorInstances[0].detachedCallback,
-        environment.sensorInstances[0].callback
-    );
-    assert.equal(environment.controller.sensors.length, 1);
-    assert.equal(environment.controller.sensors[0].element, replacementElement);
+    assert.equal(environment.observerInstances.length, 1);
+    assert.deepEqual(Array.from(environment.observerInstances[0].targets), [replacementElement]);
+    assert.equal(firstImage.listenerCount('load'), 0);
+    assert.equal(firstImage.listenerCount('error'), 0);
+    assert.equal(environment.controller.watchedItems.length, 1);
+    assert.equal(environment.controller.watchedItems[0].element, replacementElement);
 });
 
-test('Masonry stays active through UI reset and explicit teardown detaches it once', () => {
+test('Masonry initializes once and explicit teardown releases every resource', () => {
     const environment = loadMasonryEnvironment({ indexStyle: 0 });
-    const element = environment.createElement('p-2');
+    const image = environment.createImage();
+    const element = environment.createElement('p-2', [image]);
 
     environment.elements.push(element);
     environment.controller.init();
     environment.controller.init();
 
-    assert.equal(environment.sensorInstances.length, 1);
-    assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.masonryInstances.length, 1);
+    assert.equal(environment.masonryInstances[0].options.resize, false);
+    assert.equal(environment.observerInstances.length, 1);
+    assert.equal(environment.controller.watchedItems.length, 1);
     assert.equal(environment.controller.active, true);
 
     environment.ui.reset();
     environment.ui.reset();
 
-    assert.equal(environment.masonryCalls.length, 1);
-    assert.equal(environment.sensorInstances[0].detachCount, 0);
-    assert.equal(environment.controller.sensors.length, 1);
+    assert.equal(environment.masonryInstances.length, 1);
+    assert.equal(environment.masonryInstances[0].destroyCount, 0);
+    assert.equal(environment.controller.watchedItems.length, 1);
     assert.equal(environment.listenerCount('resize'), 1);
     assert.equal(environment.controller.active, true);
     assert.equal(environment.masonryContainer.classes.has('masonry'), true);
@@ -258,15 +313,13 @@ test('Masonry stays active through UI reset and explicit teardown detaches it on
     environment.controller.destroy();
     environment.controller.destroy();
 
-    assert.equal(environment.masonryCalls.length, 2);
-    assert.equal(environment.masonryCalls[1], 'destroy');
-    assert.equal(environment.sensorInstances[0].detachCount, 1);
-    assert.equal(
-        environment.sensorInstances[0].detachedCallback,
-        environment.sensorInstances[0].callback
-    );
-    assert.equal(environment.controller.sensors.length, 0);
+    assert.equal(environment.masonryInstances[0].destroyCount, 1);
+    assert.equal(environment.observerInstances[0].disconnectCount, 1);
+    assert.equal(environment.controller.instance, null);
+    assert.equal(environment.controller.watchedItems.length, 0);
     assert.equal(environment.listenerCount('resize'), 0);
+    assert.equal(image.listenerCount('load'), 0);
+    assert.equal(image.listenerCount('error'), 0);
 });
 
 test('Masonry follows both directions across the mobile breakpoint', () => {
@@ -276,7 +329,7 @@ test('Masonry follows both directions across the mobile breakpoint', () => {
     environment.elements.push(element);
     environment.controller.init();
 
-    assert.equal(environment.masonryCalls.length, 0);
+    assert.equal(environment.masonryInstances.length, 0);
     assert.equal(environment.listenerCount('resize'), 1);
     assert.equal(element.classes.has('masonry-ready'), false);
 
@@ -284,8 +337,8 @@ test('Masonry follows both directions across the mobile breakpoint', () => {
     environment.dispatchWindowEvent('resize');
     environment.dispatchWindowEvent('resize');
 
-    assert.equal(environment.masonryCalls.length, 1);
-    assert.equal(environment.masonryCalls[0].itemSelector, '.masonry-item');
+    assert.equal(environment.masonryInstances.length, 1);
+    assert.equal(environment.masonryInstances[0].options.itemSelector, '.masonry-item');
     assert.equal(environment.controller.active, true);
     assert.equal(environment.masonryContainer.classes.has('masonry'), true);
     assert.equal(element.classes.has('masonry-ready'), true);
@@ -294,8 +347,7 @@ test('Masonry follows both directions across the mobile breakpoint', () => {
     environment.window.innerWidth = 767;
     environment.dispatchWindowEvent('resize');
 
-    assert.equal(environment.masonryCalls.length, 2);
-    assert.equal(environment.masonryCalls[1], 'destroy');
+    assert.equal(environment.masonryInstances[0].destroyCount, 1);
     assert.equal(environment.controller.active, false);
     assert.equal(environment.masonryContainer.classes.has('masonry'), false);
     assert.equal(element.classes.has('masonry-ready'), false);
@@ -304,8 +356,8 @@ test('Masonry follows both directions across the mobile breakpoint', () => {
     environment.window.innerWidth = 768;
     environment.dispatchWindowEvent('resize');
 
-    assert.equal(environment.masonryCalls.length, 3);
-    assert.equal(environment.masonryCalls[2].itemSelector, '.masonry-item');
+    assert.equal(environment.masonryInstances.length, 2);
+    assert.equal(environment.masonryInstances[1].options.itemSelector, '.masonry-item');
     assert.equal(environment.controller.active, true);
 });
 
@@ -319,40 +371,87 @@ test('Masonry teardown and PJAX DOM replacement rebuild the layout once', () => 
     environment.controller.destroy();
     environment.controller.destroy();
 
-    assert.deepEqual(environment.masonryCalls.map((argument) => (
-        typeof argument === 'string' ? argument : 'init'
-    )), ['init', 'destroy']);
+    assert.equal(environment.masonryInstances.length, 1);
+    assert.equal(environment.masonryInstances[0].destroyCount, 1);
     assert.equal(environment.listenerCount('resize'), 0);
-    assert.equal(environment.sensorInstances[0].detachCount, 1);
+    assert.equal(environment.observerInstances[0].disconnectCount, 1);
     assert.equal(environment.controller.active, false);
 
     environment.elements[0] = replacementElement;
+    environment.replaceContainer();
     environment.controller.init();
 
-    assert.deepEqual(environment.masonryCalls.map((argument) => (
-        typeof argument === 'string' ? argument : 'init'
-    )), ['init', 'destroy', 'init']);
+    assert.equal(environment.masonryInstances.length, 2);
     assert.equal(environment.listenerCount('resize'), 1);
-    assert.equal(environment.sensorInstances.length, 2);
-    assert.equal(environment.controller.sensors.length, 1);
-    assert.equal(environment.controller.sensors[0].element, replacementElement);
+    assert.equal(environment.observerInstances.length, 2);
+    assert.equal(environment.controller.watchedItems.length, 1);
+    assert.equal(environment.controller.watchedItems[0].element, replacementElement);
     assert.equal(environment.controller.active, true);
 });
 
-test('an observed item size change relayouts only an active desktop Masonry grid', () => {
+test('observed size changes are coalesced and only relayout an active desktop grid', () => {
     const environment = loadMasonryEnvironment({ indexStyle: 0 });
     const element = environment.createElement('p-5');
 
     environment.elements.push(element);
     environment.controller.init();
-    assert.equal(environment.masonryCalls.length, 1);
+    assert.equal(environment.masonryInstances[0].layoutCount, 1);
 
-    environment.sensorInstances[0].callback();
-    assert.equal(environment.masonryCalls.length, 2);
+    environment.triggerResize(element);
+    environment.triggerResize(element);
+    assert.equal(environment.frameCount(), 1);
+    environment.flushFrames();
+    assert.equal(environment.masonryInstances[0].layoutCount, 2);
 
     environment.window.innerWidth = 767;
-    environment.sensorInstances[0].callback();
-    assert.equal(environment.masonryCalls.length, 2);
+    environment.dispatchWindowEvent('resize');
+    environment.triggerResize(element);
+    environment.flushFrames();
+    assert.equal(environment.masonryInstances[0].layoutCount, 2);
+});
+
+test('image load and error relayout once and teardown cancels stale work', () => {
+    const environment = loadMasonryEnvironment({ withoutResizeObserver: true });
+    const firstImage = environment.createImage();
+    const secondImage = environment.createImage();
+    const element = environment.createElement('p-6', [firstImage, secondImage]);
+
+    environment.elements.push(element);
+    environment.controller.init();
+
+    assert.equal(environment.observerInstances.length, 0);
+    assert.equal(firstImage.listenerCount('load'), 1);
+    assert.equal(secondImage.listenerCount('error'), 1);
+
+    firstImage.dispatch('load');
+    secondImage.dispatch('error');
+    assert.equal(environment.frameCount(), 1);
+    assert.equal(firstImage.listenerCount('error'), 0);
+    assert.equal(secondImage.listenerCount('load'), 0);
+
+    environment.controller.destroy();
+
+    assert.equal(environment.frameCount(), 0);
+    assert.equal(environment.cancelledFrames.length, 1);
+    assert.equal(environment.masonryInstances[0].layoutCount, 1);
+    firstImage.dispatch('load');
+    secondImage.dispatch('error');
+    environment.flushFrames();
+    assert.equal(environment.masonryInstances[0].layoutCount, 1);
+});
+
+test('window resize is the controlled fallback without ResizeObserver', () => {
+    const environment = loadMasonryEnvironment({ withoutResizeObserver: true });
+    const element = environment.createElement('p-7');
+
+    environment.elements.push(element);
+    environment.controller.init();
+    environment.dispatchWindowEvent('resize');
+    environment.dispatchWindowEvent('resize');
+
+    assert.equal(environment.frameCount(), 1);
+    environment.flushFrames();
+    assert.equal(environment.masonryInstances[0].layoutCount, 2);
 });
 
 test('large background waits for success and ignores failed or stale loads', () => {
@@ -414,77 +513,4 @@ test('large background template serializes its URL and uses the shared loader', 
     assert.match(template, /VOID_Ui\.loadBackgroundImage\(/);
     assert.match(template, /json_encode\([\s\S]*JSON_HEX_TAG[\s\S]*JSON_HEX_QUOT/);
     assert.doesNotMatch(template, /if\s*\(\s*!img_bg\.complete/);
-});
-
-test('ResizeSensor detach cancels an invisible-element animation frame', () => {
-    const frameCallbacks = new Map();
-    const cancelledFrames = [];
-    let nextFrameId = 1;
-
-    function createNode() {
-        return {
-            addEventListener() {},
-            appendChild(child) {
-                this.children.push(child);
-            },
-            children: [],
-            contains(child) {
-                return this.children.includes(child);
-            },
-            offsetHeight: 0,
-            offsetWidth: 0,
-            removeChild(child) {
-                this.children.splice(this.children.indexOf(child), 1);
-            },
-            scrollLeft: 0,
-            scrollTop: 0,
-            style: {}
-        };
-    }
-
-    const element = createNode();
-    element[Symbol.toStringTag] = 'HTMLDivElement';
-    element.getBoundingClientRect = () => ({ height: 0, width: 0 });
-
-    const window = {
-        Math,
-        cancelAnimationFrame(id) {
-            cancelledFrames.push(id);
-            frameCallbacks.delete(id);
-        },
-        getComputedStyle() {
-            return { getPropertyValue: () => 'static' };
-        },
-        requestAnimationFrame(callback) {
-            const id = nextFrameId;
-            nextFrameId += 1;
-            frameCallbacks.set(id, callback);
-            return id;
-        }
-    };
-    const context = {
-        Math,
-        document: { createElement: createNode },
-        exports: {},
-        module: { exports: {} },
-        window
-    };
-    window.window = window;
-
-    vm.runInNewContext(
-        fs.readFileSync(
-            path.resolve(__dirname, '../../assets/libs/header/ResizeSensor/ResizeSensor.js'),
-            'utf8'
-        ),
-        context
-    );
-
-    const callback = () => {};
-    const sensor = new context.module.exports(element, callback);
-    assert.equal(frameCallbacks.size, 1);
-
-    sensor.detach(callback);
-
-    assert.deepEqual(cancelledFrames, [1]);
-    assert.equal(frameCallbacks.size, 0);
 });
