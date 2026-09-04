@@ -5,11 +5,19 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
 const scrollerStart = headerSource.indexOf('VOID_SmoothScroller = {');
 const scrollerEnd = headerSource.indexOf('\n\nVOID_ControllerPanel = {', scrollerStart);
 
 assert.notEqual(scrollerStart, -1, 'smooth scroller source should exist');
 assert.notEqual(scrollerEnd, -1, 'anchor scroller source should have a stable boundary');
+
+test('TOC links enable delayed-layout stabilization', () => {
+    assert.match(
+        voidSource,
+        /scrollToWithHeader\(\$\(this\)\.attr\('href'\), 0, \{\s*behavior: 'smooth',\s*stabilize: true\s*\}\)/
+    );
+});
 
 function createEnvironment(options = {}) {
     const listeners = new Map();

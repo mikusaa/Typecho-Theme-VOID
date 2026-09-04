@@ -286,11 +286,11 @@ article {
 
             img[data-void-image-content] {
                 display: block;
-                width: auto;
                 max-width: 100%;
                 height: auto;
                 max-height: 680px;
                 max-height: min(78svh, 680px);
+                aspect-ratio: var(--void-image-ratio);
                 object-fit: contain;
                 box-sizing: border-box;
             }

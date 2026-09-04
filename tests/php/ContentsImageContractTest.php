@@ -126,6 +126,21 @@ assertImageContains(
 assertImageNotContains('data-fancybox', $semantic, '正文图片不再输出 Fancybox 属性');
 assertImageNotContains('data-caption', $semantic, '正文图片不再输出 Fancybox Caption 属性');
 
+$manualDisplaySize = Contents::parseImages(
+    '<img alt="手动小图" src="/small.jpg#vwid=150&vhei=145">'
+);
+assertImageContains(
+    '<figure data-void-image-item data-void-image-width="150" data-void-image-height="145" style="--void-image-ratio: 1.0345">',
+    $manualDisplaySize,
+    '手动尺寸作为正文显示和加载前占位语义输出'
+);
+assertImageContains(
+    '<a class="void-image-link" data-void-image-zoom no-pjax href="/small.jpg#vwid=150&amp;vhei=145">'
+        . '<img data-void-image-content width="150" height="145" alt="手动小图" src="/small.jpg#vwid=150&amp;vhei=145" decoding="async">',
+    $manualDisplaySize,
+    '手动小图保留显示尺寸且链接继续指向原始资源'
+);
+
 foreach (array(
     'https://img.example/a.jpg#vwid=1920',
     'https://img.example/a.jpg#vwid=1920&vhei=0',

@@ -38,7 +38,10 @@ var VOID_Content = {
             tocbot.init(toc_option);
             $.each($('.toc-link'), function (i, item) {
                 $(item).click(function () {
-                    VOID_Ui.scrollToWithHeader($(this).attr('href'));
+                    VOID_Ui.scrollToWithHeader($(this).attr('href'), 0, {
+                        behavior: 'smooth',
+                        stabilize: true
+                    });
                     if (window.innerWidth < 1200) {
                         TOC.close();
                     }
@@ -2686,7 +2689,7 @@ var VOID_PhotoSwipe = {
         return isFinite(dimension) && dimension > 0 ? dimension : 0;
     },
 
-    resolveDimensions: function (link, image) {
+    resolveDisplayDimensions: function (link, image) {
         var figure = this.getImageFigure(link);
         var width = figure ? this.parseDimension(figure.getAttribute('data-void-image-width')) : 0;
         var height = figure ? this.parseDimension(figure.getAttribute('data-void-image-height')) : 0;
@@ -2696,6 +2699,82 @@ var VOID_PhotoSwipe = {
             height = this.parseDimension(image && image.getAttribute('height'));
         }
         return width && height ? { width: width, height: height } : null;
+    },
+
+    resolveNaturalDimensions: function (image) {
+        var width = this.parseDimension(image && image.naturalWidth);
+        var height = this.parseDimension(image && image.naturalHeight);
+
+        return width && height ? { width: width, height: height } : null;
+    },
+
+    resolveDimensions: function (link, image) {
+        return this.resolveNaturalDimensions(image)
+            || this.resolveDisplayDimensions(link, image);
+    },
+
+    applyDimensions: function (itemData, dimensions) {
+        if (!itemData || !dimensions) {
+            return;
+        }
+        itemData.width = dimensions.width;
+        itemData.height = dimensions.height;
+        itemData.w = dimensions.width;
+        itemData.h = dimensions.height;
+    },
+
+    syncLoadedDimensions: function (event) {
+        var content = event && event.content;
+        var slide = event && event.slide;
+        var contentChanged;
+        var slideChanged;
+        var dimensions;
+
+        if (!content || event.isError) {
+            return false;
+        }
+
+        dimensions = this.resolveNaturalDimensions(content.element);
+        if (!dimensions) {
+            return false;
+        }
+
+        contentChanged = content.width !== dimensions.width
+            || content.height !== dimensions.height;
+        slide = slide || content.slide;
+        slideChanged = !!(slide && (slide.width !== dimensions.width
+            || slide.height !== dimensions.height));
+        this.applyDimensions(content.data, dimensions);
+        if (slide) {
+            this.applyDimensions(slide.data, dimensions);
+        }
+        if (!contentChanged && !slideChanged) {
+            return true;
+        }
+
+        content.width = dimensions.width;
+        content.height = dimensions.height;
+
+        if (!slide) {
+            return true;
+        }
+
+        slide.width = dimensions.width;
+        slide.height = dimensions.height;
+        slide.currentResolution = 0;
+        if (typeof slide.calculateSize === 'function') {
+            slide.calculateSize();
+        }
+        if (slide.isActive && typeof slide.zoomAndPanToInitial === 'function') {
+            slide.zoomAndPanToInitial();
+        }
+        if (typeof slide.updateContentSize === 'function') {
+            slide.updateContentSize(true);
+        }
+        if (slide.isActive && typeof slide.applyCurrentZoomPan === 'function') {
+            slide.applyCurrentZoomPan();
+        }
+        return true;
     },
 
     getPreviewSource: function (image) {
@@ -2925,6 +3004,12 @@ var VOID_PhotoSwipe = {
             this.lightbox.on('keydown', function (event) {
                 self.handleKeydown(event);
             });
+            this.lightbox.on('loadComplete', function (event) {
+                self.syncLoadedDimensions(event);
+            });
+            this.lightbox.on('contentAppendImage', function (event) {
+                self.syncLoadedDimensions(event);
+            });
             this.lightbox.init();
         } catch (error) {
             this.lightbox = null;
@@ -2968,6 +3053,9 @@ var VOID_PhotoSwipe = {
         },
         getItemData: function (link) {
             return VOID_PhotoSwipe.getItemData(link);
+        },
+        syncLoadedDimensions: function (event) {
+            return VOID_PhotoSwipe.syncLoadedDimensions(event);
         },
         getPadding: function (viewportSize) {
             return VOID_PhotoSwipe.getPadding(viewportSize);

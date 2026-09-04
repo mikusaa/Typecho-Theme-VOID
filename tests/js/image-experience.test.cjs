@@ -531,6 +531,8 @@ function createSource(root, options = {}) {
     if (options.dimensions !== false) {
         figure.setAttribute('data-void-image-width', String(options.width || 1600));
         figure.setAttribute('data-void-image-height', String(options.height || 900));
+        image.setAttribute('width', String(options.width || 1600));
+        image.setAttribute('height', String(options.height || 900));
     }
     link.setAttribute('data-void-image-zoom', '');
     link.setAttribute('href', options.href || '/original.jpg');
@@ -542,8 +544,10 @@ function createSource(root, options = {}) {
     }
     image.complete = options.complete !== false;
     image.currentSrc = options.previewSource === undefined ? '/display.jpg' : options.previewSource;
-    image.naturalWidth = options.naturalWidth === undefined ? 1600 : options.naturalWidth;
-    image.naturalHeight = options.naturalHeight === undefined ? 900 : options.naturalHeight;
+    image.naturalWidth = options.naturalWidth === undefined
+        ? (options.width || 1600) : options.naturalWidth;
+    image.naturalHeight = options.naturalHeight === undefined
+        ? (options.height || 900) : options.naturalHeight;
     image.rect = options.rect || { left: 20, top: 30, width: 320, height: 180 };
     if (options.objectFit) {
         image.computedStyle = { objectFit: options.objectFit };
@@ -968,6 +972,20 @@ test('theme external-link parsing excludes generated image links', () => {
     assert.match(source, /:not\(\.void-image-link\)/);
 });
 
+test('ordinary image styles preserve declared display dimensions and stable aspect ratio', () => {
+    const styles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_article.scss'), 'utf8');
+    const ordinaryImageRule = styles.match(
+        /img\[data-void-image-content\] \{[\s\S]*?\n\s*\}/
+    );
+
+    assert.ok(ordinaryImageRule);
+    assert.doesNotMatch(ordinaryImageRule[0], /width: auto;/);
+    assert.match(ordinaryImageRule[0], /max-width: 100%;/);
+    assert.match(ordinaryImageRule[0], /height: auto;/);
+    assert.match(ordinaryImageRule[0], /max-height: min\(78svh, 680px\);/);
+    assert.match(ordinaryImageRule[0], /aspect-ratio: var\(--void-image-ratio\);/);
+});
+
 test('photo-set styles keep pair ratios, native strip scrolling, and responsive row heights', () => {
     const styles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_article.scss'), 'utf8');
     const script = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
@@ -1165,10 +1183,13 @@ test('PhotoSwipe adapter groups article images and preserves item dimensions, al
     const secondArticle = new FakeElement('article');
     const first = createSource(firstArticle, {
         alt: '第一张',
-        height: 900,
+        height: 145,
         href: '/first.jpg',
+        naturalHeight: 582,
+        naturalWidth: 600,
         objectFit: 'cover',
-        width: 1600
+        rect: { left: 20, top: 30, width: 150, height: 145 },
+        width: 150
     });
     const hidden = createSource(firstArticle, {
         alt: '隐藏图片',
@@ -1189,8 +1210,8 @@ test('PhotoSwipe adapter groups article images and preserves item dimensions, al
     assert.equal(dataSource.index, 0);
     assert.equal(dataSource.items.length, 2);
     assert.equal(dataSource.items[0].src, '/first.jpg');
-    assert.equal(dataSource.items[0].width, 1600);
-    assert.equal(dataSource.items[0].height, 900);
+    assert.equal(dataSource.items[0].width, 600);
+    assert.equal(dataSource.items[0].height, 582);
     assert.equal(dataSource.items[0].alt, '第一张');
     assert.equal(dataSource.items[0].element, first.link);
     assert.equal(dataSource.items[0].thumbCropped, true);
@@ -1199,6 +1220,86 @@ test('PhotoSwipe adapter groups article images and preserves item dimensions, al
     assert.equal(hidden.image.getAttribute('src'), '');
     assert.equal(hidden.image.getAttribute('data-src'), '/hidden-thumb.jpg');
     assert.equal(dataSource.items.some((item) => item.element === other.link), false);
+});
+
+test('PhotoSwipe temporarily uses display dimensions until the original image loads', () => {
+    const { context } = loadVoid();
+    const root = new FakeElement('article');
+    const source = createSource(root, {
+        complete: false,
+        height: 145,
+        naturalHeight: 0,
+        naturalWidth: 0,
+        width: 150
+    });
+
+    const itemData = context.VOID_PhotoSwipe.__test.getItemData(source.link);
+    assert.equal(itemData.width, 150);
+    assert.equal(itemData.height, 145);
+});
+
+test('PhotoSwipe replaces fallback dimensions after its original image loads', () => {
+    const { context, document } = loadVoid();
+    const root = new FakeElement('main');
+    const article = new FakeElement('article');
+    const source = createSource(article, {
+        complete: false,
+        height: 145,
+        naturalHeight: 0,
+        naturalWidth: 0,
+        width: 150
+    });
+    root.appendChild(article);
+    document.root = root;
+    context.VOID_PhotoSwipe.init(root);
+
+    const lightbox = FakePhotoSwipeLightbox.instances[0];
+    const itemData = context.VOID_PhotoSwipe.__test.getItemData(source.link);
+    const originalImage = new FakeElement('img');
+    const calls = [];
+    originalImage.naturalWidth = 600;
+    originalImage.naturalHeight = 582;
+    const content = {
+        data: itemData,
+        element: originalImage,
+        height: 145,
+        slide: null,
+        width: 150
+    };
+    const slide = {
+        applyCurrentZoomPan() { calls.push('applyCurrentZoomPan'); },
+        calculateSize() { calls.push('calculateSize'); },
+        content,
+        currentResolution: 1,
+        data: itemData,
+        height: 145,
+        isActive: true,
+        updateContentSize(force) { calls.push(['updateContentSize', force]); },
+        width: 150,
+        zoomAndPanToInitial() { calls.push('zoomAndPanToInitial'); }
+    };
+    content.slide = slide;
+
+    lightbox.emit('contentAppendImage', { content });
+
+    assert.equal(itemData.width, 600);
+    assert.equal(itemData.height, 582);
+    assert.equal(itemData.w, 600);
+    assert.equal(itemData.h, 582);
+    assert.equal(content.width, 600);
+    assert.equal(content.height, 582);
+    assert.equal(slide.width, 600);
+    assert.equal(slide.height, 582);
+    assert.equal(slide.currentResolution, 0);
+    assert.deepEqual(calls, [
+        'calculateSize',
+        'zoomAndPanToInitial',
+        ['updateContentSize', true],
+        'applyCurrentZoomPan'
+    ]);
+
+    lightbox.emit('loadComplete', { content, slide });
+    assert.equal(calls.length, 4);
 });
 
 test('PhotoSwipe adapter keeps Gallery sets separate inside one article', () => {
@@ -1295,6 +1396,10 @@ test('PhotoSwipe adapter leaves modified, alternate-target, and invalid image li
 
     source.figure.removeAttribute('data-void-image-width');
     source.figure.removeAttribute('data-void-image-height');
+    source.image.removeAttribute('width');
+    source.image.removeAttribute('height');
+    source.image.naturalWidth = 0;
+    source.image.naturalHeight = 0;
     const missingDimensionsClick = preventableEvent({ target: source.image });
     root.dispatch('click', missingDimensionsClick);
     assert.equal(missingDimensionsClick.defaultPrevented, false);
