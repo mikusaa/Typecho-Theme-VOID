@@ -13,18 +13,25 @@ var VOID_Content = {
     mathJaxLoadPromise: null,
 
     countWords: function () {
-        if ($('#totalWordCount').length) {
-            var total = 0;
-            $.each($('a.archive-title'), function (i, item) {
-                total += parseInt($(item).attr('data-words'));
-            });
-            $('#totalWordCount').html(total);
+        var totalWordCount = document.getElementById('totalWordCount');
+        var total = 0;
+        var titles;
+
+        if (!totalWordCount) {
+            return;
         }
+
+        titles = document.querySelectorAll('a.archive-title');
+        for (var index = 0; index < titles.length; index++) {
+            total += parseInt(titles[index].getAttribute('data-words'), 10);
+        }
+
+        totalWordCount.textContent = total;
     },
 
     // 解析文章目录
     parseTOC: function () {
-        if ($('.TOC').length > 0) {
+        if (document.querySelector('.TOC')) {
             var toc_option = {
                 // Where to render the table of contents.
                 tocSelector: '.TOC',
@@ -36,18 +43,37 @@ var VOID_Content = {
                 collapseDepth: 6
             };
             tocbot.init(toc_option);
-            $.each($('.toc-link'), function (i, item) {
-                $(item).click(function () {
-                    VOID_Ui.scrollToWithHeader($(this).attr('href'), 0, {
+            var tocLinks = document.querySelectorAll('.toc-link');
+            for (var index = 0; index < tocLinks.length; index++) {
+                var item = tocLinks[index];
+                if (item._voidTocClickBound) {
+                    continue;
+                }
+
+                item._voidTocClickBound = true;
+                item.addEventListener('click', function (event) {
+                    if (event.defaultPrevented
+                        || (typeof event.button === 'number' && event.button !== 0)
+                        || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                        return;
+                    }
+
+                    var href = this.getAttribute('href');
+                    if (!href) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    VOID_Ui.scrollToWithHeader(href, 0, {
                         behavior: 'smooth',
                         stabilize: true
                     });
                     if (window.innerWidth < 1200) {
                         TOC.close();
                     }
-                    return false;
                 });
-            });
+            }
             // 检查目录
             if (window.innerWidth >= 1200) {
                 TOC.open();
@@ -83,16 +109,27 @@ var VOID_Content = {
 
     // 为省略 summary 的旧文章补充可样式化、可访问的折叠标题
     parseDetails: function () {
-        $.each($('article.yue details'), function (i, item) {
-            if ($(item).children('summary').length > 0) {
-                return;
+        var details = document.querySelectorAll('article.yue details');
+
+        for (var index = 0; index < details.length; index++) {
+            var item = details[index];
+            var hasSummary = false;
+            for (var childIndex = 0; childIndex < item.children.length; childIndex++) {
+                if (item.children[childIndex].tagName.toLowerCase() === 'summary') {
+                    hasSummary = true;
+                    break;
+                }
+            }
+
+            if (hasSummary) {
+                continue;
             }
 
             var summary = document.createElement('summary');
             summary.textContent = '展开详情';
             summary.setAttribute('data-void-generated', '');
             item.insertBefore(summary, item.firstChild);
-        });
+        }
     },
 
     normalizeTableLabel: function (value) {
@@ -431,27 +468,30 @@ var VOID_Content = {
     // 解析URL
     parseUrl: function () {
         var domain = document.domain;
-        $('a:not([href^="#"]):not(.post-like):not(.void-image-link)').each(function (i, item) {
-            if ((!$(item).attr('target') || (!$(item).attr('target') == '' && !$(item).attr('target') == '_self'))) {
-                if (item.hostname != domain) {
-                    $(item).attr('target', '_blank');
-                }
+        var links = document.querySelectorAll('a:not([href^="#"]):not(.post-like):not(.void-image-link)');
+        var index;
+        var item;
+
+        for (index = 0; index < links.length; index++) {
+            item = links[index];
+            if (!item.getAttribute('target') && item.hostname != domain) {
+                item.setAttribute('target', '_blank');
             }
-        });
+        }
 
         if (VOIDConfig.PJAX) {
-            $.each($('a:not(a[target="_blank"], a[no-pjax])'), function (i, item) {
-                var $item = $(item);
-
+            links = document.querySelectorAll('a:not([target="_blank"]):not([no-pjax])');
+            for (index = 0; index < links.length; index++) {
+                item = links[index];
                 if (item.hostname == domain) {
-                    if ($item.is('.comments-container .pager a')) {
-                        $item.removeClass('pjax');
-                        return;
+                    if (item.matches('.comments-container .pager a')) {
+                        item.classList.remove('pjax');
+                        continue;
                     }
 
-                    $item.addClass('pjax');
+                    item.classList.add('pjax');
                 }
-            });
+            }
             if (window.VoidPjax && typeof window.VoidPjax.bind === 'function') {
                 window.VoidPjax.bind('a.pjax', {
                     container: '#pjax-container',
@@ -463,10 +503,13 @@ var VOID_Content = {
     },
 
     highlight: function () {
-        $.each($('.yue pre code'), function (i, item) {
-            var classStr = $(item).attr('class');
+        var codeBlocks = document.querySelectorAll('.yue pre code');
 
-            if (typeof (classStr) == 'undefined') {
+        for (var index = 0; index < codeBlocks.length; index++) {
+            var item = codeBlocks[index];
+            var classStr = item.getAttribute('class');
+
+            if (classStr === null) {
                 classStr = 'language-none';
             }
 
@@ -474,37 +517,43 @@ var VOID_Content = {
                 classStr += ' language-none';
             }
 
-            $(item).attr('class', classStr);
-        });
+            item.setAttribute('class', classStr);
+        }
 
         Prism.highlightAll();
     },
 
     restoreLittlefootReferenceIds: function () {
-        $.each($('[data-lf-original-id]'), function (i, item) {
-            var originalId = $(item).attr('data-lf-original-id');
-            if (typeof originalId !== 'undefined' && originalId !== '') {
-                $(item).attr('id', originalId);
+        var references = document.querySelectorAll('[data-lf-original-id]');
+
+        for (var index = 0; index < references.length; index++) {
+            var item = references[index];
+            var originalId = item.getAttribute('data-lf-original-id');
+            if (originalId !== null && originalId !== '') {
+                item.setAttribute('id', originalId);
             }
-            $(item).removeAttr('data-lf-original-id');
-        });
+            item.removeAttribute('data-lf-original-id');
+        }
     },
 
     bridgeLittlefootBacklinks: function () {
-        $.each($('.littlefoot__button[id^="lf-"]'), function (i, item) {
+        var buttons = document.querySelectorAll('.littlefoot__button[id^="lf-"]');
+
+        for (var index = 0; index < buttons.length; index++) {
+            var item = buttons[index];
             var originalId = item.id.replace(/^lf-/, '');
             if (originalId === '') {
-                return;
+                continue;
             }
 
             var printRef = document.getElementById(originalId);
             if (printRef && printRef.classList.contains('littlefoot--print')) {
-                $(printRef).attr('data-lf-original-id', originalId);
-                $(printRef).attr('id', 'lf-print-' + originalId);
+                printRef.setAttribute('data-lf-original-id', originalId);
+                printRef.setAttribute('id', 'lf-print-' + originalId);
             }
 
-            $(item).attr('id', originalId);
-        });
+            item.setAttribute('id', originalId);
+        }
     },
 
     isPanguSpaceElement: function (node) {
@@ -537,14 +586,16 @@ var VOID_Content = {
 
     cleanupLittlefootPanguSpacing: function () {
         var self = this;
+        var footnotes = document.querySelectorAll('.littlefoot');
+        var printReferences = document.querySelectorAll('sup.littlefoot--print, a.littlefoot--print');
 
-        $.each($('.littlefoot'), function (i, item) {
-            self.cleanupPanguAroundNode(item);
-        });
+        for (var index = 0; index < footnotes.length; index++) {
+            self.cleanupPanguAroundNode(footnotes[index]);
+        }
 
-        $.each($('sup.littlefoot--print, a.littlefoot--print'), function (i, item) {
-            self.cleanupPanguAroundNode(item);
-        });
+        for (index = 0; index < printReferences.length; index++) {
+            self.cleanupPanguAroundNode(printReferences[index]);
+        }
     },
 
     setLittlefootActiveState: function (button, isActive) {
@@ -565,9 +616,11 @@ var VOID_Content = {
     },
 
     clearLittlefootActiveState: function () {
-        $.each($('.littlefoot.littlefoot--active'), function (i, item) {
-            item.classList.remove('littlefoot--active');
-        });
+        var activeFootnotes = document.querySelectorAll('.littlefoot.littlefoot--active');
+
+        for (var index = 0; index < activeFootnotes.length; index++) {
+            activeFootnotes[index].classList.remove('littlefoot--active');
+        }
     },
 
     prepareLittlefootMobileCompat: function () {
@@ -962,21 +1015,27 @@ var VOID_Content = {
     },
 
     hyphenate: function () {
-        $.each($('div.articleBody p, div.articleBody blockquote'), function (index, item) {
+        if (!window.Hypher || typeof window.Hypher.hyphenateElement !== 'function') {
+            return;
+        }
+
+        var paragraphs = document.querySelectorAll('div.articleBody p, div.articleBody blockquote');
+        for (var index = 0; index < paragraphs.length; index++) {
+            var item = paragraphs[index];
             var text = item.textContent || '';
 
             // Alert markup and fallback markers are structured content, not prose to hyphenate.
-            if ($(item).closest('.void-alert').length > 0 || /\[!|\[\/?notice\b/i.test(text)) {
-                return;
+            if (item.closest('.void-alert') || /\[!|\[\/?notice\b/i.test(text)) {
+                continue;
             }
 
             // 避免在 MathJax 解析前把 TeX 命令打断（如 \begin 被插入软连字符）
             if (/\\begin\{|\\\(|\\\[|(^|[^\\])\$\$|(^|[^\\])\$/.test(text)) {
-                return;
+                continue;
             }
 
-            $(item).hyphenate('en-us');
-        });
+            window.Hypher.hyphenateElement(item, 'en-us');
+        }
     }
 };
 

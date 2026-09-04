@@ -15,8 +15,9 @@ assert.notEqual(scrollerEnd, -1, 'anchor scroller source should have a stable bo
 test('TOC links enable delayed-layout stabilization', () => {
     assert.match(
         voidSource,
-        /scrollToWithHeader\(\$\(this\)\.attr\('href'\), 0, \{\s*behavior: 'smooth',\s*stabilize: true\s*\}\)/
+        /var href = this\.getAttribute\('href'\);[\s\S]*scrollToWithHeader\(href, 0, \{\s*behavior: 'smooth',\s*stabilize: true\s*\}\)/
     );
+    assert.match(voidSource, /item\.addEventListener\('click', function \(event\)/);
 });
 
 function createEnvironment(options = {}) {
