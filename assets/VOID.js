@@ -3292,6 +3292,7 @@ var VOID_RewardDialog = {
 
 var VOID = {
     pjaxLifecycleBound: false,
+    pjaxLifecycleHandlers: null,
     emotePicker: null,
     emoteContentObserver: null,
     typographyGeneration: 0,
@@ -3373,6 +3374,15 @@ var VOID = {
             return detail.options;
         }
 
+        for (index = detail && detail.args && typeof detail.args.length === 'number'
+            ? detail.args.length - 1 : -1; index >= 0; index--) {
+            if (detail.args[index]
+                && typeof detail.args[index] === 'object'
+                && detail.args[index].container) {
+                return detail.args[index];
+            }
+        }
+
         for (index = args ? args.length - 1 : -1; index >= 0; index--) {
             if (args[index] && typeof args[index] === 'object' && args[index].container) {
                 return args[index];
@@ -3387,63 +3397,83 @@ var VOID = {
             return;
         }
 
+        this.pjaxLifecycleHandlers = {
+            send: function () {
+                var options = VOID.resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    VOID.destroyEmotes();
+                    AjaxComment.setCommentPageLoading(true);
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.beforePjax();
+                }
+            },
+            beforeReplace: function () {
+                var options = VOID.resolvePjaxOptions(arguments);
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.beforePjaxReplace();
+                }
+            },
+            complete: function () {
+                var options = VOID.resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.afterPagePjax(options);
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.afterPjax(options);
+                }
+            },
+            abort: function () {
+                var options = VOID.resolvePjaxOptions(arguments);
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.afterPjax();
+                }
+            },
+            end: function () {
+                var options = VOID.resolvePjaxOptions(arguments);
+
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.endPagePjax();
+                    return;
+                }
+
+                if (VOID.isMainPjaxRequest(options)) {
+                    VOID.endPjax();
+                }
+            }
+        };
+
+        document.addEventListener('pjax:send', this.pjaxLifecycleHandlers.send);
+        document.addEventListener('pjax:beforeReplace', this.pjaxLifecycleHandlers.beforeReplace);
+        document.addEventListener('pjax:complete', this.pjaxLifecycleHandlers.complete);
+        document.addEventListener('pjax:abort', this.pjaxLifecycleHandlers.abort);
+        document.addEventListener('pjax:end', this.pjaxLifecycleHandlers.end);
         this.pjaxLifecycleBound = true;
+    },
 
-        $(document).on('pjax:send', function () {
-            var options = VOID.resolvePjaxOptions(arguments);
+    unbindPjaxLifecycle: function () {
+        var handlers = this.pjaxLifecycleHandlers;
 
-            if (AjaxComment.isCommentPjaxRequest(options)) {
-                VOID.destroyEmotes();
-                AjaxComment.setCommentPageLoading(true);
-                return;
-            }
+        if (!handlers) {
+            this.pjaxLifecycleBound = false;
+            return;
+        }
 
-            if (VOID.isMainPjaxRequest(options)) {
-                VOID.beforePjax();
-            }
-        });
-
-        $(document).on('pjax:beforeReplace', function () {
-            var options = VOID.resolvePjaxOptions(arguments);
-
-            if (VOID.isMainPjaxRequest(options)) {
-                VOID.beforePjaxReplace();
-            }
-        });
-
-        $(document).on('pjax:complete', function () {
-            var options = VOID.resolvePjaxOptions(arguments);
-
-            if (AjaxComment.isCommentPjaxRequest(options)) {
-                AjaxComment.afterPagePjax(options);
-                return;
-            }
-
-            if (VOID.isMainPjaxRequest(options)) {
-                VOID.afterPjax(options);
-            }
-        });
-
-        $(document).on('pjax:abort', function () {
-            var options = VOID.resolvePjaxOptions(arguments);
-
-            if (VOID.isMainPjaxRequest(options)) {
-                VOID.afterPjax();
-            }
-        });
-
-        $(document).on('pjax:end', function () {
-            var options = VOID.resolvePjaxOptions(arguments);
-
-            if (AjaxComment.isCommentPjaxRequest(options)) {
-                AjaxComment.endPagePjax();
-                return;
-            }
-
-            if (VOID.isMainPjaxRequest(options)) {
-                VOID.endPjax();
-            }
-        });
+        document.removeEventListener('pjax:send', handlers.send);
+        document.removeEventListener('pjax:beforeReplace', handlers.beforeReplace);
+        document.removeEventListener('pjax:complete', handlers.complete);
+        document.removeEventListener('pjax:abort', handlers.abort);
+        document.removeEventListener('pjax:end', handlers.end);
+        this.pjaxLifecycleHandlers = null;
+        this.pjaxLifecycleBound = false;
     },
 
     // 初始化单页应用

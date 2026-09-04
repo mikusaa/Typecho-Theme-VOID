@@ -396,13 +396,17 @@ $setting = $GLOBALS['VOIDSetting'];
         <script src="<?php Utils::indexTheme('/assets/VOID.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
-            $(document).on('pjax:complete', function(event, xhr, status, options){
-                options = VOID.resolvePjaxOptions(arguments);
+            if (VOID.pjaxReloadHandler) {
+                document.removeEventListener('pjax:complete', VOID.pjaxReloadHandler);
+            }
+            VOID.pjaxReloadHandler = function(event){
+                var options = VOID.resolvePjaxOptions(arguments);
                 if (!VOID.isMainPjaxRequest(options)) {
                     return;
                 }
                 <?php echo $setting['pjaxreload']; ?>
-            })
+            };
+            document.addEventListener('pjax:complete', VOID.pjaxReloadHandler);
             <?php if(Utils::isPluginAvailable('ExSearch')): ?>
             function ExSearchCall(item){
                 if (item && item.length) {
