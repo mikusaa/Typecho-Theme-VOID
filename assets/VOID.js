@@ -3420,23 +3420,7 @@ var VOID = {
         AjaxComment.init();
         VOID_Ui.checkScrollTop();
 
-        $('body').on('click', function (e) {
-            if (!VOID_Util.clickIn(e, '.mobile-search-form') && !VOID_Util.clickIn(e, '#toggle-mobile-search')) {
-                if ($('.mobile-search-form').hasClass('opened')) {
-                    $('.mobile-search-form').removeClass('opened');
-                    return false;
-                }
-            }
-            if (!VOID_Util.clickIn(e, '#toggle-setting-pc') && !VOID_Util.clickIn(e, '#toggle-setting')) {
-                if ($('body').hasClass('setting-panel-show') && !VOID_Util.clickIn(e, '#setting-panel')) {
-                    $('body').removeClass('setting-panel-show');
-                    setTimeout(function () {
-                        $('#setting-panel').hide();
-                    }, 300);
-                    return false;
-                }
-            }
-        });
+        VOID_Ui.bindDismissEvents();
     },
 
     initEmotes: function () {
@@ -3509,9 +3493,7 @@ var VOID = {
         VOID_PhotoSwipe.init();
         VOID_RewardDialog.init();
 
-        if ($('#loggin-form').length) {
-            $('#loggin-form').addClass('need-refresh');
-        }
+        VOID_Ui.invalidateLoginAction();
 
         if (typeof VOID_CardCover !== 'undefined') {
             VOID_CardCover.init(document.getElementById('pjax-container'));

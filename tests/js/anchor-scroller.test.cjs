@@ -122,10 +122,7 @@ function createEnvironment(options = {}) {
         }
     };
     window.window = window;
-    const jQuery = () => ({});
-    jQuery.each = (items, callback) => items.forEach((item, index) => callback(index, item));
     const context = {
-        $: jQuery,
         Date,
         VOID_Ui: {
             getHeaderOffset() {

@@ -34,14 +34,32 @@ function loadMasonryEnvironment(options = {}) {
         return element.classes;
     }
 
+    const bodyClasses = new Set();
     const document = {
-        body: {},
+        body: {
+            classList: {
+                add(name) { bodyClasses.add(name); },
+                contains(name) { return bodyClasses.has(name); },
+                remove(name) { bodyClasses.delete(name); },
+                toggle(name) {
+                    if (bodyClasses.has(name)) {
+                        bodyClasses.delete(name);
+                        return false;
+                    }
+                    bodyClasses.add(name);
+                    return true;
+                }
+            }
+        },
         documentElement: {},
         getElementById(id) {
             return elements.find((element) => element.id === id) || null;
         },
         querySelector() {
             return null;
+        },
+        querySelectorAll(selector) {
+            return selector === '.masonry-item' ? elements.slice() : [];
         }
     };
 

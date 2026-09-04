@@ -756,6 +756,7 @@ test('main PJAX completion reinitializes Masonry once on the replaced DOM', () =
             init: () => calls.push('init-masonry')
         },
         checkScrollTop() {},
+        invalidateLoginAction() {},
         lazyload() {}
     };
     context.VOID.scheduleTypography = () => {};
@@ -777,6 +778,7 @@ test('initialization defers typography until the entering animation is visible',
     context.VOID_Ui = {
         DarkModeSwitcher: { checkColorScheme() {} },
         MasonryCtrler: { init() {} },
+        bindDismissEvents() {},
         checkHeader() {},
         checkScrollTop() { calls.push('scroll'); },
         headroom() {},
@@ -848,6 +850,7 @@ test('PJAX rebuild marks login action stale while typography drops stale work', 
     context.VOID_Ui = {
         MasonryCtrler: { init() {} },
         checkScrollTop() { calls.push('scroll'); },
+        invalidateLoginAction() { loginFormClasses.add('need-refresh'); },
         lazyload() {}
     };
     context.VOID_Content.parseBoardThumbs = () => {};

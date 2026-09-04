@@ -5,11 +5,36 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 function createItem(attributes, options = {}) {
+    const classes = new Set(['lazyload']);
+    const parentClasses = new Set();
+    const parentElement = {
+        classList: {
+            add(name) {
+                parentClasses.add(name);
+            }
+        }
+    };
+
     return {
         attributes: new Map(Object.entries(attributes)),
-        classes: new Set(['lazyload']),
+        classList: {
+            add(name) {
+                classes.add(name);
+            },
+            contains(name) {
+                return classes.has(name);
+            }
+        },
+        classes,
+        closest(selector) {
+            return selector === '[hidden]' && this.hiddenAncestor ? {} : null;
+        },
+        getBoundingClientRect() {
+            return { bottom: 200, top: 100 };
+        },
         hiddenAncestor: options.hiddenAncestor === true,
-        parentClasses: new Set(),
+        parentClasses,
+        parentElement,
         getAttribute(name) {
             return this.attributes.has(name) ? this.attributes.get(name) : null;
         },
@@ -25,7 +50,15 @@ function loadLazyload(items, isVisible) {
     const scrollListeners = new Set();
     const document = {
         body: { scrollTop: 0 },
-        documentElement: { clientHeight: 800, scrollTop: 0 }
+        documentElement: { clientHeight: 800, scrollTop: 0 },
+        querySelectorAll(selector) {
+            if (selector === '[data-void-gallery] img.lazyload:not(.loaded):not(.error)') {
+                return items.filter((item) => (
+                    !item.classes.has('loaded') && !item.classes.has('error')
+                ));
+            }
+            return [];
+        }
     };
 
     class FakePreloadImage {
@@ -49,46 +82,6 @@ function loadLazyload(items, isVisible) {
         }
     }
 
-    function jQuery(target) {
-        if (typeof target === 'string') {
-            if (target === '[data-void-gallery] img.lazyload:not(.loaded):not(.error)') {
-                return items.filter((item) => !item.classes.has('loaded') && !item.classes.has('error'));
-            }
-            return { length: 0 };
-        }
-        if (target === document) {
-            return { on() { return this; } };
-        }
-
-        return {
-            addClass(name) {
-                target.classes.add(name);
-                return this;
-            },
-            attr(name, value) {
-                if (arguments.length === 1) {
-                    return target.getAttribute(name);
-                }
-                target.setAttribute(name, value);
-                return this;
-            },
-            closest(selector) {
-                return {
-                    length: selector === '[hidden]' && target.hiddenAncestor ? 1 : 0
-                };
-            },
-            parent() {
-                return {
-                    addClass(name) {
-                        target.parentClasses.add(name);
-                        return this;
-                    }
-                };
-            },
-        };
-    }
-    jQuery.each = (collection, callback) => collection.forEach((item, index) => callback(index, item));
-
     const runImmediately = (callback) => {
         callback();
         return 1;
@@ -109,13 +102,11 @@ function loadLazyload(items, isVisible) {
     };
     window.window = window;
     const context = {
-        $: jQuery,
         Image: FakePreloadImage,
         clearTimeout() {},
         console: { log() {} },
         document,
         escape,
-        jQuery,
         setTimeout: runImmediately,
         unescape,
         window
@@ -198,6 +189,31 @@ test('visible Gallery images keep viewport gating and default request priority',
     assert.deepEqual(fixture.preloadImages[0].operations, [
         'src:https://example.test/visible.jpg'
     ]);
+});
+
+test('concurrent Gallery preloads update only their own image and parent', () => {
+    const first = createItem({
+        'data-src': 'https://example.test/first.jpg',
+        loading: 'eager'
+    });
+    const second = createItem({
+        'data-src': 'https://example.test/second.jpg',
+        loading: 'eager'
+    });
+    const fixture = loadLazyload([first, second], () => false);
+
+    fixture.context.VOID_GalleryLazyload.callback();
+    assert.equal(fixture.preloadImages.length, 2);
+
+    fixture.preloadImages[0].onload();
+    assert.equal(first.getAttribute('src'), 'https://example.test/first.jpg');
+    assert.equal(second.getAttribute('src'), null);
+    assert.equal(first.parentClasses.has('loaded'), true);
+    assert.equal(second.parentClasses.has('loaded'), false);
+
+    fixture.preloadImages[1].onload();
+    assert.equal(second.getAttribute('src'), 'https://example.test/second.jpg');
+    assert.equal(second.parentClasses.has('loaded'), true);
 });
 
 test('Gallery lazy-load initialization retains only one scroll listener', () => {

@@ -292,5 +292,6 @@ test('friend card source includes the dark surface and two-line title contract',
     assert.match(styles, /&\.error::before \{\s*display: flex;/);
     assert.match(styles, /&\.loading \{\s*opacity: 0;/);
     assert.match(styles, /&\.loaded \{\s*opacity: 1;/);
-    assert.equal((lazyload.match(/\.parent\(\)\.addClass\('error'\)/g) || []).length, 1);
+    assert.equal((lazyload.match(/parentElement\.classList\.add\('error'\)/g) || []).length, 1);
+    assert.doesNotMatch(lazyload, /\.parent\(\)\.addClass\('error'\)/);
 });

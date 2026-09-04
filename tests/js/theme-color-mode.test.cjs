@@ -95,6 +95,9 @@ function loadThemeEnvironment(mode, prefersDark = false) {
         },
         querySelector(selector) {
             return selector === '#toggle-night button' ? control : null;
+        },
+        querySelectorAll() {
+            return [];
         }
     };
 
@@ -115,26 +118,6 @@ function loadThemeEnvironment(mode, prefersDark = false) {
         }
     });
 
-    function jQuery(target) {
-        const classList = target === 'body' ? body.classList : target && target.classList;
-        const api = {
-            addClass(name) {
-                if (classList) {
-                    classList.add(name);
-                }
-                return api;
-            },
-            removeClass(name) {
-                if (classList) {
-                    classList.remove(name);
-                }
-                return api;
-            },
-            on() { return api; }
-        };
-        return api;
-    }
-
     const window = {
         clearTimeout() {},
         matchMedia(query) {
@@ -148,7 +131,6 @@ function loadThemeEnvironment(mode, prefersDark = false) {
     window.window = window;
 
     const context = {
-        $: jQuery,
         VOIDConfig: {
             colorScheme: mode,
             fontStylesheets: {
@@ -157,7 +139,6 @@ function loadThemeEnvironment(mode, prefersDark = false) {
         },
         console,
         document,
-        jQuery,
         window
     };
 

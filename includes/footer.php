@@ -98,7 +98,7 @@ $setting = $GLOBALS['VOIDSetting'];
                             ?>">
                         </div>
                         <div class="buttons" id="loggin-buttons">
-                            <button class="btn btn-normal" type="button" onclick="$('#login-panel').removeClass('show');$('#setting-panel').removeClass('show')">关闭</button>
+                            <button class="btn btn-normal" type="button" onclick="document.getElementById('login-panel').classList.remove('show');document.getElementById('setting-panel').classList.remove('show')">关闭</button>
                             <button class="btn btn-normal" type="submit" onclick="VOID_Ui.rememberPos()">登录</button>
                             <span hidden id="wait" class="btn btn-normal">请稍等……</span>
                         </div>

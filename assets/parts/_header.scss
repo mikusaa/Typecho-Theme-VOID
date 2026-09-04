@@ -274,8 +274,11 @@ body:not(.theme-dark) header {
     left: 0;
     background: rgba(0, 0, 0, 0.92);
     z-index: 2;
-    display: flex;
-    display: none;
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s $animationTimingFunc, visibility 0s linear 0.2s;
     flex-direction: column;
     padding: 0 1rem;
     padding-bottom: 8rem;
@@ -328,5 +331,18 @@ body:not(.theme-dark) header {
                 line-height: 3;
             }
         }
+    }
+}
+
+header.opened + #nav-mobile {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #nav-mobile {
+        transition: none;
     }
 }

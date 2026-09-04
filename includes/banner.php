@@ -28,9 +28,9 @@ if($this->is('post') || $this->is('page')) {
         <div id="banner" class="<?php if($blur) echo 'blur'; ?>">
             <img src="<?php echo Utils::escapeHtml($banner); ?>" alt="" fetchpriority="high" decoding="async">
         </div>
-        <script>$('body>header').removeClass('force-dark').removeClass('no-banner');</script>
+        <script>(function(header){if(header){header.classList.remove('force-dark','no-banner');}}(document.querySelector('body>header')));</script>
     <?php else: ?>
-        <script>$('body>header').addClass('force-dark').addClass('no-banner');</script>
+        <script>(function(header){if(header){header.classList.add('force-dark','no-banner');}}(document.querySelector('body>header')));</script>
         <style>main>.lazy-wrap{min-height: 0;}</style>
     <?php endif; ?>
 
