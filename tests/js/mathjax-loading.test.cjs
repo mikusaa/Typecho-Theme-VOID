@@ -142,16 +142,9 @@ function element(tagName, ...children) {
 
 function loadEnvironment({ enabled = true } = {}) {
     const document = new FakeDocument();
+    document.readyState = 'loading';
+    document.addEventListener = () => {};
     const errors = [];
-    const jQuery = () => {
-        const api = {
-            on() { return api; },
-            ready() { return api; }
-        };
-        return api;
-    };
-    jQuery.each = () => {};
-    jQuery.trim = (value) => String(value).trim();
 
     const window = {
         cancelAnimationFrame() {},
@@ -163,7 +156,6 @@ function loadEnvironment({ enabled = true } = {}) {
     window.window = window;
 
     const context = {
-        $: jQuery,
         Promise,
         VOIDConfig: {
             enableMath: enabled,
@@ -174,7 +166,6 @@ function loadEnvironment({ enabled = true } = {}) {
             log() {}
         },
         document,
-        jQuery,
         window
     };
 

@@ -470,6 +470,7 @@ FakePhotoSwipeLightbox.instances = [];
 function loadVoid(options = {}) {
     const document = new FakeDocument(options.dialogMode || 'supported');
     const window = new FakeWindow(document, options.reducedMotion || false);
+    document.readyState = 'loading';
     const PhotoSwipeCore = options.photoSwipeCore === false
         ? undefined : (options.photoSwipeCore || function PhotoSwipe() {});
     const PhotoSwipeLightbox = options.photoSwipeLightbox === false
@@ -479,26 +480,15 @@ function loadVoid(options = {}) {
             return options.now();
         }
     } : Date;
-    const jQuery = () => {
-        const api = {
-            on() { return api; },
-            ready() { return api; }
-        };
-        return api;
-    };
-    jQuery.each = () => {};
-    jQuery.trim = (value) => String(value).trim();
     FakePhotoSwipeLightbox.instances = [];
     window.PhotoSwipe = PhotoSwipeCore;
     window.PhotoSwipeLightbox = PhotoSwipeLightbox;
 
     const context = {
-        $: jQuery,
         Date: ContextDate,
         Promise,
         console: { error() {}, log() {} },
         document,
-        jQuery,
         window
     };
     vm.runInNewContext(

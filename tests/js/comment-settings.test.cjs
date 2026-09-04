@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
 const commentStyles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_comments.scss'), 'utf8');
 const ajaxCommentStart = voidSource.indexOf('var AjaxComment = {');
-const ajaxCommentEnd = voidSource.indexOf('\n};\n\n(function ()', ajaxCommentStart);
+const ajaxCommentEnd = voidSource.indexOf('\n};\n\nfunction VOID_onReady', ajaxCommentStart);
 
 assert.notEqual(ajaxCommentStart, -1, 'AjaxComment source should exist');
 assert.notEqual(ajaxCommentEnd, -1, 'AjaxComment source should have a stable boundary');

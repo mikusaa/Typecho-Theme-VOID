@@ -173,6 +173,8 @@ function loadVoidEnvironment(options = {}) {
     };
     const document = {
         body: mainContainer,
+        readyState: 'loading',
+        addEventListener() {},
         getElementById(id) {
             return id === 'pjax-container' ? mainContainer : null;
         },

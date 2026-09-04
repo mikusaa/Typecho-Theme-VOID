@@ -3587,34 +3587,44 @@ var VOID = {
     alert: function (content, time) {
         var id = new Date().getTime();
         var message = document.createElement('div');
+        var messages;
+        var messageHeight;
         message.className = 'msg';
         message.id = 'msg' + id;
         message.textContent = content == null ? '' : String(content);
         document.body.insertBefore(message, document.body.firstChild);
-        $.each($('.msg'), function (i, item) {
-            if ($(item).attr('id') != 'msg' + id) {
-                $(item).css('top', $(item).offset().top - $(document).scrollTop() + $('.msg#msg' + id).outerHeight() + 20 + 'px');
+        messages = document.querySelectorAll('.msg');
+        messageHeight = message.offsetHeight;
+        for (var index = 0; index < messages.length; index++) {
+            if (messages[index] !== message) {
+                messages[index].style.top = messages[index].getBoundingClientRect().top
+                    + messageHeight + 20 + 'px';
             }
-        });
-        $('.msg#msg' + id).addClass('show');
+        }
+        message.classList.add('show');
         var t = time;
         if (typeof (t) != 'number') {
             t = 2500;
         }
         setTimeout(function () {
-            $('.msg#msg' + id).addClass('hide');
+            message.classList.add('hide');
             setTimeout(function () {
-                $('.msg#msg' + id).remove();
+                message.remove();
             }, 1000);
         }, t);
     },
 
     startSearch: function (item) {
-        var c = $(item).val();
-        $(item).val('');
-        $(item).blur();
+        item = typeof item === 'string' ? document.querySelector(item) : item;
+        if (!item) {
+            return;
+        }
+
+        var c = item.value;
+        item.value = '';
+        item.blur();
         if (!c || c == '') {
-            $(item).attr('placeholder', '你还没有输入任何信息');
+            item.setAttribute('placeholder', '你还没有输入任何信息');
             return;
         }
         var t = VOIDConfig.searchBase + encodeURIComponent(c);
@@ -3630,19 +3640,21 @@ var VOID = {
         }
     },
 
-    enterSearch: function (item) {
-        var event = window.event || arguments.callee.caller.arguments[0];
-        if (event.keyCode == 13) {
+    enterSearch: function (item, event) {
+        event = event || window.event;
+        if (event && (event.key === 'Enter' || event.keyCode == 13)) {
             VOID.startSearch(item);
         }
     }
 };
 
 var VOID_Vote = {
+    pendingItems: new WeakSet(),
+
     vote: function (item) {
-        var type = $(item).attr('data-type');
-        var id = $(item).attr('data-item-id');
-        var table = $(item).attr('data-table');
+        var type = item.getAttribute('data-type');
+        var id = item.getAttribute('data-item-id');
+        var table = item.getAttribute('data-table');
 
         var cookieName = 'void_vote_' + table + '_' + type;
         var voted = VOID_Util.getCookie(cookieName);
@@ -3650,13 +3662,13 @@ var VOID_Vote = {
 
         // 首先检查本地 cookie
         if (voted.indexOf(',' + id + ',') != -1) {
-            $(item).addClass('done');
+            item.classList.add('done');
             VOID.alert('您已经投过票了~');
             return;
         }
 
         // 当是评论投票时检查是否已经投过另一个选项
-        if ($(item).hasClass('comment-vote')) {
+        if (item.classList.contains('comment-vote')) {
             var type_2 = type == 'up' ? 'down' : 'up';
             if (VOID_Vote.checkVoted(type_2, id, table)) {
                 VOID.alert('暂不支持更改投票哦～');
@@ -3664,39 +3676,55 @@ var VOID_Vote = {
             }
         }
 
-        $.ajax({
-            url: VOIDConfig.votePath + table,
-            type: 'POST',
-            data: JSON.stringify({
+        if (VOID_Vote.pendingItems.has(item)) {
+            return;
+        }
+        VOID_Vote.pendingItems.add(item);
+
+        return window.fetch(VOIDConfig.votePath + table, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
                 'id': parseInt(id),
                 'type': type
-            }),
-            contentType: 'application/json; charset=utf-8',
-            dataType: 'json',
-            success: function (data) {
-                if (data.code >= 200 && data.code < 400) {
-                    $(item).addClass('done');
-                    voted += id + ',';
-                    VOID_Util.setCookie(cookieName, voted, 3600 * 24 * 90);
-                }
-                switch (data.code) {
-                    case 200:
-                        var prev = parseInt($(item).find('.value').text());
-                        $(item).find('.value').text(prev + 1);
-                        break;
-                    case 302:
-                        VOID.alert('您好像已经投过票了呢～');
-                        break;
-                    case 403:
-                        VOID.alert('暂不支持更改投票哦～');
-                        break;
-                    default:
-                        break;
-                }
-            },
-            error: function () {
-                VOID.alert('投票失败 o(╥﹏╥)o，请稍后重试');
+            })
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('Vote request failed');
             }
+            return response.json();
+        }).then(function (data) {
+            if (!data || typeof data.code !== 'number') {
+                throw new Error('Invalid vote response');
+            }
+            if (data.code >= 200 && data.code < 400) {
+                item.classList.add('done');
+                voted += id + ',';
+                VOID_Util.setCookie(cookieName, voted, 3600 * 24 * 90);
+            }
+            switch (data.code) {
+                case 200:
+                    var value = item.querySelector('.value');
+                    if (value) {
+                        value.textContent = parseInt(value.textContent) + 1;
+                    }
+                    break;
+                case 302:
+                    VOID.alert('您好像已经投过票了呢～');
+                    break;
+                case 403:
+                    VOID.alert('暂不支持更改投票哦～');
+                    break;
+                default:
+                    break;
+            }
+        }).catch(function () {
+            VOID.alert('投票失败 o(╥﹏╥)o，请稍后重试');
+        }).then(function () {
+            VOID_Vote.pendingItems.delete(item);
         });
     },
 
@@ -3709,38 +3737,44 @@ var VOID_Vote = {
 
     reload: function () {
         // 高亮已记录的
-        $.each($('.vote-button'), function (i, item) {
-            var type = $(item).attr('data-type');
-            var id = $(item).attr('data-item-id');
-            var table = $(item).attr('data-table');
+        var items = document.querySelectorAll('.vote-button');
+        for (var index = 0; index < items.length; index++) {
+            var item = items[index];
+            var type = item.getAttribute('data-type');
+            var id = item.getAttribute('data-item-id');
+            var table = item.getAttribute('data-table');
 
             if (VOID_Vote.checkVoted(type, id, table)) {
-                $(item).addClass('done');
+                item.classList.add('done');
             }
-        });
+        }
     },
 
     toggleFoldComment: function (coid, item) {
-        var sel = '#comment-' + String(coid);
-        $(sel).toggleClass('fold');
-        if ($(sel).hasClass('fold')) {
-            $(item).text('点击展开');
+        var comment = document.getElementById('comment-' + String(coid));
+        if (!comment) {
+            return;
+        }
+
+        comment.classList.toggle('fold');
+        if (comment.classList.contains('fold')) {
+            item.textContent = '点击展开';
         } else {
-            $(item).text('还是叠上吧');
+            item.textContent = '还是叠上吧';
         }
     },
 };
 
 var Share = {
     parseItem: function (item) {
-        item = $(item).parent();
+        item = item ? item.parentElement : null;
         return {
-            url: $(item).attr('data-url'),
-            title: $(item).attr('data-title'),
-            excerpt: $(item).attr('data-excerpt'),
-            img: $(item).attr('data-img'),
-            twitter: $(item).attr('data-twitter'),
-            weibo: $(item).attr('data-weibo'),
+            url: item ? item.getAttribute('data-url') : null,
+            title: item ? item.getAttribute('data-title') : null,
+            excerpt: item ? item.getAttribute('data-excerpt') : null,
+            img: item ? item.getAttribute('data-img') : null,
+            twitter: item ? item.getAttribute('data-twitter') : null,
+            weibo: item ? item.getAttribute('data-weibo') : null,
         };
     },
 
@@ -4815,27 +4849,31 @@ var AjaxComment = {
     }
 };
 
-(function () {
-    $(document).ready(function () {
-        if (VOIDConfig.PJAX) {
-            VOID.bindPjaxLifecycle();
-        }
-        VOID.init();
-    });
+function VOID_onReady(callback) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+    } else {
+        callback();
+    }
+}
 
-    window.setInterval(function () {
-        var times = new Date().getTime() - Date.parse(VOIDConfig.buildTime);
-        times = Math.floor(times / 1000); // convert total milliseconds into total seconds
-        var days = Math.floor(times / (60 * 60 * 24)); //separate days
-        times %= 60 * 60 * 24; //subtract entire days
-        var hours = Math.floor(times / (60 * 60)); //separate hours
-        times %= 60 * 60; //subtract entire hours
-        var minutes = Math.floor(times / 60); //separate minutes
-        times %= 60; //subtract entire minutes
-        var seconds = Math.floor(times / 1); // remainder is seconds
-        $('#uptime').html(days + ' 天 ' + hours + ' 小时 ' + minutes + ' 分 ' + seconds + ' 秒 ');
-    }, 1000);
-})();
+function updateVoidRuntime() {
+    var uptime = document.getElementById('uptime');
+    if (!uptime) {
+        return;
+    }
+
+    var times = new Date().getTime() - Date.parse(VOIDConfig.buildTime);
+    times = Math.floor(times / 1000); // convert total milliseconds into total seconds
+    var days = Math.floor(times / (60 * 60 * 24)); //separate days
+    times %= 60 * 60 * 24; //subtract entire days
+    var hours = Math.floor(times / (60 * 60)); //separate hours
+    times %= 60 * 60; //subtract entire hours
+    var minutes = Math.floor(times / 60); //separate minutes
+    times %= 60; //subtract entire minutes
+    var seconds = Math.floor(times / 1); // remainder is seconds
+    uptime.textContent = days + ' 天 ' + hours + ' 小时 ' + minutes + ' 分 ' + seconds + ' 秒 ';
+}
 
 // 复制到剪贴板（带 fallback）
 function copyToClipboard(text) {
@@ -4861,27 +4899,77 @@ function copyToClipboard(text) {
     }
 }
 
-var clipboardCopyIcon = '<svg aria-hidden="true" role="img" class="clipboard-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; user-select: none; vertical-align: text-bottom;"><path fill-rule="evenodd" d="M5.75 1a.75.75 0 00-.75.75v3c0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75v-3a.75.75 0 00-.75-.75h-4.5zm.75 3V2.5h3V4h-3zm-2.874-.467a.75.75 0 00-.752-1.298A1.75 1.75 0 002 3.75v9.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0014 13.25v-9.5a1.75 1.75 0 00-.874-1.515.75.75 0 10-.752 1.298.25.25 0 01.126.217v9.5a.25.25 0 01-.25.25h-8.5a.25.25 0 01-.25-.25v-9.5a.25.25 0 01.126-.217z"></path></svg>';
+function createClipboardButton() {
+    var namespace = 'http://www.w3.org/2000/svg';
+    var button = document.createElement('div');
+    var icon = document.createElementNS(namespace, 'svg');
+    var path = document.createElementNS(namespace, 'path');
 
-function loadClipboard() {
-    $('pre').each(function () {
-        if (!$(this).find('.clipboard').length) {
-            $(this).prepend('<div class="clipboard" title="复制代码">' + clipboardCopyIcon + '</div>');
-        }
-    });
+    button.className = 'clipboard';
+    button.setAttribute('title', '复制代码');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('class', 'clipboard-icon');
+    icon.setAttribute('viewBox', '0 0 16 16');
+    icon.setAttribute('width', '16');
+    icon.setAttribute('height', '16');
+    icon.setAttribute('fill', 'currentColor');
+    icon.setAttribute('style', 'display: inline-block; user-select: none; vertical-align: text-bottom;');
+    path.setAttribute('fill-rule', 'evenodd');
+    path.setAttribute('d', 'M5.75 1a.75.75 0 00-.75.75v3c0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75v-3a.75.75 0 00-.75-.75h-4.5zm.75 3V2.5h3V4h-3zm-2.874-.467a.75.75 0 00-.752-1.298A1.75 1.75 0 002 3.75v9.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0014 13.25v-9.5a1.75 1.75 0 00-.874-1.515.75.75 0 10-.752 1.298.25.25 0 01.126.217v9.5a.25.25 0 01-.25.25h-8.5a.25.25 0 01-.25-.25v-9.5a.25.25 0 01.126-.217z');
+    icon.appendChild(path);
+    button.appendChild(icon);
+    return button;
 }
 
-// 事件委托只绑定一次，PJAX 安全
-$(document).ready(function () {
-    loadClipboard();
+function loadClipboard() {
+    var blocks = document.querySelectorAll('pre');
+    for (var index = 0; index < blocks.length; index++) {
+        if (!blocks[index].querySelector('.clipboard')) {
+            blocks[index].insertBefore(createClipboardButton(), blocks[index].firstChild);
+        }
+    }
+}
 
-    $('body').on('click', '.clipboard', function () {
-        var btn = $(this);
-        var code = btn.closest('pre').find('code').text() || btn.closest('pre').text();
+var clipboardClickBound = false;
+
+function bindClipboard() {
+    if (clipboardClickBound || !document.body) {
+        return;
+    }
+
+    clipboardClickBound = true;
+    document.body.addEventListener('click', function (event) {
+        var target = event.target;
+        var button = target && typeof target.closest === 'function'
+            ? target.closest('.clipboard') : null;
+        if (!button || !document.body.contains(button)) {
+            return;
+        }
+
+        var block = button.closest('pre');
+        if (!block) {
+            return;
+        }
+        var codeNode = block.querySelector('code');
+        var code = codeNode && codeNode.textContent ? codeNode.textContent : block.textContent;
         copyToClipboard(code).then(function () {
             VOID.alert('复制成功');
         }).catch(function () {
             VOID.alert('复制失败');
         });
     });
-});
+}
+
+(function () {
+    VOID_onReady(function () {
+        if (VOIDConfig.PJAX) {
+            VOID.bindPjaxLifecycle();
+        }
+        VOID.init();
+        loadClipboard();
+        bindClipboard();
+    });
+
+    window.setInterval(updateVoidRuntime, 1000);
+})();

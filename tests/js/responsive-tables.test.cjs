@@ -205,18 +205,11 @@ function createTable(headers, rows, options = {}) {
 
 function loadContent() {
     const document = {
+        readyState: 'loading',
+        addEventListener() {},
         createElement() {},
         querySelectorAll() { return []; }
     };
-    const jQuery = () => {
-        const api = {
-            on() { return api; },
-            ready() { return api; }
-        };
-        return api;
-    };
-    jQuery.each = () => {};
-    jQuery.trim = (value) => String(value).trim();
 
     const window = {
         clearTimeout() {},
@@ -226,10 +219,8 @@ function loadContent() {
     window.window = window;
 
     const context = {
-        $: jQuery,
         console: { error() {}, log() {} },
         document,
-        jQuery,
         window
     };
 

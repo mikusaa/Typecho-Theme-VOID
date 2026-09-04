@@ -125,6 +125,8 @@ function createCard(name = 'Velas电波站') {
 function loadVoid(card, config, options = {}) {
     let animationFrames = [];
     const document = {
+        readyState: 'loading',
+        addEventListener() {},
         createElement(tagName) {
             return new FakeNode(tagName);
         },
@@ -132,16 +134,6 @@ function loadVoid(card, config, options = {}) {
             return selector === '.board-thumb' ? [card.thumb] : [];
         }
     };
-    const jQuery = () => {
-        const api = {
-            on() { return api; },
-            ready() { return api; }
-        };
-        return api;
-    };
-    jQuery.each = () => {};
-    jQuery.trim = (value) => String(value).trim();
-
     const window = {
         clearTimeout() {},
         matchMedia() {
@@ -156,11 +148,9 @@ function loadVoid(card, config, options = {}) {
     window.window = window;
 
     const context = {
-        $: jQuery,
         VOIDConfig: config,
         console: { error() {}, log() {} },
         document,
-        jQuery,
         window
     };
 

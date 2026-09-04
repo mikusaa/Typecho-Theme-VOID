@@ -252,6 +252,8 @@ class FakeDocument {
         this.galleryRoot = null;
     }
 
+    addEventListener() {}
+
     createDocumentFragment() {
         return new FakeElement('fragment', this);
     }
@@ -384,9 +386,9 @@ function createImageFigure(document, options = {}) {
 
 function loadGalleryEnvironment(root = null) {
     FakeResizeObserver.instances = [];
-    const handlers = new Map();
     const document = new FakeDocument();
     const window = new FakeWindow();
+    document.readyState = 'loading';
     document.galleryRoot = root;
     if (root) {
         document.body.appendChild(root);
@@ -397,32 +399,16 @@ function loadGalleryEnvironment(root = null) {
         setOwnerDocument(root);
         root.setAttribute('data-void-gallery', '');
     }
-    const jQuery = () => {
-        const api = {
-            on(name, listener) {
-                handlers.set(name, listener);
-                return api;
-            },
-            ready() {
-                return api;
-            }
-        };
-        return api;
-    };
-    jQuery.each = () => {};
-    jQuery.trim = (value) => String(value).trim();
     const context = {
-        $: jQuery,
         console: { error() {}, log() {} },
         document,
-        jQuery,
         window
     };
     vm.runInNewContext(
         fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8'),
         context
     );
-    return { context, document, handlers, window };
+    return { context, document, window };
 }
 
 function closeTo(actual, expected, precision = 0.000001) {
