@@ -89,9 +89,9 @@ gulp.task('pack:css:emotes', function () {
 
 // 页头依赖 JS 压缩混淆
 gulp.task('pack:js:header', function () {
-    return gulp.src(['./assets/libs/header/jquery/jquery.min.js', './assets/libs/header/**/*.js'])
+    return gulp.src('./assets/libs/header/**/*.js')
         .pipe(concat('bundle-header.js'))
-        .pipe(uglify())
+        .pipe(uglify({ output: { comments: /^!/ } }))
         .pipe(rev())
         .pipe(gulp.dest('./build/assets/'))
         .pipe(rev.manifest())
@@ -244,7 +244,7 @@ gulp.task('dev:css', function () {
 });
 
 gulp.task('dev:js:header', function () {
-    return gulp.src(['./assets/libs/header/jquery/jquery.min.js', './assets/libs/header/**/*.js'])
+    return gulp.src('./assets/libs/header/**/*.js')
         .pipe(concat('bundle-header.js'))
         .pipe(gulp.dest('./assets/'));
 });

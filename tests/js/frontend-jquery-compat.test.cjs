@@ -61,10 +61,13 @@ test('theme-owned frontend sources and templates contain no jQuery references', 
     }
 });
 
-test('3.x retains frontend jQuery while editor.js uses the Typecho admin boundary', () => {
+test('4.0 removes frontend jQuery while editor.js uses the Typecho admin boundary', () => {
     const editor = read('assets/editor.js');
     const functions = read('functions.php');
     const gulpfile = read('gulpfile.js');
+    const index = read('index.php');
+    const readme = read('README.md');
+    const changeLog = read('change-log.md');
     const templates = fs.readdirSync(path.join(root, 'includes'))
         .filter((name) => name.endsWith('.php'))
         .map((name) => read(`includes/${name}`))
@@ -73,11 +76,19 @@ test('3.x retains frontend jQuery while editor.js uses the Typecho admin boundar
 
     assert.equal(
         (gulpfile.match(/assets\/libs\/header\/jquery\/jquery\.min\.js/g) || []).length,
-        2,
-        'pack and dev header bundles should both retain jQuery during 3.x'
+        0,
+        'frontend build tasks must not retain the removed jQuery input'
     );
-    assert.equal(fs.existsSync(path.join(root, 'assets/libs/header/jquery/jquery.min.js')), true);
-    assert.match(read('assets/libs/header/jquery/jquery.min.js'), /\.jQuery=.*\.\$=/);
+    assert.equal(
+        (gulpfile.match(/gulp\.src\('\.\/assets\/libs\/header\/\*\*\/\*\.js'\)/g) || []).length,
+        2,
+        'pack and dev header bundles should only read the remaining header dependencies'
+    );
+    assert.equal(fs.existsSync(path.join(root, 'assets/libs/header/jquery/jquery.min.js')), false);
+    assert.match(index, /@version\s+4\.0\.0/);
+    assert.match(functions, /\$GLOBALS\['VOIDVersion'\] = '4\.0\.0';/);
+    assert.match(readme, /VOID 4\.0 起不再在前台打包或提供全局/);
+    assert.match(changeLog, /Version 4\.0\.0/);
 
     assert.match(functions, /factory\('admin\/write-post\.php'\)->bottom = array\('Utils', 'addButton'\)/);
     assert.match(functions, /factory\('admin\/write-page\.php'\)->bottom = array\('Utils', 'addButton'\)/);

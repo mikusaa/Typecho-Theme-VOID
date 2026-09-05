@@ -198,7 +198,7 @@
 
 <details><summary>页面空白</summary><br>
 
-* 首先检查是否有插件重复引入了 JQuery，若有，在插件设置页面关闭。
+* 从 VOID 4.0 升级后，请先检查自定义 `head`、`footer`、`pjaxreload` 或第三方插件是否仍依赖全局 `$` / `jQuery`；应迁移到原生 DOM API，或由使用方在依赖脚本之前自行加载 jQuery。
 * 另外，推荐使用 PHP 7.0 及以上版本搭配 MySQL 数据库。PHP 5.6 或者更低版本以及其它数据库可能出现未知问题（并且我不会去修复）。
 
 </details>
@@ -209,12 +209,12 @@
 
 某些版本由于改用幅度较大需要重启主题与插件，请参见对应版本的发布日志。
 
-### 3.x 前端脚本兼容说明
+### 4.0 前端脚本兼容说明
 
-VOID 3.x 仍在前台提供全局 `$` 和 `jQuery`，以便现有的自定义 `head`、`footer`、
-`pjaxreload` 脚本及第三方插件完成迁移。这两个全局接口已弃用，将在下一个
-兼容性版本移除；依赖它们的自定义代码应迁移到原生 DOM API，或在届时由使用方
-自行加载和管理 jQuery。
+VOID 4.0 起不再在前台打包或提供全局 `$` 和 `jQuery`。主题自身的前台交互已经使用
+原生 DOM、事件和 `fetch` API；从 3.x 升级前，应检查自定义 `head`、`footer`、
+`pjaxreload` 脚本及第三方插件。仍依赖 jQuery 的代码必须迁移，或由使用方在依赖脚本
+之前自行加载和管理 jQuery。
 
 `pjaxreload` 设置中的代码会在主内容 PJAX 完成后执行，当前原生事件可通过
 `event.detail.options` 读取请求选项：
@@ -239,9 +239,9 @@ document.addEventListener('pjax:complete', function (event) {
 });
 ```
 
-旧的 `$(document).on('pjax:complete', ...)` 写法在 3.x 期间仍能从
-`event.originalEvent.detail.options` 取得同一个原生事件，但不应再用于新代码，且不会跨越
-下一个兼容性版本保留。
+旧的 `$(document).on('pjax:complete', ...)` 写法在 VOID 4.0 中默认不再可用。站点若自行
+加载 jQuery，仍可从 `event.originalEvent.detail.options` 取得同一个原生事件，但主题不再
+提供或管理这项依赖。
 
 后台 `assets/editor.js` 只由 Typecho 的文章/页面编辑器钩子加载，继续使用 Typecho 管理端
 提供的 jQuery，不依赖 VOID 前台的 vendored jQuery。
@@ -295,7 +295,7 @@ gulp build
 
 ### 开源项目
 
-[JQuery](https://github.com/jquery/jquery) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [Fontsource](https://fontsource.org/) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
+[Masonry](https://masonry.desandro.com/) | [PrismJS](https://prismjs.com/index.html) | [MathJax](https://www.mathjax.org/) | [littlefoot](https://littlefoot.js.org/) | [yue.css](https://github.com/lepture/yue.css) | [tocbot](https://tscanlin.github.io/tocbot/) | [pangu.js](https://github.com/vinta/pangu.js) | [Fontsource](https://fontsource.org/) | [social](https://github.com/lepture/social) | [Headroom.js](http://wicky.nillia.ms/headroom.js/) | [hypher](https://github.com/bramstein/hypher)
 
 ### 其他
 

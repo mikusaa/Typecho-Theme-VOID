@@ -2,7 +2,13 @@
 
 **开发中 | Unreleased**
 
-* 调整：[3.x 前端兼容] 清理主题内部剩余的前台 jQuery 调用，ExSearch 跳转优先使用 DOM 元素并临时兼容旧 jQuery 对象；3.x 仍保留全局 `$` / `jQuery`，但该接口已弃用，将在下一个兼容性版本移除。
+**🧩 2026-09-05 Version 4.0.0**
+
+> **兼容性升级提醒：** VOID 4.0 不再在前台提供全局 `$` / `jQuery`。升级前请迁移依赖它们的自定义 `head`、`footer`、`pjaxreload` 和第三方插件脚本，或由使用方自行加载 jQuery。
+>
+> **缓存升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。
+
+* 兼容性变更：[前台 jQuery] 清理主题内部剩余调用后，从页头构建与发布包删除 vendored jQuery；ExSearch 跳转继续优先使用 DOM 元素并兼容旧 array-like 参数，后台编辑器仍使用 Typecho 管理端提供的 jQuery。
 * 重构：[PJAX] 将主题内部生命周期与自定义重载监听迁移到原生事件 API，保留单次 `CustomEvent`、容器隔离及旧版 jQuery 参数兼容。
 * 重构：[前台交互] 将提示、搜索、分享、投票、运行时间和代码复制按钮迁移到原生 DOM 与事件 API，投票改用 fetch 并保留既有 Cookie、防重复提交、状态码文案和失败提示。
 * 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并清理已停用的 ResizeSensor 依赖。

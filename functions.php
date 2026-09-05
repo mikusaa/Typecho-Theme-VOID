@@ -114,7 +114,7 @@ function themeInit($archive = null)
 }
 
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
-$GLOBALS['VOIDVersion'] = '3.6.2';
+$GLOBALS['VOIDVersion'] = '4.0.0';
 
 /**
  * 主题设置

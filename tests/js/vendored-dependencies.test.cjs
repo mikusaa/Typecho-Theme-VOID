@@ -38,6 +38,7 @@ function listFiles(directory) {
 
 test('vendored release files match the pinned official npm artifacts', () => {
     const expectedHashes = {
+        'assets/libs/header/masonry/masonry.min.js': '367d6afdfc741fb48d2d9310e47c3924b693459a74c882c0fc545ec5ed7d55d2',
         'assets/libs/littlefoot/LICENSE': '27dd58a18d0a0d12c035cb40badfb47805eb7f3053f33ce53c2186e9739ae9d2',
         'assets/libs/littlefoot/littlefoot.js': '7ee71129ae558229f1d4eb35ee16f60e0e58e401bee900a50b27727cd63f26f8',
         'assets/libs/mathjax/4.1.3/LICENSE': 'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30',
@@ -67,6 +68,7 @@ test('vendored release files match the pinned official npm artifacts', () => {
 
 test('vendored licenses are included in the distributable build', () => {
     const gulpfile = read('gulpfile.js');
+    const masonry = read('assets/libs/header/masonry/masonry.min.js');
 
     for (const licensePath of [
         './assets/libs/littlefoot/LICENSE',
@@ -76,6 +78,10 @@ test('vendored licenses are included in the distributable build', () => {
     ]) {
         assert.ok(gulpfile.includes(`'${licensePath}'`), licensePath);
     }
+
+    assert.match(masonry, /Masonry PACKAGED v4\.2\.2[\s\S]*MIT License[\s\S]*David DeSandro/);
+    assert.match(gulpfile, /pack:js:header[\s\S]*uglify\(\{ output: \{ comments: \/\^!\/ \} \}\)/);
+    assert.doesNotMatch(gulpfile, /assets\/libs\/header\/jquery/);
 });
 
 test('MathJax keeps the intentional minimal runtime file set', () => {
