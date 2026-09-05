@@ -98,7 +98,7 @@ $setting = $GLOBALS['VOIDSetting'];
                             ?>">
                         </div>
                         <div class="buttons" id="loggin-buttons">
-                            <button class="btn btn-normal" type="button" onclick="$('#login-panel').removeClass('show');$('#setting-panel').removeClass('show')">关闭</button>
+                            <button class="btn btn-normal" type="button" onclick="document.getElementById('login-panel').classList.remove('show');document.getElementById('setting-panel').classList.remove('show')">关闭</button>
                             <button class="btn btn-normal" type="submit" onclick="VOID_Ui.rememberPos()">登录</button>
                             <span hidden id="wait" class="btn btn-normal">请稍等……</span>
                         </div>
@@ -392,32 +392,56 @@ $setting = $GLOBALS['VOIDSetting'];
             migrateLegacyWorker(true);
         }());
         </script>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-6da030345d.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-a093d97aea.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-1bc901d91d.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-0f928b0af8.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
-            $(document).on('pjax:complete', function(event, xhr, status, options){
-                options = VOID.resolvePjaxOptions(arguments);
+            if (VOID.pjaxReloadHandler) {
+                document.removeEventListener('pjax:complete', VOID.pjaxReloadHandler);
+            }
+            VOID.pjaxReloadHandler = function(event){
+                var options = VOID.resolvePjaxOptions(arguments);
                 if (!VOID.isMainPjaxRequest(options)) {
                     return;
                 }
                 <?php echo $setting['pjaxreload']; ?>
-            })
+            };
+            document.addEventListener('pjax:complete', VOID.pjaxReloadHandler);
             <?php if(Utils::isPluginAvailable('ExSearch')): ?>
-            function ExSearchCall(item){
-                if (item && item.length) {
-                    $('.ins-close').click(); // 关闭搜索框
-                    let url = item.attr('data-url'); // 获取目标页面 URL
-                    if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
-                        window.VoidPjax.visit({
-                            url: url,
-                            container: '#pjax-container',
-                            fragment: '#pjax-container',
-                            timeout: 8000
-                        }); // 发起一次 PJAX 请求
-                    } else {
-                        window.open(url, '_self');
-                    }
+            function ExSearchCall(item, context){
+                var element = item && item.nodeType === 1 ? item : null;
+                if (!element && context && context.element && context.element.nodeType === 1) {
+                    element = context.element;
+                }
+                if (!element && item && item[0] && item[0].nodeType === 1) {
+                    element = item[0];
+                }
+                if (!element && item && item.el && item.el.nodeType === 1) {
+                    element = item.el;
+                }
+                if (!element) {
+                    return;
+                }
+
+                var closeButton = document.querySelector('.ins-close');
+                if (closeButton) {
+                    closeButton.click();
+                }
+
+                var url = element.getAttribute('data-url') || (context && context.url) || '';
+                if (!url) {
+                    return;
+                }
+
+                if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
+                    window.VoidPjax.visit({
+                        url: url,
+                        container: '#pjax-container',
+                        fragment: '#pjax-container',
+                        timeout: 8000
+                    });
+                } else {
+                    window.open(url, '_self');
                 }
             }
             <?php endif; ?>

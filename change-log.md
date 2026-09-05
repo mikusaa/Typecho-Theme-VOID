@@ -2,6 +2,19 @@
 
 **开发中 | Unreleased**
 
+**🧩 2026-09-05 Version 4.0.0**
+
+> **兼容性升级提醒：** VOID 4.0 不再在前台提供全局 `$` / `jQuery`。升级前请迁移依赖它们的自定义 `head`、`footer`、`pjaxreload` 和第三方插件脚本，或由使用方自行加载 jQuery。
+>
+> **缓存升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。
+
+* 兼容性变更：[前台 jQuery] 清理主题内部剩余调用后，从页头构建与发布包删除 vendored jQuery；ExSearch 跳转继续优先使用 DOM 元素并兼容旧 array-like 参数，后台编辑器仍使用 Typecho 管理端提供的 jQuery。
+* 重构：[PJAX] 将主题内部生命周期与自定义重载监听迁移到原生事件 API，保留单次 `CustomEvent`、容器隔离及旧版 jQuery 参数兼容。
+* 重构：[前台交互] 将提示、搜索、分享、投票、运行时间和代码复制按钮迁移到原生 DOM 与事件 API，投票改用 fetch 并保留既有 Cookie、防重复提交、状态码文案和失败提示。
+* 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并清理已停用的 ResizeSensor 依赖。
+* 重构：[评论交互] 将评论查询、回复与取消、hash 同步、线程展开收起、分页渲染以及评论提交迁移到原生 DOM、FormData、fetch 和 DOMParser，保持 URL-encoded 协议、PJAX 幂等、焦点恢复、滚动位置及防重复/陈旧写入。
+* 移除：[Feed] 移除主题内置的正文截断及后台选项，改由可选的 FeedEnhancer 1.1.0 或更高版本负责；旧主题设置不会自动迁移，未安装插件时恢复 Typecho 原生输出，需要接近旧版长度时可在插件中设置为 300 字。
+
 **🖼️ 2026-09-04 Version 3.6.2**
 
 > **升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。
