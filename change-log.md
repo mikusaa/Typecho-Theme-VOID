@@ -15,6 +15,7 @@
 * 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并清理已停用的 ResizeSensor 依赖。
 * 重构：[评论交互] 将评论查询、回复与取消、hash 同步、线程展开收起、分页渲染以及评论提交迁移到原生 DOM、FormData、fetch 和 DOMParser，保持 URL-encoded 协议、PJAX 幂等、焦点恢复、滚动位置及防重复/陈旧写入。
 * 移除：[Feed] 移除主题内置的正文截断及后台选项，改由可选的 FeedEnhancer 1.1.0 或更高版本负责；旧主题设置不会自动迁移，未安装插件时恢复 Typecho 原生输出，需要接近旧版长度时可在插件中设置为 300 字。
+* 调整：[工程] 统一 `make dev-build`、`make verify` 和 `make build`，开发运行单元不再写回源码目录；PHP 测试与语法检查自动发现目标，CI 验证 PR 和 PHP 7.0/8.5，并只从通过验证的同一提交制品发布 nightly。
 
 **🖼️ 2026-09-04 Version 3.6.2**
 
