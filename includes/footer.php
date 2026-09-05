@@ -392,7 +392,7 @@ $setting = $GLOBALS['VOIDSetting'];
             migrateLegacyWorker(true);
         }());
         </script>
-        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-1bc901d91d.js'); ?>"></script>
+        <script data-manual src="<?php Utils::indexTheme('/assets/bundle-4ac796cc8e.js'); ?>"></script>
         <script src="<?php Utils::indexTheme('/assets/VOID-0f928b0af8.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
