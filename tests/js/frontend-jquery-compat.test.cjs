@@ -68,6 +68,7 @@ test('4.0 removes frontend jQuery while editor.js uses the Typecho admin boundar
     const gulpfile = read('gulpfile.js');
     const index = read('index.php');
     const readme = read('README.md');
+    const upgradeGuide = read('docs/upgrade-4.0.md');
     const changeLog = read('change-log.md');
     const templates = fs.readdirSync(path.join(root, 'includes'))
         .filter((name) => name.endsWith('.php'))
@@ -88,7 +89,12 @@ test('4.0 removes frontend jQuery while editor.js uses the Typecho admin boundar
     assert.equal(fs.existsSync(path.join(root, 'assets/libs/header/jquery/jquery.min.js')), false);
     assert.match(index, /@version\s+4\.0\.0/);
     assert.match(functions, /\$GLOBALS\['VOIDVersion'\] = '4\.0\.0';/);
-    assert.match(readme, /VOID 4\.0 起不再在前台打包或提供全局/);
+    assert.match(
+        readme,
+        /\[VOID 4\.0 升级说明\]\(https:\/\/github\.com\/mikusaa\/Typecho-Theme-VOID\/blob\/master\/docs\/upgrade-4\.0\.md\)/
+    );
+    assert.doesNotMatch(readme, /VOID 4\.0 起不再在前台打包或提供全局/);
+    assert.match(upgradeGuide, /VOID 4\.0 起不再在前台打包或提供全局/);
     assert.match(changeLog, /Version 4\.0\.0/);
 
     assert.match(functions, /factory\('admin\/write-post\.php'\)->bottom = array\('Utils', 'addButton'\)/);
