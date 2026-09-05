@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 const sass = require('sass');
+const { readVoidModule, readVoidSource } = require('./helpers/void-source.cjs');
 
 class FakeClassList {
     constructor() {
@@ -492,7 +493,7 @@ function loadVoid(options = {}) {
         window
     };
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8'),
+        readVoidSource(),
         context
     );
     return { context, document, PhotoSwipeLightbox, window };
@@ -958,7 +959,7 @@ test('keyboard focus scrolls an off-screen strip item into view', () => {
 });
 
 test('theme external-link parsing excludes generated image links', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+    const source = readVoidModule('content');
     assert.match(source, /:not\(\.void-image-link\)/);
 });
 
@@ -978,11 +979,7 @@ test('ordinary image styles preserve declared display dimensions and stable aspe
 
 test('photo-set styles keep pair ratios, native strip scrolling, and responsive row heights', () => {
     const styles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_article.scss'), 'utf8');
-    const script = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
-    const photoSetsSource = script.slice(
-        script.indexOf('var VOID_PhotoSets'),
-        script.indexOf('var VOID_PhotoSwipe')
-    );
+    const photoSetsSource = readVoidModule('photo-sets');
 
     assert.match(styles, /gap: 8px;/);
     assert.match(styles, /--void-photo-gap: 6px;/);
@@ -1517,7 +1514,7 @@ test('reward dialog has independent scroll ownership and PJAX-safe teardown', ()
 
 test('PhotoSwipe 5.4.4 assets, license, build order, and adapter boundary are fixed', () => {
     const repositoryRoot = path.resolve(__dirname, '../..');
-    const runtimeSource = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.js'), 'utf8');
+    const runtimeSource = readVoidSource();
     const packageSource = fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8');
     const gulpSource = fs.readFileSync(path.join(repositoryRoot, 'gulpfile.js'), 'utf8');
     const viewerStyles = fs.readFileSync(

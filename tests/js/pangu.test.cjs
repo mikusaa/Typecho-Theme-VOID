@@ -3,15 +3,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
 const source = fs.readFileSync(
     path.resolve(__dirname, '../../assets/libs/pangu/pangu.js'),
     'utf8'
 );
-const themeSource = fs.readFileSync(
-    path.resolve(__dirname, '../../assets/VOID.js'),
-    'utf8'
-);
+const themeSource = readVoidModule('content');
 
 class FakeNode {
     constructor(nodeType, nodeName) {

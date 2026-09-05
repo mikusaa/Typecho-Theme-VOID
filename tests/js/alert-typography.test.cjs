@@ -1,12 +1,8 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
-const source = fs.readFileSync(
-    path.resolve(__dirname, '../../assets/VOID.js'),
-    'utf8'
-);
+const source = readVoidModule('content');
 
 test('hyphenation leaves Alert content and fallback markers untouched', () => {
     const start = source.indexOf('hyphenate: function ()');

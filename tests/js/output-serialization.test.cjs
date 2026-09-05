@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
 class FakeNode {
     constructor(tagName, text = '') {
@@ -101,8 +102,7 @@ class FakeNode {
 }
 
 function loadAlert() {
-    const source = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8')
-        .replace(/\r\n/g, '\n');
+    const source = readVoidModule('runtime');
     const start = source.indexOf('alert: function');
     const end = source.indexOf('\n    },\n\n    startSearch:', start);
     const body = new FakeNode('body');
@@ -138,8 +138,7 @@ function loadAlert() {
 }
 
 function loadStartSearch(pjax) {
-    const source = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8')
-        .replace(/\r\n/g, '\n');
+    const source = readVoidModule('runtime');
     const start = source.indexOf('startSearch: function');
     const end = source.indexOf('\n    },\n\n    enterSearch:', start);
     const input = new FakeNode('input');
@@ -179,10 +178,8 @@ function loadStartSearch(pjax) {
 }
 
 function loadShare(content) {
-    const source = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8')
-        .replace(/\r\n/g, '\n');
+    const source = readVoidModule('interactions');
     const start = source.indexOf('var Share = {');
-    const end = source.indexOf('\n};\n\nvar AjaxComment', start);
     const opened = [];
     const context = vm.createContext({
         URL,
@@ -194,9 +191,8 @@ function loadShare(content) {
     });
 
     assert.notEqual(start, -1, 'Share should exist');
-    assert.notEqual(end, -1, 'Share should have a stable boundary');
 
-    vm.runInContext(source.slice(start, end + '\n};'.length), context);
+    vm.runInContext(source.slice(start), context);
     const parent = new FakeNode('div');
     const item = new FakeNode('a');
     for (const [name, value] of Object.entries(content)) {
@@ -394,8 +390,7 @@ test('update checker builds remote release details with text and safe links', ()
 
 test('dynamic output sources no longer assign innerHTML', () => {
     const updateSource = fs.readFileSync(path.resolve(__dirname, '../../assets/check_update.js'), 'utf8');
-    const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8')
-        .replace(/\r\n/g, '\n');
+    const voidSource = readVoidModule('runtime');
     const alertStart = voidSource.indexOf('alert: function');
     const alertEnd = voidSource.indexOf('\n    startSearch:', alertStart);
 

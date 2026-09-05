@@ -2,7 +2,7 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 const firstPartyBrowserFiles = [
-    'assets/VOID.js',
+    'assets/js/void/**/*.js',
     'assets/VOIDCacheRule.js',
     'assets/check_update.js',
     'assets/editor.js',
@@ -39,7 +39,7 @@ module.exports = [
     },
     js.configs.recommended,
     {
-        files: ['eslint.config.cjs', 'gulpfile.js'],
+        files: ['eslint.config.cjs', 'gulpfile.js', 'scripts/**/*.cjs'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'commonjs',
@@ -72,6 +72,48 @@ module.exports = [
             }
         },
         rules: sharedRules
+    },
+    {
+        files: ['assets/js/void/**/*.js'],
+        languageOptions: {
+            globals: {
+                AjaxComment: 'writable',
+                NProgress: 'readonly',
+                PhotoSwipe: 'readonly',
+                PhotoSwipeLightbox: 'readonly',
+                Prism: 'readonly',
+                Promise: 'readonly',
+                Share: 'writable',
+                TOC: 'writable',
+                VOID: 'writable',
+                VOID_AnchorScroller: 'readonly',
+                VOID_CardCover: 'readonly',
+                VOIDConfig: 'readonly',
+                VOID_Content: 'writable',
+                VOID_ControllerPanel: 'readonly',
+                VOID_DialogScrollLock: 'writable',
+                VOID_Gallery: 'writable',
+                VOID_PhotoSets: 'writable',
+                VOID_PhotoSwipe: 'writable',
+                VOID_RewardDialog: 'writable',
+                VOID_Ui: 'readonly',
+                VOID_Util: 'readonly',
+                VOID_Vote: 'writable',
+                WeakSet: 'readonly',
+                littlefoot: 'readonly',
+                loadClipboard: 'readonly',
+                pangu: 'readonly',
+                tocbot: 'readonly'
+            }
+        },
+        rules: {
+            ...sharedRules,
+            'no-redeclare': ['error', { builtinGlobals: false }],
+            'no-unused-vars': ['error', {
+                caughtErrors: 'none',
+                varsIgnorePattern: '^(VOID_DialogScrollLock|VOID_RewardDialog)$'
+            }]
+        }
     },
     {
         files: ['assets/libs/emotes/emote-picker.js'],

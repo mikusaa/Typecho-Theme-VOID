@@ -1,12 +1,9 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
-const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
-const ajaxCommentStart = voidSource.indexOf('var AjaxComment = {');
-const ajaxCommentEnd = voidSource.indexOf('\n};\n\nfunction VOID_onReady', ajaxCommentStart);
+const ajaxCommentSource = readVoidModule('comments');
 
 class FakeFormData {
     constructor(form) {
@@ -128,7 +125,7 @@ function loadAjaxComment(options = {}) {
     };
 
     window.window = window;
-    vm.runInNewContext(voidSource.slice(ajaxCommentStart, ajaxCommentEnd + 3), context);
+    vm.runInNewContext(ajaxCommentSource, context);
     return { ajaxComment: context.AjaxComment, alerts, context };
 }
 

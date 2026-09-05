@@ -3,15 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
-const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+const ajaxCommentSource = readVoidModule('comments');
 const commentStyles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_comments.scss'), 'utf8');
-const ajaxCommentStart = voidSource.indexOf('var AjaxComment = {');
-const ajaxCommentEnd = voidSource.indexOf('\n};\n\nfunction VOID_onReady', ajaxCommentStart);
-const ajaxCommentSource = voidSource.slice(ajaxCommentStart, ajaxCommentEnd + 3);
-
-assert.notEqual(ajaxCommentStart, -1, 'AjaxComment source should exist');
-assert.notEqual(ajaxCommentEnd, -1, 'AjaxComment source should have a stable boundary');
 
 function loadAjaxComment(jQuery, document = {}, window = {}) {
     window.window = window;
@@ -26,10 +21,7 @@ function loadAjaxComment(jQuery, document = {}, window = {}) {
         VOID_AnchorScroller: window.VOID_AnchorScroller
     };
 
-    vm.runInNewContext(
-        voidSource.slice(ajaxCommentStart, ajaxCommentEnd + 3),
-        context
-    );
+    vm.runInNewContext(ajaxCommentSource, context);
     return context.AjaxComment;
 }
 
@@ -500,7 +492,7 @@ test('comment thread spacing and reduced-motion entry remain stable', () => {
         commentStyles,
         /&\.is-thread-footer-collapsed\s*\{[\s\S]*?padding-bottom:\s*0\.5rem;/
     );
-    assert.doesNotMatch(voidSource, /addClass\('is-collapsed'\)/);
+    assert.doesNotMatch(ajaxCommentSource, /addClass\('is-collapsed'\)/);
     assert.doesNotMatch(commentStyles, /&\.is-collapsed\s*\{/);
     assert.doesNotMatch(commentStyles, /padding-bottom:\s*1\.8rem;/);
     assert.match(commentStyles, /html\.void-anchor-scrolling[\s\S]*?overflow-anchor:\s*none;/);

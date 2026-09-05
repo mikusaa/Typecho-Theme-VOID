@@ -4,9 +4,9 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidSource } = require('./helpers/void-source.cjs');
 
 const HEADER_PATH = path.resolve(__dirname, '../../assets/header.js');
-const VOID_PATH = path.resolve(__dirname, '../../assets/VOID.js');
 
 function controllerSource() {
     const source = fs.readFileSync(HEADER_PATH, 'utf8');
@@ -192,7 +192,7 @@ test('mobile and hidden footer states reset the desktop overlap', () => {
 });
 
 test('VOID lifecycle initializes and refreshes the controller panel', () => {
-    const source = fs.readFileSync(VOID_PATH, 'utf8');
+    const source = readVoidSource();
 
     assert.match(source, /VOID_Content\.parseTOC\(\);\s*if \(typeof VOID_ControllerPanel[^}]*VOID_ControllerPanel\.init\(\);/);
     assert.match(source, /VOID_Content\.parseTOC\(\);\s*if \(typeof VOID_ControllerPanel[^}]*VOID_ControllerPanel\.refresh\(\);/);

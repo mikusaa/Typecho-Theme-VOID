@@ -4,6 +4,7 @@ build/*
 build.zip
 assets/bundle*.js
 assets/bundle*.css
+assets/VOID.js
 assets/VOID*.css
 assets/VOID*.css.map
 .DS_Store

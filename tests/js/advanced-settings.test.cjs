@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const { readVoidSource } = require('./helpers/void-source.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '../..');
 
@@ -45,7 +46,7 @@ test('runtime sources no longer contain the blurred placeholder contract', () =>
 test('native lazy loading no longer depends on theme visibility JavaScript', () => {
     const headTemplate = fs.readFileSync(path.join(repositoryRoot, 'includes/head.php'), 'utf8');
     const headerScript = fs.readFileSync(path.join(repositoryRoot, 'assets/header.js'), 'utf8');
-    const contentScript = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.js'), 'utf8');
+    const contentScript = readVoidSource();
     const styles = fs.readFileSync(path.join(repositoryRoot, 'assets/VOID.scss'), 'utf8');
 
     for (const source of [headTemplate, headerScript, contentScript, styles]) {

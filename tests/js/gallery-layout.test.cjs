@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule, readVoidSource } = require('./helpers/void-source.cjs');
 
 class FakeClassList {
     constructor() {
@@ -405,7 +406,7 @@ function loadGalleryEnvironment(root = null) {
         window
     };
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8'),
+        readVoidSource(),
         context
     );
     return { context, document, window };
@@ -967,14 +968,11 @@ test('the first gallery image is promoted only when no banner is present', () =>
 });
 
 test('gallery sources use the current image contract without Fancybox fallbacks', () => {
-    const script = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+    const script = readVoidSource();
     const stylesheet = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.scss'), 'utf8');
     const style = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_gallery.scss'), 'utf8');
     const template = fs.readFileSync(path.resolve(__dirname, '../../Gallery.php'), 'utf8');
-    const gallerySource = script.slice(
-        script.indexOf('var VOID_Gallery'),
-        script.indexOf('var VOID_PhotoSwipe')
-    );
+    const gallerySource = readVoidModule('gallery');
 
     assert.match(gallerySource, /VOID_PhotoSets\.resolveDimensions\(figure, image\)/);
     assert.match(gallerySource, /\[data-void-photo-set\]/);

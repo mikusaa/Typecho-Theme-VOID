@@ -10,6 +10,7 @@ var del = require('del');
 var path = require('path');
 var Transform = require('stream').Transform;
 var finished = require('stream/promises').finished;
+var voidJsSources = require('./scripts/void-sources.cjs');
 
 var prefixerOptions = {
     overrideBrowserslist: ['last 2 versions']
@@ -119,10 +120,20 @@ gulp.task('pack:js:emotes', function () {
         .pipe(gulp.dest('./temp/rev/js_emotes'));
 });
 
-// 主 JS 压缩混淆
+// VOID 前台源码按权威顺序合并、压缩混淆
+gulp.task('pack:js:void', function () {
+    return gulp.src(voidJsSources)
+        .pipe(concat('VOID.js'))
+        .pipe(uglify())
+        .pipe(rev())
+        .pipe(gulp.dest('./build/assets/'))
+        .pipe(rev.manifest())
+        .pipe(gulp.dest('temp/rev/js_void'));
+});
+
+// 其他独立 JS 压缩混淆
 gulp.task('pack:js:main', function () {
     return gulp.src([
-        './assets/VOID.js',
         './assets/editor.js',
         './assets/header.js',
         './assets/check_update.js'])
@@ -230,6 +241,7 @@ gulp.task('build', gulp.series('clean', gulp.parallel(
     'pack:css:admin',
     'pack:css:emotes',
     'pack:css:dep',
+    'pack:js:void',
     'pack:js:main',
     'pack:js:header',
     'pack:js:emotes',
@@ -255,7 +267,13 @@ gulp.task('dev:js:dep', function () {
         .pipe(gulp.dest('./assets/'));
 });
 
-gulp.task('dev', gulp.parallel('dev:css', 'dev:js:header', 'dev:js:dep'));
+gulp.task('dev:js:void', function () {
+    return gulp.src(voidJsSources)
+        .pipe(concat('VOID.js'))
+        .pipe(gulp.dest('./assets/'));
+});
+
+gulp.task('dev', gulp.parallel('dev:css', 'dev:js:header', 'dev:js:dep', 'dev:js:void'));
 
 // 开发过程，监视 SCSS
 gulp.task('sass', function () {

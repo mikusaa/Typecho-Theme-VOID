@@ -6,11 +6,12 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidSource } = require('./helpers/void-source.cjs');
 
 const editorSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor.js'), 'utf8');
 const editorAdminCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor-admin.css'), 'utf8');
 const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
-const mainSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+const mainSource = readVoidSource();
 const indexCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_index.scss'), 'utf8');
 const functionsSource = fs.readFileSync(path.resolve(__dirname, '../../functions.php'), 'utf8');
 const utilsSource = fs.readFileSync(path.resolve(__dirname, '../../libs/Utils.php'), 'utf8');

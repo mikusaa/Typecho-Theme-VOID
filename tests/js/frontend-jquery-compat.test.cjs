@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { voidSourcePaths } = require('./helpers/void-source.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const jQueryReference = /\$\s*\(|\$\s*\.|\bjQuery\b/;
@@ -37,7 +38,7 @@ function createSearchItem(url) {
 
 test('theme-owned frontend sources and templates contain no jQuery references', () => {
     const frontendSources = [
-        'assets/VOID.js',
+        ...voidSourcePaths,
         'assets/VOIDCacheRule.js',
         'assets/header.js',
         'assets/libs/emotes/emote-picker.js',

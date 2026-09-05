@@ -3,11 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
-const themeSource = fs.readFileSync(
-    path.resolve(__dirname, '../../assets/VOID.js'),
-    'utf8'
-).replace(/\r\n/g, '\n');
+const themeSource = readVoidModule('content');
 const hyphenSource = fs.readFileSync(
     path.resolve(__dirname, '../../assets/libs/hyphen/hyphen.js'),
     'utf8'
@@ -163,7 +161,6 @@ class FakeDocument {
 
 function loadContent(document, overrides = {}) {
     const start = themeSource.indexOf('var VOID_Content = {');
-    const end = themeSource.indexOf('\n};\n\nvar VOID_DialogScrollLock', start);
     const window = overrides.window || {};
     const context = {
         Prism: overrides.Prism,
@@ -179,8 +176,7 @@ function loadContent(document, overrides = {}) {
     window.window = window;
 
     assert.notEqual(start, -1, 'VOID_Content should exist');
-    assert.notEqual(end, -1, 'VOID_Content should have a stable boundary');
-    vm.runInNewContext(themeSource.slice(start, end + '\n};'.length), context);
+    vm.runInNewContext(themeSource.slice(start), context);
     return { content: context.VOID_Content, window };
 }
 
@@ -210,7 +206,7 @@ test('stage 2A content boundaries contain no jQuery calls', () => {
         themeSource.slice(themeSource.indexOf('parseDetails: function'), themeSource.indexOf('normalizeTableLabel: function')),
         themeSource.slice(themeSource.indexOf('parseUrl: function'), themeSource.indexOf('isPanguSpaceElement: function')),
         themeSource.slice(themeSource.indexOf('cleanupLittlefootPanguSpacing: function'), themeSource.indexOf('prepareLittlefootMobileCompat: function')),
-        themeSource.slice(themeSource.indexOf('hyphenate: function'), themeSource.indexOf('\n};\n\nvar VOID_DialogScrollLock'))
+        themeSource.slice(themeSource.indexOf('hyphenate: function'))
     ];
     const jQueryReference = /\$\s*\(|\$\s*\.|\bjQuery\b/;
 

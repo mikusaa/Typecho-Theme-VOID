@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule, readVoidSource } = require('./helpers/void-source.cjs');
 
 class FakeEventTarget {
     constructor(parentNode = null) {
@@ -251,7 +252,7 @@ function loadVoidEnvironment(options = {}) {
     };
 
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8'),
+        readVoidSource(),
         context
     );
 
@@ -792,7 +793,7 @@ test('footer pjaxreload filters native and legacy comment replacements', () => {
 });
 
 test('theme-owned PJAX consumers use native event listeners', () => {
-    const voidSource = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8');
+    const voidSource = readVoidModule('runtime');
     const footer = fs.readFileSync(path.resolve(__dirname, '../../includes/footer.php'), 'utf8');
     const lifecycleStart = voidSource.indexOf('    bindPjaxLifecycle: function () {');
     const lifecycleEnd = voidSource.indexOf('    // 初始化单页应用', lifecycleStart);

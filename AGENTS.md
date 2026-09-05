@@ -113,6 +113,8 @@ git log --oneline -5
 
 - 除非明确的架构决定要求改变，否则继续采用无框架且兼容 jQuery 的架构。
 - 使用当前运行时代码和 Gulp 压缩链支持的语法。
+- `assets/js/void/` 是前台主脚本的受维护源码；文件顺序以
+  `scripts/void-sources.cjs` 为唯一事实来源。`assets/VOID.js` 仅由开发任务生成。
 - 每个 DOM 初始化器都必须支持首次加载，以及 PJAX 替换后的重建。
 - 重复初始化不得重复创建 DOM、监听器、观察器、定时器、请求或全局状态。
 - 对可替换 DOM 优先使用事件委托。需要销毁时，应为处理程序添加命名空间，
@@ -148,6 +150,7 @@ git log --oneline -5
 ```text
 assets/VOID.css
 assets/VOID.css.map
+assets/VOID.js
 assets/bundle*.js
 assets/bundle*.css
 build/

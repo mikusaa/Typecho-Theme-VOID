@@ -1,11 +1,11 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readVoidModule } = require('./helpers/void-source.cjs');
 
-const source = fs.readFileSync(path.resolve(__dirname, '../../assets/VOID.js'), 'utf8')
-    .replace(/\r\n/g, '\n');
+const bootstrapSource = readVoidModule('bootstrap');
+const interactionsSource = readVoidModule('interactions');
+const runtimeSource = readVoidModule('runtime');
 
 class FakeClassList {
     constructor(element) {
@@ -165,8 +165,8 @@ function createVoteButton({ id = '42', table = 'content', type = 'up', comment =
 }
 
 function loadVote(options = {}) {
-    const start = source.indexOf('var VOID_Vote = {');
-    const end = source.indexOf('\n\nvar Share = {', start);
+    const start = interactionsSource.indexOf('var VOID_Vote = {');
+    const end = interactionsSource.indexOf('\n\nvar Share = {', start);
     const alerts = [];
     const cookieWrites = [];
     const cookies = new Map(Object.entries(options.cookies || {}));
@@ -213,7 +213,7 @@ function loadVote(options = {}) {
 
     assert.notEqual(start, -1);
     assert.notEqual(end, -1);
-    vm.runInContext(source.slice(start, end), context);
+    vm.runInContext(interactionsSource.slice(start, end), context);
     return {
         alerts,
         cookieWrites,
@@ -224,7 +224,6 @@ function loadVote(options = {}) {
 }
 
 function createBottomEnvironment(options = {}) {
-    const start = source.indexOf('function VOID_onReady');
     const body = new FakeElement('body');
     const pre = new FakeElement('pre');
     const code = new FakeElement('code', 'const answer = 42;');
@@ -312,7 +311,7 @@ function createBottomEnvironment(options = {}) {
         navigator,
         window
     });
-    vm.runInContext(source.slice(start), context);
+    vm.runInContext(bootstrapSource, context);
 
     return {
         alerts,
@@ -330,14 +329,12 @@ function createBottomEnvironment(options = {}) {
 }
 
 test('stage 2B interaction boundaries contain no jQuery calls', () => {
-    const alertStart = source.indexOf('    alert: function');
-    const commentStart = source.indexOf('var AjaxComment = {', alertStart);
-    const readyStart = source.indexOf('function VOID_onReady');
     const jQueryReference = /\$\s*\(|\$\s*\.|\bjQuery\b/;
 
-    assert.doesNotMatch(source.slice(alertStart, commentStart), jQueryReference);
-    assert.doesNotMatch(source.slice(readyStart), jQueryReference);
-    assert.match(source.slice(alertStart, commentStart), /window\.fetch\(/);
+    assert.doesNotMatch(runtimeSource, jQueryReference);
+    assert.doesNotMatch(interactionsSource, jQueryReference);
+    assert.doesNotMatch(bootstrapSource, jQueryReference);
+    assert.match(interactionsSource, /window\.fetch\(/);
 });
 
 test('vote 200 keeps the JSON request, cookie lifetime, count, and duplicate guard', async () => {
