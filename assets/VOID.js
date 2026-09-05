@@ -702,11 +702,13 @@ var VOID_Content = {
         }
 
         var footnoteAnchorPattern = /(fn|footnote|note)[:\-_\d]/i;
-        $.each($('a[href*="#"]'), function (index, item) {
+        var footnoteLinks = document.querySelectorAll('a[href*="#"]');
+        for (var linkIndex = 0; linkIndex < footnoteLinks.length; linkIndex++) {
+            var item = footnoteLinks[linkIndex];
             var hrefAttr = item.getAttribute('href') || '';
             var relAttr = item.getAttribute('rel') || '';
             if (!(hrefAttr + relAttr).match(footnoteAnchorPattern)) {
-                return;
+                continue;
             }
 
             item.classList.add('no-pangu-spacing');
@@ -716,11 +718,12 @@ var VOID_Content = {
                     supNode.classList.add('no-pangu-spacing');
                 }
             }
-        });
+        }
 
-        $.each($('p'), function (index, item) {
-            pangu.spacingNode(item);
-        });
+        var paragraphs = document.querySelectorAll('p');
+        for (var paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex++) {
+            pangu.spacingNode(paragraphs[paragraphIndex]);
+        }
     },
 
     getMathContainer: function () {
@@ -3617,7 +3620,7 @@ var VOID = {
     },
 
     endPjax: function () {
-        if ($('.TOC').length < 1) {
+        if (!document.querySelector('.TOC')) {
             TOC.close();
         }
     },

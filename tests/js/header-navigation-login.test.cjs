@@ -494,17 +494,14 @@ test('TOC, click containment, archive toggles, and global listeners use native s
     assert.equal(event.stopped, true);
 });
 
-test('stage 1 keeps jQuery outside the migrated header and simple template boundaries', () => {
+test('stage 5 keeps jQuery outside theme-owned frontend runtime boundaries', () => {
     const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
     const bannerTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/banner.php'), 'utf8');
     const footerTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/footer.php'), 'utf8');
     const headerStyles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_header.scss'), 'utf8');
     const gulpfile = fs.readFileSync(path.resolve(__dirname, '../../gulpfile.js'), 'utf8');
-    const pjaxStart = footerTemplate.indexOf("        <?php if($setting['pjax']): ?>");
-    const migratedFooter = footerTemplate.slice(0, pjaxStart);
     const jQueryReference = /\$\s*\(|\$\s*\.|\bjQuery\b/;
 
-    assert.ok(pjaxStart > -1);
     assert.doesNotMatch(headerSource, jQueryReference);
     assert.doesNotMatch(headerSource, /\bResizeSensor\b/);
     assert.match(headerSource, /new Masonry\(this\.container,/);
@@ -513,8 +510,7 @@ test('stage 1 keeps jQuery outside the migrated header and simple template bound
     assert.match(gulpfile, /assets\/libs\/header\/jquery\/jquery\.min\.js/);
     assert.equal(fs.existsSync(path.resolve(__dirname, '../../assets/libs/header/masonry/masonry.min.js')), true);
     assert.doesNotMatch(bannerTemplate, jQueryReference);
-    assert.doesNotMatch(migratedFooter, jQueryReference);
-    assert.match(footerTemplate.slice(pjaxStart), jQueryReference);
+    assert.doesNotMatch(footerTemplate, jQueryReference);
     assert.match(headerStyles, /transition: opacity 0\.2s[^;]+visibility 0s linear 0\.2s/);
     assert.match(headerStyles, /#nav-mobile\{[\s\S]*?display: block;/);
     assert.match(headerStyles, /header\.opened \+ #nav-mobile/);

@@ -408,20 +408,40 @@ $setting = $GLOBALS['VOIDSetting'];
             };
             document.addEventListener('pjax:complete', VOID.pjaxReloadHandler);
             <?php if(Utils::isPluginAvailable('ExSearch')): ?>
-            function ExSearchCall(item){
-                if (item && item.length) {
-                    $('.ins-close').click(); // 关闭搜索框
-                    let url = item.attr('data-url'); // 获取目标页面 URL
-                    if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
-                        window.VoidPjax.visit({
-                            url: url,
-                            container: '#pjax-container',
-                            fragment: '#pjax-container',
-                            timeout: 8000
-                        }); // 发起一次 PJAX 请求
-                    } else {
-                        window.open(url, '_self');
-                    }
+            function ExSearchCall(item, context){
+                var element = item && item.nodeType === 1 ? item : null;
+                if (!element && context && context.element && context.element.nodeType === 1) {
+                    element = context.element;
+                }
+                if (!element && item && item[0] && item[0].nodeType === 1) {
+                    element = item[0];
+                }
+                if (!element && item && item.el && item.el.nodeType === 1) {
+                    element = item.el;
+                }
+                if (!element) {
+                    return;
+                }
+
+                var closeButton = document.querySelector('.ins-close');
+                if (closeButton) {
+                    closeButton.click();
+                }
+
+                var url = element.getAttribute('data-url') || (context && context.url) || '';
+                if (!url) {
+                    return;
+                }
+
+                if (window.VoidPjax && typeof window.VoidPjax.visit === 'function') {
+                    window.VoidPjax.visit({
+                        url: url,
+                        container: '#pjax-container',
+                        fragment: '#pjax-container',
+                        timeout: 8000
+                    });
+                } else {
+                    window.open(url, '_self');
                 }
             }
             <?php endif; ?>

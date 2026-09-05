@@ -172,6 +172,7 @@ function loadContent(document, overrides = {}) {
         VOID_Ui: overrides.VOID_Ui,
         console: { error() {}, log() {} },
         document,
+        pangu: overrides.pangu,
         tocbot: overrides.tocbot,
         window
     };
@@ -468,4 +469,35 @@ test('content hyphenation skips alerts, fallback markers, and TeX before using H
     assert.equal(hyphenated.length, 1);
     assert.equal(hyphenated[0].element, prose);
     assert.equal(hyphenated[0].language, 'en-us');
+});
+
+test('pangu marks footnote anchors and spaces paragraphs without jQuery', () => {
+    const document = new FakeDocument();
+    const footnoteLink = document.createElement('a');
+    const regularLink = document.createElement('a');
+    const footnoteSup = document.createElement('sup');
+    const firstParagraph = document.createElement('p');
+    const secondParagraph = document.createElement('p');
+    const spaced = [];
+
+    footnoteLink.setAttribute('href', '#fn:1');
+    footnoteLink.closestMatches.set('sup', footnoteSup);
+    regularLink.setAttribute('href', '#section');
+    document.setQuery('a[href*="#"]', [footnoteLink, regularLink]);
+    document.setQuery('p', [firstParagraph, secondParagraph]);
+
+    const { content } = loadContent(document, {
+        pangu: {
+            spacingNode(element) {
+                spaced.push(element);
+            }
+        },
+        window: {}
+    });
+    content.pangu();
+
+    assert.equal(footnoteLink.classList.contains('no-pangu-spacing'), true);
+    assert.equal(footnoteSup.classList.contains('no-pangu-spacing'), true);
+    assert.equal(regularLink.classList.contains('no-pangu-spacing'), false);
+    assert.deepEqual(spaced, [firstParagraph, secondParagraph]);
 });

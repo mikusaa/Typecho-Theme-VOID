@@ -209,6 +209,43 @@
 
 某些版本由于改用幅度较大需要重启主题与插件，请参见对应版本的发布日志。
 
+### 3.x 前端脚本兼容说明
+
+VOID 3.x 仍在前台提供全局 `$` 和 `jQuery`，以便现有的自定义 `head`、`footer`、
+`pjaxreload` 脚本及第三方插件完成迁移。这两个全局接口已弃用，将在下一个
+兼容性版本移除；依赖它们的自定义代码应迁移到原生 DOM API，或在届时由使用方
+自行加载和管理 jQuery。
+
+`pjaxreload` 设置中的代码会在主内容 PJAX 完成后执行，当前原生事件可通过
+`event.detail.options` 读取请求选项：
+
+```javascript
+var options = event.detail && event.detail.options;
+if (options && options.container === '#pjax-container') {
+    // 重建自定义前台组件。
+}
+```
+
+在自定义 `head` 或 `footer` 中直接监听生命周期时，使用原生事件：
+
+```javascript
+document.addEventListener('pjax:complete', function (event) {
+    var options = event.detail && event.detail.options;
+    if (!options || options.container !== '#pjax-container') {
+        return;
+    }
+
+    // 重建自定义前台组件。
+});
+```
+
+旧的 `$(document).on('pjax:complete', ...)` 写法在 3.x 期间仍能从
+`event.originalEvent.detail.options` 取得同一个原生事件，但不应再用于新代码，且不会跨越
+下一个兼容性版本保留。
+
+后台 `assets/editor.js` 只由 Typecho 的文章/页面编辑器钩子加载，继续使用 Typecho 管理端
+提供的 jQuery，不依赖 VOID 前台的 vendored jQuery。
+
 ## 开发与自定义
 
 **首先注意：我不保证提供任何自定义修改相关的指导与帮助。You are on your own.**
