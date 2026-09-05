@@ -3856,13 +3856,16 @@ var AjaxComment = {
     threadPagerWindow: 5,
     threadFocusPendingId: '',
     antiSpamCleanup: null,
+    pagerHandler: null,
+    hashChangeHandler: null,
 
     isCommentPjaxRequest: function (options) {
         return !!(options && options.container === '#comments');
     },
 
     getCommentsOrder: function () {
-        var order = String($('#comments').attr('data-comments-order') || '').toUpperCase();
+        var comments = document.querySelector('#comments');
+        var order = comments ? String(comments.getAttribute('data-comments-order') || '').toUpperCase() : '';
 
         return order === 'ASC' ? 'ASC' : 'DESC';
     },
@@ -3872,27 +3875,31 @@ var AjaxComment = {
             ? '#comments .pager .next'
             : '#comments .pager .prev';
 
-        return $(pagerSelector).length === 0;
+        return !document.querySelector(pagerSelector);
     },
 
-    insertNewestComment: function ($list, $comment) {
-        var $footer;
+    insertNewestComment: function (list, comment) {
+        var footer;
 
-        if (AjaxComment.getCommentsOrder() === 'DESC') {
-            $list.prepend($comment);
+        if (!list || !comment) {
             return;
         }
 
-        $footer = $list.children('.comment-thread-footer').first();
-        if ($footer.length) {
-            $footer.before($comment);
+        if (AjaxComment.getCommentsOrder() === 'DESC') {
+            list.insertBefore(comment, list.firstChild);
+            return;
+        }
+
+        footer = AjaxComment.getDirectElement(list, '.comment-thread-footer');
+        if (footer) {
+            list.insertBefore(comment, footer);
         } else {
-            $list.append($comment);
+            list.appendChild(comment);
         }
     },
 
-    getCommentDepth: function ($comment) {
-        var depth = parseInt($comment.attr('data-comment-depth'), 10);
+    getCommentDepth: function (comment) {
+        var depth = comment ? parseInt(comment.getAttribute('data-comment-depth'), 10) : 0;
 
         return isNaN(depth) ? 0 : depth;
     },
@@ -3958,6 +3965,60 @@ var AjaxComment = {
         return AjaxComment.getDirectChild(root, node.parentNode);
     },
 
+    getDirectElement: function (root, selector) {
+        var child = root ? root.firstElementChild : null;
+
+        while (child) {
+            if (child.matches(selector)) {
+                return child;
+            }
+            child = child.nextElementSibling;
+        }
+        return null;
+    },
+
+    getDirectElements: function (root, selector) {
+        var elements = [];
+        var child = root ? root.firstElementChild : null;
+
+        while (child) {
+            if (child.matches(selector)) {
+                elements.push(child);
+            }
+            child = child.nextElementSibling;
+        }
+        return elements;
+    },
+
+    focusWithoutScroll: function (element) {
+        var scrollLeft;
+        var scrollTop;
+
+        if (!element || typeof element.focus !== 'function') {
+            return;
+        }
+
+        try {
+            element.focus({ preventScroll: true });
+        } catch (err) {
+            scrollLeft = window.pageXOffset || 0;
+            scrollTop = window.pageYOffset || 0;
+            element.focus();
+            if (typeof window.scrollTo === 'function') {
+                window.scrollTo(scrollLeft, scrollTop);
+            }
+        }
+    },
+
+    preserveLayout: function (element, callback, options) {
+        if (typeof VOID_AnchorScroller !== 'undefined'
+            && typeof VOID_AnchorScroller.preserveElement === 'function') {
+            VOID_AnchorScroller.preserveElement(element, callback, options);
+            return;
+        }
+        callback();
+    },
+
     moveReplyForm: function (commentId, coid, trigger) {
         var comment = document.getElementById(commentId);
         var response = document.querySelector(AjaxComment.respond);
@@ -3985,7 +4046,6 @@ var AjaxComment = {
             input.id = 'comment-parent';
             form.appendChild(input);
         }
-        input.value = coid;
 
         holder = document.getElementById('void-comment-form-place-holder');
         if (!holder) {
@@ -3994,21 +4054,26 @@ var AjaxComment = {
             response.parentNode.insertBefore(holder, response);
         }
 
-        child = AjaxComment.getDirectChild(comment, trigger);
-        if (child) {
-            comment.insertBefore(response, child.nextSibling);
-        } else {
-            comment.appendChild(response);
-        }
+        AjaxComment.preserveLayout(comment, function () {
+            child = AjaxComment.getDirectChild(comment, trigger);
+            if (child) {
+                comment.insertBefore(response, child.nextSibling);
+            } else {
+                comment.appendChild(response);
+            }
 
-        cancel = document.getElementById('cancel-comment-reply-link');
-        if (cancel) {
-            cancel.style.display = '';
-        }
+            input.value = String(coid);
+            input.setAttribute('value', String(coid));
+
+            cancel = document.getElementById('cancel-comment-reply-link');
+            if (cancel) {
+                cancel.style.display = '';
+            }
+        });
 
         textarea = response.querySelector('textarea[name="text"]');
         if (textarea) {
-            textarea.focus();
+            AjaxComment.focusWithoutScroll(textarea);
         }
         return false;
     },
@@ -4018,16 +4083,19 @@ var AjaxComment = {
         var holder = document.getElementById('void-comment-form-place-holder');
         var input = response ? response.querySelector('input[name="parent"]') : null;
         var cancel = document.getElementById('cancel-comment-reply-link');
+        var anchor = response ? response.parentElement : null;
 
-        if (input && input.parentNode) {
-            input.parentNode.removeChild(input);
-        }
-        if (response && holder && holder.parentNode) {
-            holder.parentNode.insertBefore(response, holder);
-        }
-        if (cancel) {
-            cancel.style.display = 'none';
-        }
+        AjaxComment.preserveLayout(anchor, function () {
+            if (input && input.parentNode) {
+                input.parentNode.removeChild(input);
+            }
+            if (response && holder && holder.parentNode) {
+                holder.parentNode.insertBefore(response, holder);
+            }
+            if (cancel) {
+                cancel.style.display = 'none';
+            }
+        });
         return false;
     },
 
@@ -4047,30 +4115,61 @@ var AjaxComment = {
     },
 
     setCommentPageLoading: function (isLoading) {
-        var $comments = $('#comments');
-        var $container = $comments.closest('.comments-container');
+        var comments = document.querySelector('#comments');
+        var container = comments ? comments.closest('.comments-container') : null;
+        var pagers;
 
-        if ($comments.length === 0 || $container.length === 0) {
+        if (!comments || !container) {
             return;
         }
 
-        $container.toggleClass('is-loading', isLoading);
-        $comments.toggleClass('is-loading', isLoading);
-        $(AjaxComment.commentPager)
-            .toggleClass('is-disabled', isLoading)
-            .attr('aria-disabled', isLoading ? 'true' : null);
+        container.classList.toggle('is-loading', isLoading);
+        comments.classList.toggle('is-loading', isLoading);
+        pagers = document.querySelectorAll(AjaxComment.commentPager);
+        for (var i = 0; i < pagers.length; i++) {
+            pagers[i].classList.toggle('is-disabled', isLoading);
+            if (isLoading) {
+                pagers[i].setAttribute('aria-disabled', 'true');
+            } else {
+                pagers[i].removeAttribute('aria-disabled');
+            }
+        }
     },
 
     bindPager: function () {
-        $(document).off('click', AjaxComment.commentPager);
-        $(document).on('click', AjaxComment.commentPager, function (event) {
-            var href = this.href || $(this).attr('href');
+        if (AjaxComment.pagerHandler) {
+            return;
+        }
+
+        AjaxComment.pagerHandler = function (event) {
+            var target = event.target && event.target.nodeType === 3
+                ? event.target.parentElement : event.target;
+            var pager = target && typeof target.closest === 'function'
+                ? target.closest(AjaxComment.commentPager) : null;
+            var href;
+
+            if (!pager || (document.documentElement
+                && typeof document.documentElement.contains === 'function'
+                && !document.documentElement.contains(pager))) {
+                return;
+            }
+
+            if (event.defaultPrevented
+                || (typeof event.button === 'number' && event.button !== 0)
+                || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            href = pager.href || pager.getAttribute('href');
 
             if (!window.VoidPjax || typeof window.VoidPjax.visit !== 'function' || !href) {
-                return true;
+                return;
             }
 
             event.preventDefault();
+            if (pager.getAttribute('aria-disabled') === 'true') {
+                return;
+            }
             window.VoidPjax.visit({
                 url: href,
                 container: '#comments',
@@ -4078,10 +4177,18 @@ var AjaxComment = {
                 timeout: 8000,
                 scrollTop: false,
                 push: true,
-                target: this
+                target: pager
             });
-            return false;
-        });
+        };
+        document.addEventListener('click', AjaxComment.pagerHandler);
+    },
+
+    unbindPager: function () {
+        if (!AjaxComment.pagerHandler) {
+            return;
+        }
+        document.removeEventListener('click', AjaxComment.pagerHandler);
+        AjaxComment.pagerHandler = null;
     },
 
     afterPagePjax: function (options) {
@@ -4099,92 +4206,86 @@ var AjaxComment = {
         AjaxComment.setCommentPageLoading(false);
     },
 
-    resolveCommentTarget: function ($trigger) {
-        var $comment = $trigger.closest('[data-comment-id], .comment-body[id]');
-        if ($comment.length === 0) {
+    resolveCommentTarget: function (trigger) {
+        var comment = trigger && typeof trigger.closest === 'function'
+            ? trigger.closest('[data-comment-id], .comment-body[id]') : null;
+        if (!comment) {
             return '';
         }
 
-        return $comment.attr('data-comment-id') || $comment.attr('id') || '';
+        return comment.getAttribute('data-comment-id') || comment.id || '';
     },
 
-    getReplyText: function ($trigger, attrName, fallback) {
+    getReplyText: function (trigger, attrName, fallback) {
         var value;
 
-        if (!$trigger || !$trigger.length) {
+        if (!trigger) {
             return fallback;
         }
 
-        value = $.trim(String($trigger.attr(attrName) || ''));
+        value = String(trigger.getAttribute(attrName) || '').trim();
         return value || fallback;
     },
 
     resolveReplyTrigger: function (matcher) {
-        var $triggers = $(AjaxComment.commentReply + ' a');
-        var $match = $();
+        var triggers = document.querySelectorAll(AjaxComment.commentReply + ' a');
 
         if (typeof matcher !== 'function') {
-            return $match;
+            return null;
         }
 
-        $triggers.each(function () {
-            var $trigger = $(this);
-
-            if (matcher($trigger)) {
-                $match = $trigger;
-                return false;
+        for (var i = 0; i < triggers.length; i++) {
+            if (matcher(triggers[i])) {
+                return triggers[i];
             }
-
-            return undefined;
-        });
-
-        return $match;
+        }
+        return null;
     },
 
     findReplyTriggerByCommentId: function (commentId) {
         commentId = String(commentId || '');
         if (!commentId) {
-            return $();
+            return null;
         }
 
-        return AjaxComment.resolveReplyTrigger(function ($trigger) {
-            return String($trigger.attr('data-comment-id') || '') === commentId;
+        return AjaxComment.resolveReplyTrigger(function (trigger) {
+            return String(trigger.getAttribute('data-comment-id') || '') === commentId;
         });
     },
 
     findReplyTriggerByCoid: function (coid) {
         coid = String(coid || '');
         if (!coid) {
-            return $();
+            return null;
         }
 
-        return AjaxComment.resolveReplyTrigger(function ($trigger) {
-            return String($trigger.attr('data-comment-coid') || '') === coid;
+        return AjaxComment.resolveReplyTrigger(function (trigger) {
+            return String(trigger.getAttribute('data-comment-coid') || '') === coid;
         });
     },
 
-    setReplyTriggerState: function ($trigger, isActive) {
+    setReplyTriggerState: function (trigger, isActive) {
         var replyWord;
         var cancelWord;
 
-        if (!$trigger || !$trigger.length) {
+        if (!trigger) {
             return;
         }
 
-        replyWord = AjaxComment.getReplyText($trigger, 'data-reply-word', AjaxComment.replyWord);
-        cancelWord = AjaxComment.getReplyText($trigger, 'data-cancel-word', AjaxComment.cancelReplyWord);
+        replyWord = AjaxComment.getReplyText(trigger, 'data-reply-word', AjaxComment.replyWord);
+        cancelWord = AjaxComment.getReplyText(trigger, 'data-cancel-word', AjaxComment.cancelReplyWord);
 
-        $trigger.text(isActive ? cancelWord : replyWord);
-        $trigger.attr('aria-pressed', isActive ? 'true' : 'false');
-        $trigger.attr('data-reply-state', isActive ? 'active' : 'idle');
-        $trigger.toggleClass('is-reply-active', isActive);
+        trigger.textContent = isActive ? cancelWord : replyWord;
+        trigger.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        trigger.setAttribute('data-reply-state', isActive ? 'active' : 'idle');
+        trigger.classList.toggle('is-reply-active', isActive);
     },
 
     resetReplyTriggerState: function () {
-        var $activeTrigger = AjaxComment.findReplyTriggerByCommentId(AjaxComment.activeReplyCommentId);
+        var activeTrigger = AjaxComment.findReplyTriggerByCommentId(AjaxComment.activeReplyCommentId);
 
-        if ($activeTrigger.length) {
-            AjaxComment.setReplyTriggerState($activeTrigger, false);
+        if (activeTrigger) {
+            AjaxComment.setReplyTriggerState(activeTrigger, false);
         }
 
         AjaxComment.activeReplyCommentId = '';
@@ -4192,8 +4293,8 @@ var AjaxComment = {
         AjaxComment.parentID = '';
     },
 
-    activateReplyTrigger: function ($trigger, commentId, coid) {
-        if (!$trigger || !$trigger.length) {
+    activateReplyTrigger: function (trigger, commentId, coid) {
+        if (!trigger) {
             AjaxComment.resetReplyTriggerState();
             return;
         }
@@ -4208,7 +4309,7 @@ var AjaxComment = {
         commentId = String(commentId || '');
         coid = String(coid || '');
 
-        AjaxComment.setReplyTriggerState($trigger, true);
+        AjaxComment.setReplyTriggerState(trigger, true);
         AjaxComment.activeReplyCommentId = commentId;
         AjaxComment.activeReplyCoid = coid;
         AjaxComment.parentID = commentId;
@@ -4241,11 +4342,23 @@ var AjaxComment = {
     },
 
     bindHashChange: function () {
-        $(window).off('hashchange.ajaxComment');
-        $(window).on('hashchange.ajaxComment', function () {
+        if (AjaxComment.hashChangeHandler) {
+            return;
+        }
+
+        AjaxComment.hashChangeHandler = function () {
             AjaxComment.syncThreadFocusFromHash();
             VOID_Ui.checkScrollTop({ ignoreSavedPosition: true });
-        });
+        };
+        window.addEventListener('hashchange', AjaxComment.hashChangeHandler);
+    },
+
+    unbindHashChange: function () {
+        if (!AjaxComment.hashChangeHandler) {
+            return;
+        }
+        window.removeEventListener('hashchange', AjaxComment.hashChangeHandler);
+        AjaxComment.hashChangeHandler = null;
     },
 
     getReplyToFromLocation: function () {
@@ -4256,22 +4369,36 @@ var AjaxComment = {
     },
 
     getCurrentReplyCoid: function () {
-        var parentValue = $.trim(String($(AjaxComment.commentForm).find('input[name="parent"]').val() || ''));
+        var form = document.querySelector(AjaxComment.commentForm);
+        var parent = form ? form.querySelector('input[name="parent"]') : null;
+        var parentValue = parent ? String(parent.value || '').trim() : '';
+        var cancel;
 
         if (parentValue) {
             return parentValue;
         }
 
-        if ($('#cancel-comment-reply-link').is(':visible')) {
+        cancel = document.getElementById('cancel-comment-reply-link');
+        if (AjaxComment.isElementVisible(cancel)) {
             return AjaxComment.getReplyToFromLocation();
         }
 
         return '';
     },
 
+    isElementVisible: function (element) {
+        if (!element || element.hidden || (element.style && element.style.display === 'none')) {
+            return false;
+        }
+        if (typeof element.getClientRects === 'function') {
+            return element.getClientRects().length > 0;
+        }
+        return true;
+    },
+
     syncReplyTriggerState: function () {
         var coid = AjaxComment.getCurrentReplyCoid();
-        var $trigger;
+        var trigger;
         var commentId;
 
         if (!coid) {
@@ -4279,20 +4406,19 @@ var AjaxComment = {
             return;
         }
 
-        $trigger = AjaxComment.findReplyTriggerByCoid(coid);
-        if (!$trigger.length) {
+        trigger = AjaxComment.findReplyTriggerByCoid(coid);
+        if (!trigger) {
             AjaxComment.resetReplyTriggerState();
             return;
         }
 
-        commentId = String($trigger.attr('data-comment-id') || AjaxComment.resolveCommentTarget($trigger));
-        AjaxComment.activateReplyTrigger($trigger, commentId, coid);
+        commentId = String(trigger.getAttribute('data-comment-id') || AjaxComment.resolveCommentTarget(trigger));
+        AjaxComment.activateReplyTrigger(trigger, commentId, coid);
     },
 
     handleReplyClick: function (commentId, coid, trigger) {
-        var $trigger = $(trigger);
-        var nextCommentId = String(commentId || AjaxComment.resolveCommentTarget($trigger));
-        var nextCoid = String(coid || $trigger.attr('data-comment-coid') || '');
+        var nextCommentId = String(commentId || AjaxComment.resolveCommentTarget(trigger));
+        var nextCoid = String(coid || (trigger ? trigger.getAttribute('data-comment-coid') : '') || '');
         var currentCoid = AjaxComment.getCurrentReplyCoid();
 
         if (AjaxComment.activeReplyCommentId === nextCommentId && currentCoid === nextCoid) {
@@ -4302,147 +4428,176 @@ var AjaxComment = {
         if (AjaxComment.moveReplyForm(nextCommentId, nextCoid, trigger)) {
             return true;
         }
-        AjaxComment.activateReplyTrigger($trigger, nextCommentId, nextCoid);
+        AjaxComment.activateReplyTrigger(trigger, nextCommentId, nextCoid);
         return false;
     },
 
     cancelActiveReply: function () {
+        var activeTrigger = AjaxComment.findReplyTriggerByCommentId(AjaxComment.activeReplyCommentId);
+
         AjaxComment.restoreReplyForm();
         AjaxComment.resetReplyTriggerState();
+        if (activeTrigger) {
+            AjaxComment.focusWithoutScroll(activeTrigger);
+        }
         return false;
     },
 
     bindClick: function () {
-        $(AjaxComment.commentReply + ' a').each(function () {
-            var $trigger = $(this);
+        var triggers = document.querySelectorAll(AjaxComment.commentReply + ' a');
+        var trigger;
 
-            if (!$trigger.attr('data-reply-word')) {
-                $trigger.attr('data-reply-word', $.trim($trigger.text()) || AjaxComment.replyWord);
+        for (var i = 0; i < triggers.length; i++) {
+            trigger = triggers[i];
+            if (!trigger.getAttribute('data-reply-word')) {
+                trigger.setAttribute('data-reply-word', String(trigger.textContent || '').trim() || AjaxComment.replyWord);
             }
 
-            if (!$trigger.attr('data-cancel-word')) {
-                $trigger.attr('data-cancel-word', AjaxComment.cancelReplyWord);
+            if (!trigger.getAttribute('data-cancel-word')) {
+                trigger.setAttribute('data-cancel-word', AjaxComment.cancelReplyWord);
             }
 
-            AjaxComment.setReplyTriggerState($trigger, false);
-        });
+            AjaxComment.setReplyTriggerState(trigger, false);
+        }
 
         AjaxComment.syncReplyTriggerState();
     },
 
-    collectThreadItems: function ($children) {
+    collectThreadItems: function (children) {
         var items = [];
 
-        var walk = function ($container) {
-            var $list = $container.children('.comment-list');
-            if ($list.length === 0) {
+        var walk = function (container) {
+            var list = AjaxComment.getDirectElement(container, '.comment-list');
+            var comments;
+            var nested;
+
+            if (!list) {
                 return;
             }
 
-            $list.children('.comment-body').each(function () {
-                var $comment = $(this);
-                var $nested = $comment.children('.comment-children').detach();
-                items.push($comment);
-
-                if ($nested.length > 0) {
-                    walk($nested);
+            comments = AjaxComment.getDirectElements(list, '.comment-body');
+            for (var i = 0; i < comments.length; i++) {
+                nested = AjaxComment.getDirectElement(comments[i], '.comment-children');
+                if (nested) {
+                    comments[i].removeChild(nested);
                 }
-            });
+                items.push(comments[i]);
+
+                if (nested) {
+                    walk(nested);
+                }
+            }
         };
 
-        walk($children);
+        walk(children);
         return items;
     },
 
-    ensureThreadPanel: function ($children) {
-        var $list = $children.children('.comment-list');
+    ensureThreadPanel: function (children) {
+        var list;
+        var items;
 
-        if (!$children.hasClass('comment-thread-panel')) {
-            var items = AjaxComment.collectThreadItems($children);
+        if (!children) {
+            return null;
+        }
+
+        list = AjaxComment.getDirectElement(children, '.comment-list');
+        if (!children.classList.contains('comment-thread-panel')) {
+            items = AjaxComment.collectThreadItems(children);
             if (items.length === 0) {
-                return $();
+                return null;
             }
 
-            $children.empty().addClass('comment-thread-panel');
-            $list = $('<div class="comment-list comment-thread-list"></div>');
+            while (children.firstChild) {
+                children.removeChild(children.firstChild);
+            }
+            children.classList.add('comment-thread-panel');
+            list = document.createElement('div');
+            list.className = 'comment-list comment-thread-list';
 
-            $.each(items, function (index, $comment) {
-                $comment
-                    .addClass('comment-thread-item')
-                    .attr('data-thread-index', index);
-                $list.append($comment);
-            });
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.add('comment-thread-item');
+                items[i].setAttribute('data-thread-index', i);
+                list.appendChild(items[i]);
+            }
 
-            $children.append($list);
-            return $list;
+            children.appendChild(list);
+            AjaxComment.bindThreadPanel(children);
+            return list;
         }
 
-        if ($list.length === 0) {
-            $list = $('<div class="comment-list comment-thread-list"></div>');
-            $children.append($list);
+        if (!list) {
+            list = document.createElement('div');
+            list.className = 'comment-list comment-thread-list';
+            children.appendChild(list);
         }
 
-        $list.addClass('comment-thread-list');
-        $list.children('.comment-body').each(function (index) {
-            $(this)
-                .addClass('comment-thread-item')
-                .attr('data-thread-index', index);
-        });
+        list.classList.add('comment-thread-list');
+        items = AjaxComment.getDirectElements(list, '.comment-body');
+        for (var index = 0; index < items.length; index++) {
+            items[index].classList.add('comment-thread-item');
+            items[index].setAttribute('data-thread-index', index);
+        }
 
-        return $list;
+        AjaxComment.bindThreadPanel(children);
+        return list;
     },
 
-    insertReplyComment: function ($comment) {
-        var parentCoid = String($comment.attr('data-comment-parent') || '');
-        var $parent = parentCoid ? $('#comment-' + parentCoid) : $();
-        var $root;
-        var $children;
-        var $list;
-        var $cursor;
-        var $next;
+    insertReplyComment: function (comment) {
+        var parentCoid = comment ? String(comment.getAttribute('data-comment-parent') || '') : '';
+        var parent = parentCoid ? document.getElementById('comment-' + parentCoid) : null;
+        var root;
+        var children;
+        var list;
+        var cursor;
+        var next;
         var parentDepth;
 
-        if (!$parent.length) {
+        if (!parent) {
             return false;
         }
 
-        $root = $parent.hasClass('comment-parent') ? $parent : $parent.closest('.comment-parent');
-        if (!$root.length) {
+        root = parent.classList.contains('comment-parent') ? parent : parent.closest('.comment-parent');
+        if (!root) {
             return false;
         }
 
-        $children = $root.children('.comment-children');
-        if (!$children.length) {
-            $children = $('<div class="comment-children comment-thread-panel" data-thread-expanded="false"></div>');
-            $list = $('<div class="comment-list comment-thread-list"></div>');
-            $children.append($list);
-            $root.append($children);
+        children = AjaxComment.getDirectElement(root, '.comment-children');
+        if (!children) {
+            children = document.createElement('div');
+            children.className = 'comment-children comment-thread-panel';
+            children.setAttribute('data-thread-expanded', 'false');
+            list = document.createElement('div');
+            list.className = 'comment-list comment-thread-list';
+            children.appendChild(list);
+            root.appendChild(children);
+            AjaxComment.bindThreadPanel(children);
         } else {
-            $list = AjaxComment.ensureThreadPanel($children);
+            list = AjaxComment.ensureThreadPanel(children);
         }
 
-        if (!$list.length) {
+        if (!list) {
             return false;
         }
 
-        if ($parent.hasClass('comment-parent')) {
-            AjaxComment.insertNewestComment($list, $comment);
+        if (parent.classList.contains('comment-parent')) {
+            AjaxComment.insertNewestComment(list, comment);
             return true;
         }
 
         if (AjaxComment.getCommentsOrder() === 'DESC') {
-            $parent.after($comment);
+            parent.parentNode.insertBefore(comment, parent.nextSibling);
             return true;
         }
 
-        parentDepth = AjaxComment.getCommentDepth($parent);
-        $cursor = $parent;
-        $next = $cursor.next('.comment-body');
-        while ($next.length && AjaxComment.getCommentDepth($next) > parentDepth) {
-            $cursor = $next;
-            $next = $cursor.next('.comment-body');
+        parentDepth = AjaxComment.getCommentDepth(parent);
+        cursor = parent;
+        next = cursor.nextElementSibling;
+        while (next && next.matches('.comment-body') && AjaxComment.getCommentDepth(next) > parentDepth) {
+            cursor = next;
+            next = cursor.nextElementSibling;
         }
-        $cursor.after($comment);
+        cursor.parentNode.insertBefore(comment, cursor.nextSibling);
         return true;
     },
 
@@ -4510,137 +4665,178 @@ var AjaxComment = {
         };
     },
 
-    getThreadPanelId: function ($children) {
-        var parentId = String($children.parent().attr('id') || '').replace(/^comment-/, '');
+    getThreadPanelId: function (children) {
+        var parentId = children && children.parentElement
+            ? String(children.parentElement.id || '').replace(/^comment-/, '') : '';
         var panelId = parentId ? 'comment-thread-' + parentId : '';
 
         if (panelId) {
-            $children.attr('id', panelId);
+            children.setAttribute('id', panelId);
         }
         return panelId;
     },
 
-    focusThreadControl: function ($children, selector) {
-        var control = $children.find(selector).first().get(0);
-        if (!control || typeof control.focus !== 'function') return;
+    focusThreadControl: function (children, selector) {
+        var control = children ? children.querySelector(selector) : null;
 
-        try {
-            control.focus({ preventScroll: true });
-        } catch (err) {
-            control.focus();
-        }
+        AjaxComment.focusWithoutScroll(control);
     },
 
-    updateThreadLayout: function ($children, callback, options) {
-        var root = $children.parent().get(0);
-        if (typeof VOID_AnchorScroller !== 'undefined'
-            && typeof VOID_AnchorScroller.preserveElement === 'function') {
-            VOID_AnchorScroller.preserveElement(root, callback, options);
+    updateThreadLayout: function (children, callback, options) {
+        var root = children ? children.parentElement : null;
+        AjaxComment.preserveLayout(root, callback, options);
+    },
+
+    createThreadButton: function (className, text, page) {
+        var button = document.createElement('button');
+
+        button.type = 'button';
+        button.className = className;
+        button.textContent = text;
+        if (page !== undefined) {
+            button.setAttribute('data-thread-page', page);
+        }
+        return button;
+    },
+
+    bindThreadPanel: function (children) {
+        if (!children || children.__voidThreadHandler) {
             return;
         }
-        callback();
-    },
 
-    renderThreadFooter: function ($children, totalItems, currentPage, totalPages, shouldPaginate) {
-        var $list = $children.children('.comment-thread-list');
-        var $footer = $list.children('.comment-thread-footer');
-        var $pagination;
-        var pages;
-        var isExpanded = $children.attr('data-thread-expanded') === 'true';
-        var panelId = AjaxComment.getThreadPanelId($children);
+        children.__voidThreadHandler = function (event) {
+            var target = event.target && event.target.nodeType === 3
+                ? event.target.parentElement : event.target;
+            var button = target && typeof target.closest === 'function'
+                ? target.closest('button') : null;
+            var targetPage;
+            var currentPage;
 
-        if ($footer.length === 0) {
-            $footer = $('<div class="comment-thread-footer"></div>');
-            $list.append($footer);
-        }
+            if (!button || !children.contains(button)) {
+                return;
+            }
 
-        $footer.empty();
-        if (!isExpanded) {
-            var $expand = $('<button type="button" class="comment-thread-expand"></button>');
-            $expand
-                .text('查看全部 ' + totalItems + ' 条回复')
-                .attr('aria-expanded', 'false');
-            if (panelId) $expand.attr('aria-controls', panelId);
-            $footer
-                .removeClass('is-collapsed')
-                .addClass('is-thread-footer-collapsed')
-                .append($expand);
-
-            $footer.find('.comment-thread-expand').on('click', function () {
-                AjaxComment.updateThreadLayout($children, function () {
-                    $children.attr('data-thread-expanded', 'true');
-                    AjaxComment.renderThreadPage($children, currentPage);
-                    AjaxComment.focusThreadControl($children, '.comment-thread-collapse');
+            if (button.classList.contains('comment-thread-expand')) {
+                currentPage = parseInt(children.getAttribute('data-thread-page'), 10) || 1;
+                AjaxComment.updateThreadLayout(children, function () {
+                    children.setAttribute('data-thread-expanded', 'true');
+                    AjaxComment.renderThreadPage(children, currentPage);
+                    AjaxComment.focusThreadControl(children, '.comment-thread-collapse');
                 });
-            });
+                return;
+            }
+
+            if (button.hasAttribute('data-thread-page')) {
+                targetPage = parseInt(button.getAttribute('data-thread-page'), 10);
+                AjaxComment.updateThreadLayout(children, function () {
+                    AjaxComment.renderThreadPage(children, targetPage);
+                    AjaxComment.focusThreadControl(children, '.comment-thread-page.is-active');
+                });
+                return;
+            }
+
+            if (button.classList.contains('comment-thread-collapse')) {
+                AjaxComment.updateThreadLayout(children, function () {
+                    children.setAttribute('data-thread-expanded', 'false');
+                    AjaxComment.renderThreadPage(children, 1);
+                    AjaxComment.focusThreadControl(children, '.comment-thread-expand');
+                }, { trackFrames: false });
+            }
+        };
+        children.addEventListener('click', children.__voidThreadHandler);
+    },
+
+    renderThreadFooter: function (children, totalItems, currentPage, totalPages, shouldPaginate) {
+        var list = AjaxComment.getDirectElement(children, '.comment-thread-list');
+        var footer = AjaxComment.getDirectElement(list, '.comment-thread-footer');
+        var pagination;
+        var pages;
+        var button;
+        var isExpanded = children.getAttribute('data-thread-expanded') === 'true';
+        var panelId = AjaxComment.getThreadPanelId(children);
+
+        if (!footer) {
+            footer = document.createElement('div');
+            footer.className = 'comment-thread-footer';
+            list.appendChild(footer);
+        }
+
+        while (footer.firstChild) {
+            footer.removeChild(footer.firstChild);
+        }
+        if (!isExpanded) {
+            button = AjaxComment.createThreadButton(
+                'comment-thread-expand',
+                '查看全部 ' + totalItems + ' 条回复'
+            );
+            button.setAttribute('aria-expanded', 'false');
+            if (panelId) button.setAttribute('aria-controls', panelId);
+            footer.classList.remove('is-collapsed');
+            footer.classList.add('is-thread-footer-collapsed');
+            footer.appendChild(button);
             return;
         }
 
-        $footer.removeClass('is-collapsed is-thread-footer-collapsed');
-        $footer.append('<span class="comment-thread-total">共 ' + totalItems + ' 条回复</span>');
-        $pagination = $('<div class="comment-thread-pagination"></div>');
+        footer.classList.remove('is-collapsed', 'is-thread-footer-collapsed');
+        var total = document.createElement('span');
+        total.className = 'comment-thread-total';
+        total.textContent = '共 ' + totalItems + ' 条回复';
+        footer.appendChild(total);
+        pagination = document.createElement('div');
+        pagination.className = 'comment-thread-pagination';
 
         if (shouldPaginate) {
             pages = AjaxComment.buildThreadPages(currentPage, totalPages);
 
             if (currentPage > 1) {
-                $pagination.append('<button type="button" class="comment-thread-prev" data-thread-page="' + (currentPage - 1) + '">上一页</button>');
+                pagination.appendChild(AjaxComment.createThreadButton(
+                    'comment-thread-prev', '上一页', currentPage - 1
+                ));
             }
 
-            $.each(pages, function (_, page) {
-                var $button;
-
+            for (var i = 0; i < pages.length; i++) {
+                var page = pages[i];
                 if (page === 'ellipsis') {
-                    $pagination.append('<span class="comment-thread-ellipsis">...</span>');
-                    return;
+                    var ellipsis = document.createElement('span');
+                    ellipsis.className = 'comment-thread-ellipsis';
+                    ellipsis.textContent = '...';
+                    pagination.appendChild(ellipsis);
+                    continue;
                 }
 
-                $button = $('<button type="button" class="comment-thread-page"></button>');
-                $button.text(page);
-                $button.attr('data-thread-page', page);
+                button = AjaxComment.createThreadButton('comment-thread-page', page, page);
 
                 if (page === currentPage) {
-                    $button.addClass('is-active').attr('aria-current', 'page');
+                    button.classList.add('is-active');
+                    button.setAttribute('aria-current', 'page');
                 }
 
-                $pagination.append($button);
-            });
+                pagination.appendChild(button);
+            }
 
             if (currentPage < totalPages) {
-                $pagination.append('<button type="button" class="comment-thread-next" data-thread-page="' + (currentPage + 1) + '">下一页</button>');
+                pagination.appendChild(AjaxComment.createThreadButton(
+                    'comment-thread-next', '下一页', currentPage + 1
+                ));
             }
         }
 
-        var $collapse = $('<button type="button" class="comment-thread-collapse">收起</button>')
-            .attr('aria-expanded', 'true');
-        if (panelId) $collapse.attr('aria-controls', panelId);
-        $pagination.append($collapse);
-        $footer.append($pagination);
-
-        $footer.find('button[data-thread-page]').on('click', function () {
-            var targetPage = parseInt($(this).attr('data-thread-page'), 10);
-            AjaxComment.updateThreadLayout($children, function () {
-                AjaxComment.renderThreadPage($children, targetPage);
-                AjaxComment.focusThreadControl($children, '.comment-thread-page.is-active');
-            });
-        });
-
-        $footer.find('.comment-thread-collapse').on('click', function () {
-            AjaxComment.updateThreadLayout($children, function () {
-                $children.attr('data-thread-expanded', 'false');
-                AjaxComment.renderThreadPage($children, 1);
-                AjaxComment.focusThreadControl($children, '.comment-thread-expand');
-            }, { trackFrames: false });
-        });
+        button = AjaxComment.createThreadButton('comment-thread-collapse', '收起');
+        button.setAttribute('aria-expanded', 'true');
+        if (panelId) button.setAttribute('aria-controls', panelId);
+        pagination.appendChild(button);
+        footer.appendChild(pagination);
     },
 
-    renderThreadPage: function ($children, targetPage) {
-        var $list = $children.children('.comment-thread-list');
-        var $items = $list.children('.comment-thread-item');
+    renderThreadPage: function (children, targetPage) {
+        var list = AjaxComment.getDirectElement(children, '.comment-thread-list');
+        var items = AjaxComment.getDirectElements(list, '.comment-thread-item');
         var focusCommentId = String(AjaxComment.threadFocusPendingId || '');
-        var parentCommentId = String($children.parent().attr('id') || '').replace(/^comment-/, '');
-        var $focusComment = focusCommentId ? $children.find('#comment-' + focusCommentId).first() : $();
-        var totalItems = $items.length;
+        var parentCommentId = children.parentElement
+            ? String(children.parentElement.id || '').replace(/^comment-/, '') : '';
+        var focusComment = focusCommentId && document.getElementById
+            ? document.getElementById('comment-' + focusCommentId) : null;
+        var totalItems = items.length;
         var previewSize = AjaxComment.threadPreviewSize;
         var pageSize = AjaxComment.threadPageSize;
         var paginationThreshold = AjaxComment.threadPaginationThreshold;
@@ -4648,10 +4844,10 @@ var AjaxComment = {
         var shouldPaginate = totalItems > paginationThreshold;
         var totalPages = shouldPaginate ? Math.max(1, Math.ceil(totalItems / pageSize)) : 1;
         var shouldShowThreadFooter = canCollapseThread;
-        var currentPage = targetPage || parseInt($children.attr('data-thread-page'), 10) || 1;
-        var isExpanded = $children.attr('data-thread-expanded') === 'true';
+        var currentPage = targetPage || parseInt(children.getAttribute('data-thread-page'), 10) || 1;
+        var isExpanded = children.getAttribute('data-thread-expanded') === 'true';
         var isParentFocus = !!focusCommentId && focusCommentId === parentCommentId;
-        var focusIndex = $focusComment.length > 0 ? $items.index($focusComment) : -1;
+        var focusIndex = focusComment && children.contains(focusComment) ? items.indexOf(focusComment) : -1;
         var focusState = AjaxComment.resolveThreadFocusState(
             totalItems,
             currentPage,
@@ -4682,70 +4878,88 @@ var AjaxComment = {
             endIndex = startIndex + pageSize;
         }
 
-        $children.attr('data-thread-page', currentPage);
-        $children.attr('data-thread-expanded', isExpanded ? 'true' : 'false');
-        $children
-            .toggleClass('is-thread-expanded', isExpanded)
-            .toggleClass('is-thread-collapsed', canCollapseThread && !isExpanded)
-            .toggleClass('no-thread-footer', !shouldShowThreadFooter);
+        children.setAttribute('data-thread-page', currentPage);
+        children.setAttribute('data-thread-expanded', isExpanded ? 'true' : 'false');
+        children.classList.toggle('is-thread-expanded', isExpanded);
+        children.classList.toggle('is-thread-collapsed', canCollapseThread && !isExpanded);
+        children.classList.toggle('no-thread-footer', !shouldShowThreadFooter);
 
-        $items.each(function (index) {
-            $(this)
-                .attr('data-thread-index', index)
-                .toggleClass('is-thread-hidden', index < startIndex || index >= endIndex);
-        });
+        for (var i = 0; i < items.length; i++) {
+            items[i].setAttribute('data-thread-index', i);
+            items[i].classList.toggle('is-thread-hidden', i < startIndex || i >= endIndex);
+        }
 
         if (!shouldShowThreadFooter) {
-            $list.children('.comment-thread-footer').remove();
+            var footer = AjaxComment.getDirectElement(list, '.comment-thread-footer');
+            if (footer) {
+                list.removeChild(footer);
+            }
             return;
         }
 
-        AjaxComment.renderThreadFooter($children, totalItems, currentPage, totalPages, shouldPaginate);
+        AjaxComment.renderThreadFooter(children, totalItems, currentPage, totalPages, shouldPaginate);
     },
 
     applyThreadPanels: function () {
-        $('#comments > .comment-list > .comment-body.comment-parent').each(function () {
-            var $parent = $(this);
-            var $children = $parent.children('.comment-children');
-            var $list;
+        var parents = document.querySelectorAll('#comments > .comment-list > .comment-body.comment-parent');
+        var children;
+        var list;
 
-            if ($children.length === 0) {
-                return;
+        for (var i = 0; i < parents.length; i++) {
+            children = AjaxComment.getDirectElement(parents[i], '.comment-children');
+            if (!children) {
+                continue;
             }
 
-            $list = AjaxComment.ensureThreadPanel($children);
-            if ($list.length === 0) {
-                return;
+            list = AjaxComment.ensureThreadPanel(children);
+            if (!list) {
+                continue;
             }
 
-            if (!$children.attr('data-thread-expanded')) {
-                $children.attr('data-thread-expanded', 'false');
+            if (!children.getAttribute('data-thread-expanded')) {
+                children.setAttribute('data-thread-expanded', 'false');
             }
-            AjaxComment.renderThreadPage($children);
-        });
+            AjaxComment.renderThreadPage(children);
+        }
 
         AjaxComment.threadFocusPendingId = '';
     },
 
     err: function () {
-        $(AjaxComment.submitBtn).attr('disabled', false);
+        var submit = document.querySelector(AjaxComment.submitBtn);
+
+        if (submit) {
+            submit.disabled = false;
+        }
         AjaxComment.newID = '';
     },
 
     finish: function () {
         var newCommentId = AjaxComment.newID;
+        var submit = document.querySelector(AjaxComment.submitBtn);
+        var textarea = document.querySelector(AjaxComment.textarea);
+        var commentCount = document.querySelector('.comment-num .num');
+        var newComment = newCommentId ? document.getElementById('comment-' + newCommentId) : null;
+        var count;
+
         AjaxComment.cancelActiveReply();
-        $(AjaxComment.submitBtn).html('提交评论');
-        $(AjaxComment.textarea).val('');
-        $(AjaxComment.submitBtn).attr('disabled', false);
-        if ($('#comment-' + newCommentId).length > 0) {
-            $('#comment-' + newCommentId).fadeTo(500, 1);
+        if (submit) {
+            submit.textContent = '提交评论';
+            submit.disabled = false;
         }
-        $('.comment-num .num').html(parseInt($('.comment-num .num').html()) + 1);
+        if (textarea) {
+            textarea.value = '';
+        }
+        if (commentCount) {
+            count = parseInt(commentCount.textContent, 10);
+            if (!isNaN(count)) {
+                commentCount.textContent = count + 1;
+            }
+        }
         AjaxComment.threadFocusPendingId = newCommentId;
         AjaxComment.bindClick();
         AjaxComment.applyThreadPanels();
-        if ($('#comment-' + newCommentId).length > 0) {
+        if (newComment) {
             VOID_Ui.scrollToWithHeader('#comment-' + newCommentId, 0, {
                 behavior: 'smooth',
                 stabilize: true
@@ -4755,13 +4969,8 @@ var AjaxComment = {
         VOID.initEmoteContent();
     },
 
-    init: function () {
-        AjaxComment.ensureTypechoCommentFacade();
-        AjaxComment.bindPager();
-        AjaxComment.bindHashChange();
-        AjaxComment.bindClick();
-        AjaxComment.syncThreadFocusFromHash();
-        $(AjaxComment.commentForm).off('submit').on('submit', function () { // 提交事件
+    bindSubmit: function () {
+        $(AjaxComment.commentForm).off('submit.ajaxComment').on('submit.ajaxComment', function () { // 提交事件
             $(AjaxComment.submitBtn).attr('disabled', true);
 
             /* 检查 */
@@ -4840,6 +5049,7 @@ var AjaxComment = {
                             }
 
                             var $newComment = $(data).find('#comment-' + AjaxComment.newID).first();
+                            var newComment = $newComment.get(0);
                             if (!$newComment.length) {
                                 throw new Error('New comment is missing from the response');
                             }
@@ -4853,15 +5063,20 @@ var AjaxComment = {
 
                             if (AjaxComment.parentID == '') {
                                 // 无父 id，按后台评论顺序插入顶层评论
-                                AjaxComment.insertNewestComment($('#comments > .comment-list').first(), $newComment);
+                                AjaxComment.insertNewestComment(
+                                    document.querySelector('#comments > .comment-list'),
+                                    newComment
+                                );
+                                $newComment.fadeTo(500, 1);
                                 VOID.alert('评论成功！');
                                 AjaxComment.finish();
                                 AjaxComment.newID = '';
                                 return false;
                             } else {
-                                if (!AjaxComment.insertReplyComment($newComment)) {
+                                if (!AjaxComment.insertReplyComment(newComment)) {
                                     throw new Error('Comment parent is missing from the current page');
                                 }
+                                $newComment.fadeTo(500, 1);
                                 VOID.alert('评论成功！');
                                 AjaxComment.finish();
                                 AjaxComment.parentID = '';
@@ -4876,6 +5091,15 @@ var AjaxComment = {
             }); // end ajax()
             return false;
         }); // end submit()
+    },
+
+    init: function () {
+        AjaxComment.ensureTypechoCommentFacade();
+        AjaxComment.bindPager();
+        AjaxComment.bindHashChange();
+        AjaxComment.bindClick();
+        AjaxComment.syncThreadFocusFromHash();
+        AjaxComment.bindSubmit();
     }
 };
 
