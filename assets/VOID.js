@@ -3401,21 +3401,28 @@ var VOID = {
             send: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
 
-                AjaxComment.cancelSubmit();
                 if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.cancelSubmit();
                     VOID.destroyEmotes();
                     AjaxComment.setCommentPageLoading(true);
                     return;
                 }
 
                 if (VOID.isMainPjaxRequest(options)) {
+                    AjaxComment.cancelSubmit();
                     VOID.beforePjax();
                 }
             },
             beforeReplace: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
 
+                if (AjaxComment.isCommentPjaxRequest(options)) {
+                    AjaxComment.beforePjaxReplace();
+                    return;
+                }
+
                 if (VOID.isMainPjaxRequest(options)) {
+                    AjaxComment.beforePjaxReplace();
                     VOID.beforePjaxReplace();
                 }
             },
@@ -3959,6 +3966,11 @@ var AjaxComment = {
             AjaxComment.antiSpamCleanup();
         }
         AjaxComment.antiSpamCleanup = null;
+    },
+
+    beforePjaxReplace: function () {
+        AjaxComment.destroyAntiSpamToken();
+        AjaxComment.unbindSubmit();
     },
 
     getDirectChild: function (root, node) {
@@ -5176,21 +5188,29 @@ var AjaxComment = {
         AjaxComment.newID = '';
     },
 
-    finish: function (form) {
+    finish: function (form, token) {
         var newCommentId = AjaxComment.newID;
         var submit = AjaxComment.getSubmitButton(form || AjaxComment.submitForm);
         var textarea = form ? form.querySelector(AjaxComment.textarea) : document.querySelector(AjaxComment.textarea);
         var commentCount = document.querySelector('.comment-num .num');
         var newComment = newCommentId ? document.getElementById('comment-' + newCommentId) : null;
+        var submittedParentCoid = token ? String(token.parentCoid || '') : '';
+        var submittedText = token ? String(token.text || '') : '';
+        var currentParentCoid = AjaxComment.getCurrentReplyCoid();
+        var canResetComposer = !!textarea
+            && String(textarea.value || '') === submittedText
+            && currentParentCoid === submittedParentCoid;
         var count;
 
-        AjaxComment.cancelActiveReply();
         if (submit) {
             submit.textContent = '提交评论';
             submit.disabled = false;
         }
-        if (textarea) {
+        if (canResetComposer) {
             textarea.value = '';
+            if (submittedParentCoid) {
+                AjaxComment.cancelActiveReply();
+            }
         }
         if (commentCount) {
             count = parseInt(commentCount.textContent, 10);
@@ -5246,20 +5266,19 @@ var AjaxComment = {
         }
         AjaxComment.newID = newCommentId;
 
-        if (!AjaxComment.isNewestCommentPage() && AjaxComment.parentID === '') {
+        if (!AjaxComment.isNewestCommentPage() && !token.parentCoid) {
             VOID.alert(AjaxComment.getCommentsOrder() === 'ASC'
                 ? '评论成功！请前往评论最后一页查看。'
                 : '评论成功！请回到评论第一页查看。');
             AjaxComment.newID = '';
-            AjaxComment.parentID = '';
-            AjaxComment.finish(form);
+            AjaxComment.finish(form, token);
             return;
         }
 
         newComment = typeof document.importNode === 'function'
             ? document.importNode(responseComment, true) : responseComment;
         newComment.style.opacity = '0';
-        if (AjaxComment.parentID === '') {
+        if (!token.parentCoid) {
             currentList = AjaxComment.ensureCommentList();
             if (!currentList) {
                 AjaxComment.failSubmit(form, '');
@@ -5273,8 +5292,7 @@ var AjaxComment = {
 
         AjaxComment.revealComment(newComment);
         VOID.alert('评论成功！');
-        AjaxComment.finish(form);
-        AjaxComment.parentID = '';
+        AjaxComment.finish(form, token);
         AjaxComment.newID = '';
     },
 
@@ -5305,7 +5323,11 @@ var AjaxComment = {
             return false;
         }
 
-        token = { commentIds: AjaxComment.getCurrentCommentIds() };
+        token = {
+            commentIds: AjaxComment.getCurrentCommentIds(),
+            parentCoid: String(body.get('parent') || '').trim(),
+            text: String((form.querySelector(AjaxComment.textarea) || {}).value || '')
+        };
         generation = AjaxComment.submitGeneration + 1;
         controller = typeof AbortController === 'function' ? new AbortController() : null;
         AjaxComment.submitGeneration = generation;

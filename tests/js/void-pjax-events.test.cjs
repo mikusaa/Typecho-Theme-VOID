@@ -823,6 +823,8 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
     context.VOID_Gallery.init = () => calls.push('gallery');
     context.VOID_PhotoSets.init = () => calls.push('photoSets');
     context.VOID_PhotoSwipe.init = () => calls.push('photoSwipe');
+    context.AjaxComment.cancelSubmit = () => calls.push('cancelSubmit');
+    context.AjaxComment.beforePjaxReplace = () => calls.push('commentBeforeReplace');
     context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
     context.AjaxComment.afterPagePjax = () => calls.push('afterPagePjax');
     context.AjaxComment.endPagePjax = () => calls.push('endPagePjax');
@@ -830,16 +832,44 @@ test('comment PJAX events do not run the main-container lifecycle', () => {
 
     context.VOID.bindPjaxLifecycle();
     context.document.dispatchEvent(nativePjaxEvent('pjax:send', { container: '#comments' }));
+    assert.deepEqual(calls, [
+        'cancelSubmit',
+        'destroyEmotes',
+        'commentLoading'
+    ]);
     context.document.dispatchEvent(nativePjaxEvent('pjax:beforeReplace', { container: '#comments' }));
     context.document.dispatchEvent(nativePjaxEvent('pjax:complete', { container: '#comments' }));
     context.document.dispatchEvent(nativePjaxEvent('pjax:end', { container: '#comments' }));
 
     assert.deepEqual(calls, [
+        'cancelSubmit',
         'destroyEmotes',
         'commentLoading',
+        'commentBeforeReplace',
         'afterPagePjax',
         'endPagePjax'
     ]);
+});
+
+test('unrelated PJAX containers cannot cancel or tear down comment state', () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.AjaxComment.cancelSubmit = () => calls.push('cancelSubmit');
+    context.AjaxComment.beforePjaxReplace = () => calls.push('commentBeforeReplace');
+    context.VOID.beforePjax = () => calls.push('beforePjax');
+    context.VOID.beforePjaxReplace = () => calls.push('beforePjaxReplace');
+    context.VOID.afterPjax = () => calls.push('afterPjax');
+    context.VOID.endPjax = () => calls.push('endPjax');
+    context.VOIDConfig = { PJAX: true };
+
+    context.VOID.bindPjaxLifecycle();
+    context.document.dispatchEvent(nativePjaxEvent('pjax:send', { container: '#external' }));
+    context.document.dispatchEvent(nativePjaxEvent('pjax:beforeReplace', { container: '#external' }));
+    context.document.dispatchEvent(nativePjaxEvent('pjax:complete', { container: '#external' }));
+    context.document.dispatchEvent(nativePjaxEvent('pjax:end', { container: '#external' }));
+
+    assert.deepEqual(calls, []);
 });
 
 test('PJAX lifecycle binding stays idempotent across repeated initialization', () => {
@@ -904,6 +934,8 @@ test('main-container PJAX events do not run the comment lifecycle', () => {
     context.VOID.beforePjaxReplace = () => calls.push('beforePjaxReplace');
     context.VOID.afterPjax = () => calls.push('afterPjax');
     context.VOID.endPjax = () => calls.push('endPjax');
+    context.AjaxComment.cancelSubmit = () => calls.push('cancelSubmit');
+    context.AjaxComment.beforePjaxReplace = () => calls.push('commentBeforeReplace');
     context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
     context.AjaxComment.afterPagePjax = () => calls.push('afterPagePjax');
     context.AjaxComment.endPagePjax = () => calls.push('endPagePjax');
@@ -915,7 +947,14 @@ test('main-container PJAX events do not run the comment lifecycle', () => {
     context.document.dispatchEvent(nativePjaxEvent('pjax:complete', { container: '#pjax-container' }));
     context.document.dispatchEvent(nativePjaxEvent('pjax:end', { container: '#pjax-container' }));
 
-    assert.deepEqual(calls, ['beforePjax', 'beforePjaxReplace', 'afterPjax', 'endPjax']);
+    assert.deepEqual(calls, [
+        'cancelSubmit',
+        'beforePjax',
+        'commentBeforeReplace',
+        'beforePjaxReplace',
+        'afterPjax',
+        'endPjax'
+    ]);
 });
 
 test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', () => {

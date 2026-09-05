@@ -188,7 +188,7 @@ function commentList(existing = []) {
 }
 
 function activateSubmit(ajaxComment, form, generation = 1) {
-    const token = { commentIds: [] };
+    const token = { commentIds: [], parentCoid: '', text: form.fields['#textarea'].value };
     ajaxComment.submitForm = form;
     ajaxComment.submitToken = token;
     ajaxComment.submitGeneration = generation;
@@ -372,6 +372,7 @@ test('successful parsed responses insert DESC/ASC roots and replies through the 
     fresh = commentNode(43);
     parsed = responseDocument({ nodes: [existing, fresh] });
     token = activateSubmit(ajaxComment, form, 2);
+    ajaxComment.parentID = 'comment-10';
     ajaxComment.parseCommentResponse = () => parsed;
     ajaxComment.getCommentsOrder = () => 'ASC';
     ajaxComment.applySubmitResponse({ ok: true, url: `${form.action}#comment-43` }, '', form, token, 2);
@@ -380,8 +381,9 @@ test('successful parsed responses insert DESC/ASC roots and replies through the 
     fresh = commentNode(44, '10');
     parsed = responseDocument({ nodes: [existing, fresh] });
     token = activateSubmit(ajaxComment, form, 3);
+    token.parentCoid = '10';
     ajaxComment.parseCommentResponse = () => parsed;
-    ajaxComment.parentID = 'comment-10';
+    ajaxComment.parentID = '';
     ajaxComment.insertReplyComment = (node) => {
         reply = node;
         return true;
@@ -389,10 +391,54 @@ test('successful parsed responses insert DESC/ASC roots and replies through the 
     ajaxComment.applySubmitResponse({ ok: true, url: `${form.action}#comment-44` }, '', form, token, 3);
     assert.equal(reply.id, 'comment-44');
     assert.equal(reply.getAttribute('data-comment-parent'), '10');
-    assert.equal(ajaxComment.parentID, '');
     assert.equal(finished, 3);
     assert.equal(revealed, 3);
     assert.deepEqual(alerts, ['评论成功！', '评论成功！', '评论成功！']);
+});
+
+test('successful responses only reset the composer when its submitted context is unchanged', () => {
+    const form = new FakeForm({ text: '提交内容' });
+    const document = createDocument(() => form);
+    const VOID = { alert() {}, initEmoteContent() {} };
+    const { ajaxComment } = loadAjaxComment({ document, VOID });
+    let currentParentCoid = '10';
+    let cancelCount = 0;
+
+    ajaxComment.getCurrentReplyCoid = () => currentParentCoid;
+    ajaxComment.cancelActiveReply = () => { cancelCount += 1; };
+    ajaxComment.bindClick = () => {};
+    ajaxComment.applyThreadPanels = () => {};
+
+    ajaxComment.finish(form, { parentCoid: '10', text: '提交内容' });
+    assert.equal(form.fields['#textarea'].value, '');
+    assert.equal(cancelCount, 1);
+
+    form.fields['#textarea'].value = '新的草稿';
+    currentParentCoid = '10';
+    ajaxComment.finish(form, { parentCoid: '10', text: '提交内容' });
+    assert.equal(form.fields['#textarea'].value, '新的草稿');
+    assert.equal(cancelCount, 1);
+
+    currentParentCoid = '20';
+    ajaxComment.finish(form, { parentCoid: '10', text: '提交内容' });
+    assert.equal(form.fields['#textarea'].value, '新的草稿');
+    assert.equal(cancelCount, 1);
+
+    currentParentCoid = '20';
+    ajaxComment.finish(form, { parentCoid: '', text: '新的草稿' });
+    assert.equal(form.fields['#textarea'].value, '新的草稿');
+    assert.equal(cancelCount, 1);
+});
+
+test('before-replace teardown releases anti-spam and submit resources together', () => {
+    const { ajaxComment } = loadAjaxComment();
+    const calls = [];
+
+    ajaxComment.destroyAntiSpamToken = () => calls.push('antiSpam');
+    ajaxComment.unbindSubmit = () => calls.push('submit');
+    ajaxComment.beforePjaxReplace();
+
+    assert.deepEqual(calls, ['antiSpam', 'submit']);
 });
 
 test('a root comment submitted from a stale page reports the configured ASC/DESC destination', () => {
