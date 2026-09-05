@@ -75,16 +75,14 @@ function createClassList() {
     };
 }
 
-test('AjaxComment DOM and thread helpers are native while submit keeps the temporary jQuery boundary', () => {
-    const submitStart = ajaxCommentSource.indexOf('bindSubmit: function');
-    const initStart = ajaxCommentSource.indexOf('\n    init: function', submitStart);
+test('AjaxComment is fully native while the external jQuery compatibility layer remains separate', () => {
     const jQueryReference = /(?:^|[^\w$])\$\s*(?:\(|\.)|\bjQuery\b/;
 
-    assert.notEqual(submitStart, -1, 'comment submit should have an explicit compatibility boundary');
-    assert.ok(initStart > submitStart, 'comment init should follow the submit compatibility boundary');
-    assert.doesNotMatch(ajaxCommentSource.slice(0, submitStart), jQueryReference);
-    assert.doesNotMatch(ajaxCommentSource.slice(initStart), jQueryReference);
-    assert.match(ajaxCommentSource.slice(submitStart, initStart), /\$\.ajax\(/);
+    assert.doesNotMatch(ajaxCommentSource, jQueryReference);
+    assert.match(ajaxCommentSource, /new FormData\(form\)/);
+    assert.match(ajaxCommentSource, /new URLSearchParams\(\)/);
+    assert.match(ajaxCommentSource, /new DOMParser\(\)/);
+    assert.match(ajaxCommentSource, /fetch\(form\.getAttribute\('action'\)/);
 });
 
 test('native comment page queries and loading state follow the current PJAX DOM', () => {

@@ -3401,6 +3401,7 @@ var VOID = {
             send: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
 
+                AjaxComment.cancelSubmit();
                 if (AjaxComment.isCommentPjaxRequest(options)) {
                     VOID.destroyEmotes();
                     AjaxComment.setCommentPageLoading(true);
@@ -3858,6 +3859,11 @@ var AjaxComment = {
     antiSpamCleanup: null,
     pagerHandler: null,
     hashChangeHandler: null,
+    submitForm: null,
+    submitHandler: null,
+    submitController: null,
+    submitToken: null,
+    submitGeneration: 0,
 
     isCommentPjaxRequest: function (options) {
         return !!(options && options.container === '#comments');
@@ -4925,19 +4931,255 @@ var AjaxComment = {
         AjaxComment.threadFocusPendingId = '';
     },
 
-    err: function () {
-        var submit = document.querySelector(AjaxComment.submitBtn);
+    getSubmitButton: function (form) {
+        return form ? form.querySelector(AjaxComment.submitBtn) : null;
+    },
+
+    setSubmitState: function (form, isSubmitting) {
+        var submit = AjaxComment.getSubmitButton(form);
+
+        if (!submit) {
+            return;
+        }
+        submit.textContent = isSubmitting ? '提交中' : '提交评论';
+        submit.disabled = isSubmitting;
+    },
+
+    validateCommentForm: function (form) {
+        var author = form ? form.querySelector('#author') : null;
+        var mail = form ? form.querySelector('#mail') : null;
+        var url = form ? form.querySelector('#url') : null;
+        var textarea = form ? form.querySelector(AjaxComment.textarea) : null;
+        var filter = /^[^@\s<&>]+@([a-z0-9]+\.)+[a-z]{2,4}$/i;
+
+        if (author) {
+            if (String(author.value || '').trim() === '') {
+                return AjaxComment.noName;
+            }
+            if (mail && mail.hasAttribute('required') && String(mail.value || '').trim() === '') {
+                return AjaxComment.noMail;
+            }
+            if (mail && String(mail.value || '').trim() !== '' && !filter.test(String(mail.value).trim())) {
+                return AjaxComment.invalidMail;
+            }
+            if (url && url.hasAttribute('required') && String(url.value || '').trim() === '') {
+                return AjaxComment.noUrl;
+            }
+        }
+
+        if (!textarea || String(textarea.value || '').trim() === '') {
+            return AjaxComment.noContent;
+        }
+        return '';
+    },
+
+    buildSubmitBody: function (form) {
+        var formData = new FormData(form);
+        var body = new URLSearchParams();
+
+        formData.forEach(function (value, name) {
+            body.append(name, typeof value === 'string' ? value : value.name);
+        });
+        return body;
+    },
+
+    parseCommentResponse: function (html) {
+        var parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+
+        if (!parsed || typeof parsed.querySelector !== 'function'
+            || parsed.querySelector('parsererror')) {
+            throw new Error('Invalid comment response');
+        }
+        return parsed;
+    },
+
+    normalizeResponseText: function (value) {
+        return String(value || '').replace(/\r/g, '').split('\n').map(function (line) {
+            return line.trim();
+        }).filter(function (line) {
+            return line !== '';
+        }).join('\n').slice(0, 500);
+    },
+
+    getResponseError: function (parsed) {
+        var selectors = ['body .container', 'body [role="alert"]', 'body main', 'body'];
+        var target;
+
+        for (var i = 0; i < selectors.length; i++) {
+            target = parsed.querySelector(selectors[i]);
+            if (target) {
+                var message = AjaxComment.normalizeResponseText(target.textContent);
+                if (message) {
+                    return message;
+                }
+            }
+        }
+        return '';
+    },
+
+    getCurrentCommentIds: function () {
+        var nodes = document.querySelectorAll('#comments [id^="comment-"]');
+        var ids = [];
+
+        for (var i = 0; i < nodes.length; i++) {
+            if (/^comment-\d+$/.test(String(nodes[i].id || ''))) {
+                ids.push(nodes[i].id);
+            }
+        }
+        return ids;
+    },
+
+    getResponseCommentId: function (parsed, responseUrl, existingIds) {
+        var matched = String(responseUrl || '').match(/#comment-(\d+)$/);
+        var comments;
+        var newest = 0;
+        var known = {};
+
+        for (var knownIndex = 0; existingIds && knownIndex < existingIds.length; knownIndex++) {
+            known[String(existingIds[knownIndex])] = true;
+        }
+
+        if (matched && parsed.getElementById('comment-' + matched[1])
+            && !known['comment-' + matched[1]]) {
+            return matched[1];
+        }
+
+        comments = parsed.querySelectorAll('#comments [id^="comment-"]');
+        for (var i = 0; i < comments.length; i++) {
+            matched = String(comments[i].id || '').match(/^comment-(\d+)$/);
+            if (matched && !known[comments[i].id]) {
+                newest = Math.max(newest, parseInt(matched[1], 10));
+            }
+        }
+        return newest ? String(newest) : '';
+    },
+
+    ensureCommentList: function () {
+        var comments = document.querySelector('#comments');
+        var list = document.querySelector('#comments > .comment-list');
+        var separator;
+        var tab;
+        var count;
+        var number;
+
+        if (list || !comments) {
+            return list;
+        }
+
+        separator = comments.querySelector('.comment-separator');
+        if (!separator) {
+            separator = document.createElement('h3');
+            separator.className = 'comment-separator';
+            tab = document.createElement('div');
+            tab.className = 'comment-tab-current';
+            count = document.createElement('span');
+            count.className = 'comment-num';
+            count.appendChild(document.createTextNode('已有 '));
+            number = document.createElement('span');
+            number.className = 'num';
+            number.textContent = '0';
+            count.appendChild(number);
+            count.appendChild(document.createTextNode(' 条评论'));
+            tab.appendChild(count);
+            separator.appendChild(tab);
+            comments.appendChild(separator);
+        }
+
+        count = separator.querySelector('.comment-num');
+        number = count ? count.querySelector('.num') : null;
+        if (count && !number) {
+            while (count.firstChild) {
+                count.removeChild(count.firstChild);
+            }
+            count.appendChild(document.createTextNode('已有 '));
+            number = document.createElement('span');
+            number.className = 'num';
+            number.textContent = '0';
+            count.appendChild(number);
+            count.appendChild(document.createTextNode(' 条评论'));
+        }
+
+        list = document.createElement('div');
+        list.className = 'comment-list';
+        comments.appendChild(list);
+        return list;
+    },
+
+    revealComment: function (comment) {
+        var reducedMotion = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (!comment || !comment.style) {
+            return;
+        }
+        if (reducedMotion || typeof window.requestAnimationFrame !== 'function') {
+            comment.style.opacity = '1';
+            return;
+        }
+
+        comment.style.transition = 'opacity 500ms';
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                comment.style.opacity = '1';
+            });
+        });
+    },
+
+    isCurrentSubmit: function (form, token, generation) {
+        return AjaxComment.submitForm === form
+            && AjaxComment.submitToken === token
+            && AjaxComment.submitGeneration === generation
+            && (!document.documentElement
+                || typeof document.documentElement.contains !== 'function'
+                || document.documentElement.contains(form));
+    },
+
+    releaseSubmit: function (token, generation) {
+        if (AjaxComment.submitToken !== token || AjaxComment.submitGeneration !== generation) {
+            return;
+        }
+        AjaxComment.submitToken = null;
+        AjaxComment.submitController = null;
+    },
+
+    cancelSubmit: function () {
+        var form = AjaxComment.submitForm;
+        var controller = AjaxComment.submitController;
+
+        AjaxComment.submitGeneration += 1;
+        AjaxComment.submitToken = null;
+        AjaxComment.submitController = null;
+        if (controller && typeof controller.abort === 'function') {
+            controller.abort();
+        }
+        AjaxComment.setSubmitState(form, false);
+    },
+
+    unbindSubmit: function () {
+        var form = AjaxComment.submitForm;
+
+        AjaxComment.cancelSubmit();
+        if (form && AjaxComment.submitHandler) {
+            form.removeEventListener('submit', AjaxComment.submitHandler);
+        }
+        AjaxComment.submitForm = null;
+        AjaxComment.submitHandler = null;
+    },
+
+    err: function (form) {
+        var submit = AjaxComment.getSubmitButton(form || AjaxComment.submitForm);
 
         if (submit) {
+            submit.textContent = '提交评论';
             submit.disabled = false;
         }
         AjaxComment.newID = '';
     },
 
-    finish: function () {
+    finish: function (form) {
         var newCommentId = AjaxComment.newID;
-        var submit = document.querySelector(AjaxComment.submitBtn);
-        var textarea = document.querySelector(AjaxComment.textarea);
+        var submit = AjaxComment.getSubmitButton(form || AjaxComment.submitForm);
+        var textarea = form ? form.querySelector(AjaxComment.textarea) : document.querySelector(AjaxComment.textarea);
         var commentCount = document.querySelector('.comment-num .num');
         var newComment = newCommentId ? document.getElementById('comment-' + newCommentId) : null;
         var count;
@@ -4969,128 +5211,168 @@ var AjaxComment = {
         VOID.initEmoteContent();
     },
 
-    bindSubmit: function () {
-        $(AjaxComment.commentForm).off('submit.ajaxComment').on('submit.ajaxComment', function () { // 提交事件
-            $(AjaxComment.submitBtn).attr('disabled', true);
+    failSubmit: function (form, message) {
+        VOID.alert('提交失败！请重试。' + (message ? '\n' + message : ''));
+        AjaxComment.err(form);
+    },
 
-            /* 检查 */
-            if ($(AjaxComment.commentForm).find('#author')[0]) {
-                if ($(AjaxComment.commentForm).find('#author').val() == '') {
-                    VOID.alert(AjaxComment.noName);
-                    AjaxComment.err();
-                    return false;
-                }
+    applySubmitResponse: function (response, html, form, token, generation) {
+        var parsed = AjaxComment.parseCommentResponse(html);
+        var responseList;
+        var newCommentId;
+        var responseComment;
+        var newComment;
+        var currentList;
 
-                if (typeof $(AjaxComment.commentForm).find('#mail').attr('required') != 'undefined') {
-                    // 需要邮箱
-                    if ($(AjaxComment.commentForm).find('#mail').val() == '') {
-                        VOID.alert(AjaxComment.noMail);
-                        AjaxComment.err();
-                        return false;
-                    }
-                }
+        if (!AjaxComment.isCurrentSubmit(form, token, generation)) {
+            return;
+        }
+        if (!response.ok) {
+            AjaxComment.failSubmit(form, AjaxComment.getResponseError(parsed));
+            return;
+        }
 
-                if ($(AjaxComment.commentForm).find('#mail').val() != '') {
-                    var filter = /^[^@\s<&>]+@([a-z0-9]+\.)+[a-z]{2,4}$/i;
-                    if (!filter.test($(AjaxComment.commentForm).find('#mail').val())) {
-                        VOID.alert(AjaxComment.invalidMail);
-                        AjaxComment.err();
-                        return false;
-                    }
-                }
+        responseList = parsed.querySelector('#comments .comment-list');
+        if (!responseList) {
+            AjaxComment.failSubmit(form, '');
+            return;
+        }
 
-                if ($(AjaxComment.commentForm).find('#url').val() == ''
-                    && typeof $(AjaxComment.commentForm).find('#url').attr('required') != 'undefined') {
-                    VOID.alert(AjaxComment.noUrl);
-                    AjaxComment.err();
-                    return false;
-                }
+        newCommentId = AjaxComment.getResponseCommentId(parsed, response.url, token.commentIds);
+        responseComment = newCommentId ? parsed.getElementById('comment-' + newCommentId) : null;
+        if (!newCommentId || !responseComment) {
+            AjaxComment.failSubmit(form, '');
+            return;
+        }
+        AjaxComment.newID = newCommentId;
+
+        if (!AjaxComment.isNewestCommentPage() && AjaxComment.parentID === '') {
+            VOID.alert(AjaxComment.getCommentsOrder() === 'ASC'
+                ? '评论成功！请前往评论最后一页查看。'
+                : '评论成功！请回到评论第一页查看。');
+            AjaxComment.newID = '';
+            AjaxComment.parentID = '';
+            AjaxComment.finish(form);
+            return;
+        }
+
+        newComment = typeof document.importNode === 'function'
+            ? document.importNode(responseComment, true) : responseComment;
+        newComment.style.opacity = '0';
+        if (AjaxComment.parentID === '') {
+            currentList = AjaxComment.ensureCommentList();
+            if (!currentList) {
+                AjaxComment.failSubmit(form, '');
+                return;
             }
+            AjaxComment.insertNewestComment(currentList, newComment);
+        } else if (!AjaxComment.insertReplyComment(newComment)) {
+            AjaxComment.failSubmit(form, '');
+            return;
+        }
 
-            var textValue = $(AjaxComment.commentForm).find(AjaxComment.textarea).val().replace(/(^\s*)|(\s*$)/g, '');//检查空格信息
-            if (textValue == null || textValue == '') {
-                VOID.alert(AjaxComment.noContent);
-                AjaxComment.err();
-                return false;
-            }
-            $(AjaxComment.submitBtn).html('提交中');
-            $.ajax({
-                url: $(AjaxComment.commentForm).attr('action'),
-                type: $(AjaxComment.commentForm).attr('method'),
-                data: $(AjaxComment.commentForm).serializeArray(),
-                error: function () {
-                    VOID.alert('提交失败！请重试。');
-                    $(AjaxComment.submitBtn).html('提交评论');
-                    AjaxComment.err();
-                    return false;
-                },
-                success: function (data) { //成功取到数据
-                    try {
-                        if (!$(AjaxComment.commentList, data).length) {
-                            var msg = '提交失败！请重试。' + $($(data)[7]).text();
-                            VOID.alert(msg);
-                            $(AjaxComment.submitBtn).html('提交评论');
-                            AjaxComment.err();
-                            return false;
-                        } else {
-                            AjaxComment.newID = $(AjaxComment.commentList, data).html().match(/id="?comment-\d+/g).join().match(/\d+/g).sort(function (a, b) {
-                                return a - b;
-                            }).pop();
+        AjaxComment.revealComment(newComment);
+        VOID.alert('评论成功！');
+        AjaxComment.finish(form);
+        AjaxComment.parentID = '';
+        AjaxComment.newID = '';
+    },
 
-                            if (!AjaxComment.isNewestCommentPage() && AjaxComment.parentID == '') {
-                                // 在分页对文章发表评论，无法取得最新评论内容
-                                VOID.alert(AjaxComment.getCommentsOrder() === 'ASC'
-                                    ? '评论成功！请前往评论最后一页查看。'
-                                    : '评论成功！请回到评论第一页查看。');
-                                AjaxComment.newID = '';
-                                AjaxComment.parentID = '';
-                                AjaxComment.finish();
-                                return false;
-                            }
+    submitComment: function (form) {
+        var validationMessage;
+        var body;
+        var token;
+        var generation;
+        var controller;
+        var requestOptions;
 
-                            var $newComment = $(data).find('#comment-' + AjaxComment.newID).first();
-                            var newComment = $newComment.get(0);
-                            if (!$newComment.length) {
-                                throw new Error('New comment is missing from the response');
-                            }
-                            $newComment.css('opacity', 0);
-
-                            // 当页面无评论，先添加一个评论容器
-                            if ($(AjaxComment.commentList).length <= 0) {
-                                $('#comments').append('<h3 class="comment-separator"><div class="comment-tab-current"><span class="comment-num">已有 <span class="num">0</span> 条评论</span></div></h3>')
-                                    .append('<div class="comment-list"></div>');
-                            }
-
-                            if (AjaxComment.parentID == '') {
-                                // 无父 id，按后台评论顺序插入顶层评论
-                                AjaxComment.insertNewestComment(
-                                    document.querySelector('#comments > .comment-list'),
-                                    newComment
-                                );
-                                $newComment.fadeTo(500, 1);
-                                VOID.alert('评论成功！');
-                                AjaxComment.finish();
-                                AjaxComment.newID = '';
-                                return false;
-                            } else {
-                                if (!AjaxComment.insertReplyComment(newComment)) {
-                                    throw new Error('Comment parent is missing from the current page');
-                                }
-                                $newComment.fadeTo(500, 1);
-                                VOID.alert('评论成功！');
-                                AjaxComment.finish();
-                                AjaxComment.parentID = '';
-                                AjaxComment.newID = '';
-                                return false;
-                            }
-                        }
-                    } catch (e) {
-                        window.location.reload();
-                    }
-                } // end success()
-            }); // end ajax()
+        if (!form || AjaxComment.submitToken) {
             return false;
-        }); // end submit()
+        }
+
+        AjaxComment.setSubmitState(form, true);
+        validationMessage = AjaxComment.validateCommentForm(form);
+        if (validationMessage) {
+            VOID.alert(validationMessage);
+            AjaxComment.err(form);
+            return false;
+        }
+
+        try {
+            body = AjaxComment.buildSubmitBody(form);
+        } catch (error) {
+            AjaxComment.failSubmit(form, '');
+            return false;
+        }
+
+        token = { commentIds: AjaxComment.getCurrentCommentIds() };
+        generation = AjaxComment.submitGeneration + 1;
+        controller = typeof AbortController === 'function' ? new AbortController() : null;
+        AjaxComment.submitGeneration = generation;
+        AjaxComment.submitToken = token;
+        AjaxComment.submitController = controller;
+        requestOptions = {
+            method: String(form.getAttribute('method') || 'post').toUpperCase(),
+            body: body,
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        };
+        if (controller) {
+            requestOptions.signal = controller.signal;
+        }
+
+        fetch(form.getAttribute('action'), requestOptions).then(function (response) {
+            return response.text().then(function (html) {
+                return { response: response, html: html };
+            });
+        }).then(function (result) {
+            if (!AjaxComment.isCurrentSubmit(form, token, generation)) {
+                AjaxComment.releaseSubmit(token, generation);
+                return;
+            }
+            try {
+                AjaxComment.applySubmitResponse(result.response, result.html, form, token, generation);
+            } catch (error) {
+                AjaxComment.failSubmit(form, '');
+            }
+            AjaxComment.releaseSubmit(token, generation);
+        }).catch(function (error) {
+            if (!AjaxComment.isCurrentSubmit(form, token, generation)) {
+                AjaxComment.releaseSubmit(token, generation);
+                return;
+            }
+            if (!error || error.name !== 'AbortError') {
+                AjaxComment.failSubmit(form, '');
+            } else {
+                AjaxComment.err(form);
+            }
+            AjaxComment.releaseSubmit(token, generation);
+        });
+        return false;
+    },
+
+    bindSubmit: function () {
+        var form = document.querySelector(AjaxComment.commentForm);
+
+        if (AjaxComment.submitForm === form && AjaxComment.submitHandler) {
+            return;
+        }
+        if (AjaxComment.submitForm || AjaxComment.submitHandler) {
+            AjaxComment.unbindSubmit();
+        }
+        if (!form) {
+            return;
+        }
+
+        AjaxComment.submitForm = form;
+        AjaxComment.submitHandler = function (event) {
+            event.preventDefault();
+            AjaxComment.submitComment(form);
+        };
+        form.addEventListener('submit', AjaxComment.submitHandler);
     },
 
     init: function () {
