@@ -27,13 +27,14 @@
 VOID 是 Typecho 主题。必须明确区分以下各层：
 
 ```text
-仓库源文件 -> 生成的 build/ -> 已部署的运行副本
+仓库源文件 -> dev-build/（本地开发）或 build/（生产） -> 已部署的运行副本
 ```
 
 - 只在源码仓库中维护代码。
-- 将 `build/` 视为完整且唯一可部署的主题单元。
+- 将 `dev-build/` 视为完整、未压缩、只用于本地测试的开发运行单元。
+- 将 `build/` 视为完整且唯一可发布、可用于生产部署的主题单元。
 - 将已部署的主题目录视为可替换的运行副本，绝不能视为事实来源。
-- 不要用临时复制的个别源文件代替完整构建产物。
+- 本地测试和生产部署都必须整体使用一个完整运行单元，不要临时复制个别源文件。
 - 不要混用来自不同构建的 PHP、打包文件、清单、哈希资源或 Service Worker。
 - 成功修改源码或完成构建不等于完成浏览器验证。涉及运行时行为的结论必须
   检查已部署副本和浏览器实际加载的资源。
@@ -114,7 +115,8 @@ git log --oneline -5
 - 除非明确的架构决定要求改变，否则继续采用无框架且兼容 jQuery 的架构。
 - 使用当前运行时代码和 Gulp 压缩链支持的语法。
 - `assets/js/void/` 是前台主脚本的受维护源码；文件顺序以
-  `scripts/void-sources.cjs` 为唯一事实来源。`assets/VOID.js` 仅由开发任务生成。
+  `scripts/void-sources.cjs` 为唯一事实来源。开发任务将合并结果写入
+  `dev-build/assets/VOID.js`，不在源码目录生成副本。
 - 每个 DOM 初始化器都必须支持首次加载，以及 PJAX 替换后的重建。
 - 重复初始化不得重复创建 DOM、监听器、观察器、定时器、请求或全局状态。
 - 对可替换 DOM 优先使用事件委托。需要销毁时，应为处理程序添加命名空间，
@@ -148,16 +150,14 @@ git log --oneline -5
 被忽略的生成输出包括：
 
 ```text
-assets/VOID.css
-assets/VOID.css.map
-assets/VOID.js
-assets/bundle*.js
-assets/bundle*.css
 build/
+dev-build/
 temp/
 ```
 
 - 不要编辑或提交上述被忽略的输出。
+- `assets/` 中的 `VOID.js`、编译后 `VOID.css`、bundle 和源映射不是合法输出；构建任务
+  会清理历史遗留文件，`.gitignore` 也不会隐藏它们的回归。
 - `tests/` 是受维护的源码，必须始终纳入版本控制。
 - 压缩、内容哈希、PHP 引用改写和资源复制均由 Gulp 负责。绝不能硬编码生成的
   哈希文件名。
@@ -225,7 +225,7 @@ temp/
 
 ## 依赖与工具链
 
-CI 使用 Node.js 26。常规环境准备和验证应使用锁文件：
+CI 使用 Node.js 26 和 npm 11。常规环境准备和验证应使用锁文件：
 
 ```bash
 npm ci
@@ -235,7 +235,9 @@ npm ci
 - 只有依赖变更属于当前任务时，才同时修改 `package.json` 和 `package-lock.json`。
 - 不要在无关任务中夹带大范围依赖升级。
 - 除非任务明确是海报或资源迁移，否则保持锁定的 Sharp 版本。
-- 优先使用仓库脚本和 `make build`，不要依赖全局 Gulp。
+- 使用 `make dev-build` 生成完整开发运行单元，使用 `make watch` 监听受维护源码。
+- 使用 `make verify` 执行与 CI 相同的 lint、Node/PHP 测试、PHP 语法检查和生产构建。
+- 使用 `make build` 生成唯一生产运行单元；这些命令只调用仓库本地 Gulp。
 
 ## 验证
 
@@ -251,9 +253,7 @@ git diff --check
 JavaScript、SCSS、构建逻辑或前端资源发生变更时运行：
 
 ```bash
-npm run lint
-npm test
-make build
+make verify
 ```
 
 `npm test` 覆盖表情生成及其契约、表情行为、PJAX 事件和 Service Worker
@@ -288,12 +288,13 @@ npm run emotes:import -- <verified-source-directory>
 
 ```bash
 npm ci
-npm run lint
-npm test
-npm run test:php
-make build
-git diff --check
+make verify
 ```
+
+`make verify` 是本地和 CI 的权威完整门禁。它运行 JavaScript lint 和测试、全部受跟踪
+PHP 文件的语法检查、自动发现的 PHP 合同测试、生产构建及构建输出合同，并以
+`git diff --check` 收尾。CI 另外在 PHP 7.0 与 8.5 上运行 PHP 语法和合同矩阵；PR 只
+获得只读权限，只有 `master` 验证成功后，nightly job 才下载同一提交的构建制品并发布。
 
 ### 浏览器与 HTTP 验证
 

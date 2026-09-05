@@ -1,11 +1,7 @@
-node_modules/*
-temp/*
-build/*
-build.zip
-assets/bundle*.js
-assets/bundle*.css
-assets/VOID.js
-assets/VOID*.css
-assets/VOID*.css.map
+/node_modules/
+/temp/
+/build/
+/dev-build/
+/build.zip
 .DS_Store
 .playwright-cli/

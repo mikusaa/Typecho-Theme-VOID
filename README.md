@@ -218,38 +218,42 @@ VOID 4.0 的兼容性变更和迁移步骤参见 [VOID 4.0 升级说明](https:/
 
 <details><summary>展开详情</summary><br>
 
-如果你有不错的想法，可以定制自己的版本。首先你需要准备好 NodeJS 环境，然后 clone 这个 repo：
+如果你有不错的想法，可以定制自己的版本。开发环境使用 Node.js 26 和 npm 11。先 clone
+这个 repo：
 
 ```bash
 git clone https://github.com/mikusaa/Typecho-Theme-VOID ./VOID && cd ./VOID
 ```
 
-安装依赖：
+按锁文件安装依赖，不需要全局安装 Gulp：
 
 ```bash
-npm install -g gulp
-npm install
+npm ci
 ```
 
-用以下命令打包依赖的 JS 和 CSS：
+生成完整、未压缩的本地开发运行单元：
 
 ```bash
-gulp dev
+make dev-build
 ```
 
-主题的样式是用 SCSS 写的，你可以使用自己喜欢的方式编译 SCSS，或者使用：
+输出位于 `./dev-build`，PHP 会引用其中的逻辑资源名。需要持续更新 SCSS（包括
+`assets/parts/` 分部）、JavaScript、PHP 和运行资源时使用：
 
 ```bash
-gulp sass
+make watch
 ```
 
-监听 SCSS 更改然后实时编译。尽请添加自己想要的功能，满意后就提交代码。然后：
+交付前运行与 CI 相同的完整门禁；它会检查 JavaScript、表情资源、全部受跟踪 PHP
+文件的语法、自动发现的 PHP 合同测试，并完成一次生产构建：
 
 ```bash
-gulp build
+make verify
 ```
 
-构建你的主题，生成的主题位于 `./build` 目录下。如果你对自己的更改很满意，**欢迎提出 Pull Request**。
+只需重新生成生产运行单元时使用 `make build`。生产输出位于 `./build`，包含内容哈希
+资源和已同步改写引用的 PHP 文件；部署时必须整体使用同一次构建，不能与
+`./dev-build` 或旧资源混合。如果你对自己的更改很满意，**欢迎提出 Pull Request**。
 
 </details>
 

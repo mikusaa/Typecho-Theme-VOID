@@ -7,8 +7,10 @@ VOID 的前台主题代码按领域维护在 `assets/js/void/`。权威加载顺
 ## 构建模型
 
 这些文件是传统浏览器脚本，不是 ES Modules。生产构建按清单顺序连接源码，压缩并加上
-内容哈希，最终仍只发布一个 `VOID-[hash].js`。`gulp dev` 会在 `assets/VOID.js` 生成
-未压缩的开发副本；该文件不是受维护源码，也不得提交。
+内容哈希，最终仍只发布一个 `VOID-[hash].js`。`make dev-build` 会在独立的
+`dev-build/` 中生成完整、未压缩且使用逻辑资源名的本地运行单元，不会把 `VOID.js`、
+`VOID.css` 或 bundle 写回 `assets/`。`make watch` 先生成该运行单元，再根据同一组源码
+清单持续更新它；生产 `build/` 始终由 `make build` 清理后完整生成。
 
 ## 领域边界
 
