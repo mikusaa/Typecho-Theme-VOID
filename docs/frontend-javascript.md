@@ -29,5 +29,9 @@ PHP 模板直接使用 `VOID`、`VOID_Vote`、`Share` 和 `AjaxComment`，这些
 的组件应继续提供幂等销毁路径；评论容器 `#comments` 的局部 PJAX 不得触发主容器
 `#pjax-container` 的完整重建。
 
+`VoidPjax` 启用后由其接管 `history.scrollRestoration`，为每个历史条目记录滚动坐标，
+并在目标容器替换后恢复位置。不要改回浏览器自动恢复，否则 `popstate` 的异步请求期间会
+把目标位置提前应用到仍在显示的旧容器；评论锚点可以在替换后的生命周期中继续覆盖该坐标。
+
 新增领域文件时，必须加入 `scripts/void-sources.cjs`。源码布局合同会拒绝遗漏、重复条目
 以及不再最后执行的 `bootstrap.js`。

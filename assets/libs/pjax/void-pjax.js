@@ -17,7 +17,9 @@
         requestId: 0,
         controller: null,
         requestOptions: null,
-        onceScriptCache: {}
+        onceScriptCache: {},
+        historyEntrySerial: 0,
+        scrollPositions: {}
     };
 
     function extend(base, extra) {
@@ -50,6 +52,123 @@
     function stripHash(url) {
         var index = url.indexOf('#');
         return index > -1 ? url.slice(0, index) : url;
+    }
+
+    function normalizeScrollCoordinate(value) {
+        return typeof value === 'number' && isFinite(value) ? Math.max(0, value) : 0;
+    }
+
+    function normalizeScrollPosition(position) {
+        return {
+            x: normalizeScrollCoordinate(position && position.x),
+            y: normalizeScrollCoordinate(position && position.y)
+        };
+    }
+
+    function getScrollPosition() {
+        var scrollingElement = document.scrollingElement || document.documentElement || document.body;
+        var x = typeof window.pageXOffset === 'number'
+            ? window.pageXOffset : (scrollingElement ? scrollingElement.scrollLeft : 0);
+        var y = typeof window.pageYOffset === 'number'
+            ? window.pageYOffset : (scrollingElement ? scrollingElement.scrollTop : 0);
+
+        return normalizeScrollPosition({ x: x, y: y });
+    }
+
+    function restoreScrollPosition(position) {
+        position = normalizeScrollPosition(position);
+        if (typeof window.scrollTo === 'function') {
+            window.scrollTo(position.x, position.y);
+            return;
+        }
+
+        var scrollingElement = document.scrollingElement || document.documentElement || document.body;
+        if (scrollingElement) {
+            scrollingElement.scrollLeft = position.x;
+            scrollingElement.scrollTop = position.y;
+        }
+    }
+
+    function createHistoryEntryId() {
+        runtime.historyEntrySerial += 1;
+        return String(new Date().getTime()) + ':' + runtime.historyEntrySerial;
+    }
+
+    function rememberHistoryPosition(state, position) {
+        if (!state || !state.entryId) {
+            return;
+        }
+        runtime.scrollPositions[state.entryId] = normalizeScrollPosition(position);
+    }
+
+    function resolveHistoryPosition(state) {
+        if (!state || typeof state !== 'object') {
+            return null;
+        }
+        if (state.entryId && runtime.scrollPositions[state.entryId]) {
+            return normalizeScrollPosition(runtime.scrollPositions[state.entryId]);
+        }
+        if (typeof state.scrollX === 'number' || typeof state.scrollY === 'number') {
+            return normalizeScrollPosition({ x: state.scrollX, y: state.scrollY });
+        }
+        return null;
+    }
+
+    function setManualScrollRestoration() {
+        if (window.history && 'scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+    }
+
+    function rememberCurrentScrollPosition() {
+        if (!window.history) {
+            return;
+        }
+        rememberHistoryPosition(window.history.state, getScrollPosition());
+    }
+
+    function persistCurrentScrollPosition() {
+        var current = window.history && window.history.state;
+        if (!current || !current.__voidPjax) {
+            return;
+        }
+
+        var position = getScrollPosition();
+        rememberHistoryPosition(current, position);
+        if (current.scrollX === position.x && current.scrollY === position.y) {
+            return;
+        }
+
+        var nextState = extend(current, {
+            scrollX: position.x,
+            scrollY: position.y
+        });
+        window.history.replaceState(nextState, '', window.location.href);
+    }
+
+    function isHistoryPageShow(event) {
+        if (event && event.persisted) {
+            return true;
+        }
+        if (window.performance && typeof window.performance.getEntriesByType === 'function') {
+            var entries = window.performance.getEntriesByType('navigation');
+            if (entries && entries[0]) {
+                return entries[0].type === 'back_forward';
+            }
+        }
+        return !!(window.performance
+            && window.performance.navigation
+            && window.performance.navigation.type === 2);
+    }
+
+    function onPageShow(event) {
+        var current = window.history && window.history.state;
+        var position = resolveHistoryPosition(current);
+
+        setManualScrollRestoration();
+        if (isHistoryPageShow(event) && current && current.__voidPjax && position) {
+            restoreScrollPosition(position);
+        }
     }
 
     function isLocalUrl(url) {
@@ -262,20 +381,28 @@
 
     function ensureHistoryState() {
         var current = window.history.state;
-        if (!current || !current.__voidPjax) {
-            window.history.replaceState(buildHistoryState(window.location.href, runtime.options), '', window.location.href);
-        }
+        var options = resolveStateOptions(current);
+        var position = resolveHistoryPosition(current) || getScrollPosition();
+        var entryId = current && current.__voidPjax ? current.entryId : '';
+        var nextState = buildHistoryState(window.location.href, options, position, entryId);
+
+        window.history.replaceState(nextState, '', window.location.href);
+        rememberHistoryPosition(nextState, position);
     }
 
-    function buildHistoryState(url, options) {
+    function buildHistoryState(url, options, position, entryId) {
         var resolvedOptions = extend(runtime.options || defaults, options || {});
+        var resolvedPosition = normalizeScrollPosition(position || getScrollPosition());
 
         return {
             __voidPjax: true,
+            entryId: entryId || createHistoryEntryId(),
             url: normalizeUrl(url) || window.location.href,
             container: resolvedOptions.container || defaults.container,
             fragment: resolvedOptions.fragment || resolvedOptions.container || defaults.fragment,
-            scrollTop: !!resolvedOptions.scrollTop
+            scrollTop: !!resolvedOptions.scrollTop,
+            scrollX: resolvedPosition.x,
+            scrollY: resolvedPosition.y
         };
     }
 
@@ -302,6 +429,9 @@
     }
 
     function fallbackNavigate(url) {
+        if (window.history && 'scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'auto';
+        }
         window.location.href = url;
     }
 
@@ -316,6 +446,19 @@
             return false;
         }
 
+        var sourcePosition = getScrollPosition();
+        var targetPosition = options.fromPopstate
+            ? normalizeScrollPosition(options.historyScrollPosition)
+            : (options.scrollTop ? { x: 0, y: 0 } : sourcePosition);
+        var currentState = window.history.state;
+        var currentEntryId = currentState && currentState.__voidPjax ? currentState.entryId : '';
+
+        if (historyMode === 'push') {
+            currentState = buildHistoryState(window.location.href, options, sourcePosition, currentEntryId);
+            window.history.replaceState(currentState, '', window.location.href);
+            rememberHistoryPosition(currentState, sourcePosition);
+        }
+
         var adoptedContainer = document.importNode(nextContainer, true);
         safeEmit('pjax:beforeReplace', [adoptedContainer, options], options);
         currentContainer.parentNode.replaceChild(adoptedContainer, currentContainer);
@@ -324,14 +467,17 @@
         rerunScripts(adoptedContainer);
 
         if (historyMode === 'push') {
-            window.history.replaceState(buildHistoryState(window.location.href, options), '', window.location.href);
-            window.history.pushState(buildHistoryState(finalUrl, options), '', finalUrl);
+            var pushedState = buildHistoryState(finalUrl, options, targetPosition);
+            window.history.pushState(pushedState, '', finalUrl);
+            rememberHistoryPosition(pushedState, targetPosition);
         } else if (historyMode === 'replace') {
-            window.history.replaceState(buildHistoryState(finalUrl, options), '', finalUrl);
+            var replacedState = buildHistoryState(finalUrl, options, targetPosition, currentEntryId);
+            window.history.replaceState(replacedState, '', finalUrl);
+            rememberHistoryPosition(replacedState, targetPosition);
         }
 
-        if (options.scrollTop && !options.fromPopstate) {
-            window.scrollTo(0, 0);
+        if (options.fromPopstate || options.scrollTop) {
+            restoreScrollPosition(targetPosition);
         }
 
         return true;
@@ -498,6 +644,7 @@
         }
 
         var stateOptions = resolveStateOptions(event.state);
+        var historyScrollPosition = resolveHistoryPosition(event.state) || { x: 0, y: 0 };
 
         visit({
             url: event.state.url || window.location.href,
@@ -507,6 +654,7 @@
             push: false,
             replace: false,
             fromPopstate: true,
+            historyScrollPosition: historyScrollPosition,
             scrollTop: false
         });
     }
@@ -524,11 +672,15 @@
         if (!runtime.bound) {
             document.addEventListener('click', onDocumentClick, false);
             window.addEventListener('popstate', onPopState, false);
+            window.addEventListener('scroll', rememberCurrentScrollPosition, false);
+            window.addEventListener('pagehide', persistCurrentScrollPosition, false);
+            window.addEventListener('pageshow', onPageShow, false);
             runtime.bound = true;
         }
 
         rememberOnceScripts(document.querySelector(runtime.options.container));
         ensureHistoryState();
+        setManualScrollRestoration();
         return true;
     }
 

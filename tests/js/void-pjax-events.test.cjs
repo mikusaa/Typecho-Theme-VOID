@@ -82,6 +82,29 @@ function loadPjaxEnvironment(options = {}) {
     let jqueryTriggerCount = 0;
     let replaceObserver = () => {};
     let replacementCount = 0;
+    let historyState = options.historyState || null;
+    const historyCalls = [];
+    const scrollCalls = [];
+    const location = {
+        href: 'https://example.test/start',
+        origin: 'https://example.test'
+    };
+    const history = {
+        scrollRestoration: 'auto',
+        get state() {
+            return historyState;
+        },
+        pushState(state, _title, url) {
+            historyState = state;
+            location.href = url;
+            historyCalls.push({ mode: 'push', state, url });
+        },
+        replaceState(state, _title, url) {
+            historyState = state;
+            location.href = url;
+            historyCalls.push({ mode: 'replace', state, url });
+        }
+    };
 
     document.importNode = (node) => {
         assert.equal(node, nextContainer);
@@ -102,6 +125,10 @@ function loadPjaxEnvironment(options = {}) {
         currentContainer = next;
     };
     document.title = 'Start';
+    document.scrollingElement = {
+        scrollLeft: options.scrollX || 0,
+        scrollTop: options.scrollY || 0
+    };
 
     function DOMParser() {}
     DOMParser.prototype.parseFromString = () => ({
@@ -132,16 +159,18 @@ function loadPjaxEnvironment(options = {}) {
         console,
         document,
         fetch: () => Promise.reject(new Error('expected test failure')),
-        history: {
-            pushState() {},
-            replaceState() {}
-        },
+        history,
         jQuery,
-        location: {
-            href: 'https://example.test/start',
-            origin: 'https://example.test'
+        location,
+        pageXOffset: options.scrollX || 0,
+        pageYOffset: options.scrollY || 0,
+        scrollTo(x, y) {
+            this.pageXOffset = x;
+            this.pageYOffset = y;
+            document.scrollingElement.scrollLeft = x;
+            document.scrollingElement.scrollTop = y;
+            scrollCalls.push([x, y]);
         },
-        scrollTo() {},
         setTimeout
     });
     window.window = window;
@@ -162,13 +191,26 @@ function loadPjaxEnvironment(options = {}) {
         adoptedContainer,
         commentContainer,
         document,
+        getHistoryCalls: () => historyCalls,
+        getHistoryState: () => historyState,
         getCurrentContainer: () => currentContainer,
         getJqueryTriggerCount: () => jqueryTriggerCount,
         getReplacementCount: () => replacementCount,
+        getScrollCalls: () => scrollCalls,
         initialContainer,
         jQuery,
+        setHistoryState: (state, url = state && state.url) => {
+            historyState = state;
+            if (url) location.href = url;
+        },
         setReplaceObserver: (observer) => {
             replaceObserver = observer;
+        },
+        setScrollPosition: (x, y) => {
+            window.pageXOffset = x;
+            window.pageYOffset = y;
+            document.scrollingElement.scrollLeft = x;
+            document.scrollingElement.scrollTop = y;
         },
         window
     };
@@ -520,15 +562,108 @@ test('a superseded request emits abort before the replacement send', () => {
     ]);
 });
 
-test('popstate restores the recorded main-container request through PJAX', async () => {
-    const { document, window } = loadPjaxEnvironment();
+test('binding takes ownership of scroll restoration and records the initial position', () => {
+    const {
+        getHistoryCalls,
+        getHistoryState,
+        window
+    } = loadPjaxEnvironment({ scrollX: 12, scrollY: 345 });
+
+    window.VoidPjax.bind({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0
+    });
+
+    const state = getHistoryState();
+    assert.equal(window.history.scrollRestoration, 'manual');
+    assert.equal(getHistoryCalls().length, 1);
+    assert.equal(getHistoryCalls()[0].mode, 'replace');
+    assert.equal(state.__voidPjax, true);
+    assert.match(state.entryId, /^\d+:\d+$/);
+    assert.equal(state.scrollX, 12);
+    assert.equal(state.scrollY, 345);
+});
+
+test('page lifecycle persists scroll state without overriding a normal page show', () => {
+    const {
+        getHistoryState,
+        getScrollCalls,
+        setScrollPosition,
+        window
+    } = loadPjaxEnvironment({ scrollX: 3, scrollY: 120 });
+
+    window.VoidPjax.bind({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0
+    });
+    window.dispatchEvent({ type: 'pageshow', bubbles: false, persisted: false });
+    assert.deepEqual(getScrollCalls(), []);
+
+    setScrollPosition(6, 780);
+    window.dispatchEvent({ type: 'scroll', bubbles: false });
+    window.dispatchEvent({ type: 'pagehide', bubbles: false });
+    assert.equal(getHistoryState().scrollX, 6);
+    assert.equal(getHistoryState().scrollY, 780);
+
+    window.dispatchEvent({ type: 'pageshow', bubbles: false, persisted: true });
+    assert.deepEqual(getScrollCalls(), [[6, 780]]);
+});
+
+test('push navigation records separate source and target scroll positions', async () => {
+    const {
+        getHistoryCalls,
+        getScrollCalls,
+        window
+    } = loadPjaxEnvironment({ scrollX: 8, scrollY: 640 });
+
+    window.VoidPjax.bind({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0
+    });
+    getHistoryCalls().length = 0;
+    window.fetch = () => Promise.resolve(createPjaxResponse());
+
+    assert.equal(await window.VoidPjax.visit({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/next'
+    }), true);
+
+    const calls = getHistoryCalls();
+    assert.deepEqual(calls.map((call) => call.mode), ['replace', 'push']);
+    assert.equal(calls[0].state.scrollX, 8);
+    assert.equal(calls[0].state.scrollY, 640);
+    assert.equal(calls[1].state.scrollX, 0);
+    assert.equal(calls[1].state.scrollY, 0);
+    assert.notEqual(calls[0].state.entryId, calls[1].state.entryId);
+    assert.deepEqual(getScrollCalls(), [[0, 0]]);
+});
+
+test('popstate keeps the old DOM fixed until the target position can be restored', async () => {
+    const {
+        document,
+        getCurrentContainer,
+        getScrollCalls,
+        initialContainer,
+        setHistoryState,
+        setReplaceObserver,
+        window
+    } = loadPjaxEnvironment();
     let sendOptions;
+    let resolveFetch;
     let resolveEnd;
+    let scrollCallsAtReplace = -1;
     const ended = new Promise((resolve) => {
         resolveEnd = resolve;
     });
 
-    window.fetch = () => Promise.resolve(createPjaxResponse('https://example.test/history'));
+    window.fetch = () => new Promise((resolve) => {
+        resolveFetch = resolve;
+    });
     document.addEventListener('pjax:send', (event) => {
         sendOptions = event.detail.options;
     });
@@ -542,18 +677,33 @@ test('popstate restores the recorded main-container request through PJAX', async
         fragment: '#pjax-container',
         timeout: 0
     });
+    setReplaceObserver(() => {
+        scrollCallsAtReplace = getScrollCalls().length;
+    });
+
+    const historyState = {
+        __voidPjax: true,
+        entryId: 'history-entry',
+        url: 'https://example.test/history',
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        scrollTop: true,
+        scrollX: 14,
+        scrollY: 860
+    };
+    setHistoryState(historyState);
 
     window.dispatchEvent({
         type: 'popstate',
         bubbles: false,
-        state: {
-            __voidPjax: true,
-            url: 'https://example.test/history',
-            container: '#pjax-container',
-            fragment: '#pjax-container',
-            scrollTop: true
-        }
+        state: historyState
     });
+
+    assert.equal(window.history.scrollRestoration, 'manual');
+    assert.deepEqual(getScrollCalls(), []);
+    assert.equal(getCurrentContainer(), initialContainer);
+
+    resolveFetch(createPjaxResponse('https://example.test/history'));
     await ended;
 
     assert.equal(sendOptions.container, '#pjax-container');
@@ -561,6 +711,64 @@ test('popstate restores the recorded main-container request through PJAX', async
     assert.equal(sendOptions.fromPopstate, true);
     assert.equal(sendOptions.push, false);
     assert.equal(sendOptions.scrollTop, false);
+    assert.equal(sendOptions.historyScrollPosition.x, 14);
+    assert.equal(sendOptions.historyScrollPosition.y, 860);
+    assert.equal(scrollCallsAtReplace, 0);
+    assert.deepEqual(getScrollCalls(), [[14, 860]]);
+});
+
+test('scroll tracking preserves the latest position across back and forward traversal', async () => {
+    const {
+        document,
+        getHistoryState,
+        getScrollCalls,
+        setHistoryState,
+        setScrollPosition,
+        window
+    } = loadPjaxEnvironment({ scrollY: 420 });
+    const waitForEnd = () => new Promise((resolve) => {
+        const handler = (event) => {
+            document.removeEventListener('pjax:end', handler);
+            resolve(event);
+        };
+        document.addEventListener('pjax:end', handler);
+    });
+
+    window.VoidPjax.bind({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0
+    });
+    const initialState = getHistoryState();
+    window.fetch = () => Promise.resolve(createPjaxResponse('https://example.test/next'));
+    await window.VoidPjax.visit({
+        container: '#pjax-container',
+        fragment: '#pjax-container',
+        timeout: 0,
+        url: 'https://example.test/next'
+    });
+    const nextState = getHistoryState();
+
+    setScrollPosition(0, 930);
+    window.dispatchEvent({ type: 'scroll', bubbles: false });
+
+    setHistoryState(initialState);
+    window.fetch = () => Promise.resolve(createPjaxResponse(initialState.url));
+    const backEnded = waitForEnd();
+    window.dispatchEvent({ type: 'popstate', bubbles: false, state: initialState });
+    await backEnded;
+
+    setHistoryState(nextState);
+    window.fetch = () => Promise.resolve(createPjaxResponse(nextState.url));
+    const forwardEnded = waitForEnd();
+    window.dispatchEvent({ type: 'popstate', bubbles: false, state: nextState });
+    await forwardEnded;
+
+    assert.deepEqual(getScrollCalls(), [
+        [0, 0],
+        [0, 420],
+        [0, 930]
+    ]);
 });
 
 test('popstate preserves comment-container targeting', async () => {
