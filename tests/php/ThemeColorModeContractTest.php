@@ -64,14 +64,6 @@ foreach (array(0, '0', null, false, true, '', 'invalid', '1foo', 1.0, 4, '4') as
     themeColorAssertSame(3, Utils::normalizeColorScheme($mode), 'legacy or invalid mode ' . var_export($mode, true));
 }
 
-foreach (array(0, 1, '0', '1') as $mode) {
-    themeColorAssertSame((int) $mode, Utils::normalizeFeedContentMode($mode), 'valid Feed mode ' . var_export($mode, true));
-}
-
-foreach (array(null, false, true, '', 'invalid', '1foo', 1.0, 2, '2') as $mode) {
-    themeColorAssertSame(0, Utils::normalizeFeedContentMode($mode), 'invalid Feed mode ' . var_export($mode, true));
-}
-
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
 Helper::$options = new ThemeColorTestOptions(array(
     'colorScheme' => '0',
@@ -96,7 +88,7 @@ themeColorAssertSame(false, array_key_exists('bluredLazyload', $settings), 'reti
 themeColorAssertSame(false, array_key_exists('CDNType', $settings), 'retired CDN mapping is filtered from runtime settings');
 themeColorAssertSame(false, array_key_exists('browserLevelLoadingLazy', $settings), 'retired browser lazy-load selector is filtered from runtime settings');
 themeColorAssertSame(2, $settings['headerMode'], 'unrelated advanced settings remain available');
-themeColorAssertSame(0, $settings['feedContentMode'], 'invalid public Feed mode falls back without advance override');
+themeColorAssertSame(false, array_key_exists('feedContentMode', $settings), 'retired Feed mode is filtered from runtime settings');
 themeColorAssertSame(true, $settings['lazyload'], 'missing public lazy-load setting defaults on and ignores advance override');
 
 Helper::$options = new ThemeColorTestOptions(array(

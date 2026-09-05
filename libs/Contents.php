@@ -138,26 +138,6 @@ Class Contents
     }
 
     /**
-     * 当前请求是否应由主题生成 Feed 正文开头。
-     */
-    static public function shouldTruncateFeed($widget)
-    {
-        $settings = isset($GLOBALS['VOIDSetting']) && is_array($GLOBALS['VOIDSetting'])
-            ? $GLOBALS['VOIDSetting'] : array();
-        $mode = isset($settings['feedContentMode']) ? $settings['feedContentMode'] : 0;
-        if ($mode !== 1 && $mode !== '1') {
-            return false;
-        }
-
-        if (!self::isFeedContext($widget)) {
-            return false;
-        }
-
-        // 单篇文章的 Feed 实际输出评论，不应改变其请求选项或正文。
-        return !is_callable(array($widget, 'is')) || !$widget->is('single');
-    }
-
-    /**
      * 净化 feed 内容中的主题样式和交互属性
      */
     static private function sanitizeFeedHtml($content)
@@ -230,281 +210,9 @@ Class Contents
     }
 
     /**
-     * 在全部正文过滤完成后，为文章 Feed 生成纯文本正文开头与原文链接。
-     */
-    static public function contentEx_999($data, $widget, $last)
-    {
-        $text = self::getFilteredText($data, $last);
-        if (!self::shouldTruncateFeed($widget)) {
-            return $text;
-        }
-
-        $teaser = self::renderFeedTeaser(is_string($text) ? $text : '');
-        return $teaser . self::renderFeedMoreLink($widget);
-    }
-
-    /**
-     * Feed 摘要仅保留正文开头，不包含主题追加的原文链接。
-     */
-    static public function excerptEx_999($data, $widget, $last)
-    {
-        $text = self::getFilteredText($data, $last);
-        if (!self::shouldTruncateFeed($widget)) {
-            return $text;
-        }
-
-        return self::renderFeedTeaser(is_string($text) ? $text : '');
-    }
-
-    /**
-     * 从最终 HTML 中提取正文开头并输出为安全的纯文本段落。
-     */
-    static private function renderFeedTeaser($content)
-    {
-        $text = self::extractFeedLeadText($content);
-        if ($text === '') {
-            return '';
-        }
-
-        return '<p>' . self::escapeHtml(self::truncateFeedText($text)) . '</p>';
-    }
-
-    /**
-     * 输出经过校验和分别转义的绝对原文地址。
-     */
-    static private function renderFeedMoreLink($widget)
-    {
-        if (!is_object($widget)) {
-            return '';
-        }
-
-        $url = $widget->permalink;
-        if (!is_string($url) || $url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
-            return '';
-        }
-
-        $parts = parse_url($url);
-        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])
-            || !in_array(strtolower($parts['scheme']), array('http', 'https'), true)) {
-            return '';
-        }
-
-        return '<p class="more">请前往 <a href="' . self::escapeHtml($url) . '">'
-            . self::escapeHtml($url) . '</a> 阅读全文</p>';
-    }
-
-    /**
-     * 依文档顺序查找首个有效段落、引用或列表；找不到时回退到全文可见文本。
-     */
-    static private function extractFeedLeadText($content)
-    {
-        if (!is_string($content) || $content === '') {
-            return '';
-        }
-
-        $offset = 0;
-        $length = strlen($content);
-        while ($offset < $length) {
-            $tagStart = strpos($content, '<', $offset);
-            if (false === $tagStart) {
-                break;
-            }
-
-            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
-            if (null === $tagEnd) {
-                $offset = $tagStart + 1;
-                continue;
-            }
-
-            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
-            if (null === $tagInfo || $tagInfo['closing']) {
-                $offset = $tagEnd + 1;
-                continue;
-            }
-
-            $name = $tagInfo['name'];
-            if (self::isFeedExcludedTag($name)
-                || self::isFeedHiddenElementTag($tag, $name)
-                || self::isFeedMoreParagraphTag($tag, $name)) {
-                if (!$tagInfo['selfClosing']) {
-                    $closing = self::findClosingFeedElement($content, $name, $tagEnd + 1);
-                    if (null === $closing) {
-                        break;
-                    }
-                    $offset = $closing[1] + 1;
-                    continue;
-                }
-            }
-
-            if (!$tagInfo['selfClosing'] && in_array($name, array('p', 'blockquote', 'ul', 'ol'), true)) {
-                $closing = self::findClosingFeedElement($content, $name, $tagEnd + 1);
-                $innerEnd = null === $closing ? $length : $closing[0];
-                $inner = substr($content, $tagEnd + 1, $innerEnd - $tagEnd - 1);
-                $candidate = in_array($name, array('ul', 'ol'), true)
-                    ? self::extractFeedListText($inner)
-                    : self::extractFeedVisibleText($inner);
-                if ($candidate !== '') {
-                    return $candidate;
-                }
-
-                if (null === $closing) {
-                    break;
-                }
-                $offset = $closing[1] + 1;
-                continue;
-            }
-
-            $offset = $tagEnd + 1;
-        }
-
-        return self::extractFeedVisibleText($content);
-    }
-
-    /**
-     * 提取列表项文本，嵌套列表项保持文档顺序且不重复父项内容。
-     */
-    static private function extractFeedListText($content)
-    {
-        $items = array();
-        $openItems = array();
-        $offset = 0;
-        $length = strlen($content);
-
-        while ($offset < $length) {
-            $tagStart = strpos($content, '<', $offset);
-            $plain = false === $tagStart
-                ? substr($content, $offset)
-                : substr($content, $offset, $tagStart - $offset);
-            if (!empty($openItems) && $plain !== '') {
-                $itemIndex = count($openItems) - 1;
-                $openItems[$itemIndex]['text'] .= $plain;
-            }
-            if (false === $tagStart) {
-                break;
-            }
-
-            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
-            if (null === $tagEnd) {
-                if (!empty($openItems)) {
-                    $itemIndex = count($openItems) - 1;
-                    $openItems[$itemIndex]['text'] .= '<';
-                }
-                $offset = $tagStart + 1;
-                continue;
-            }
-
-            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
-            if (null === $tagInfo) {
-                $offset = $tagEnd + 1;
-                continue;
-            }
-
-            $name = $tagInfo['name'];
-            if (!$tagInfo['closing']
-                && (self::isFeedExcludedTag($name)
-                    || self::isFeedHiddenElementTag($tag, $name)
-                    || self::isFeedMoreParagraphTag($tag, $name))) {
-                if (!$tagInfo['selfClosing']) {
-                    $closing = self::findClosingFeedElement($content, $name, $tagEnd + 1);
-                    if (null === $closing) {
-                        break;
-                    }
-                    $offset = $closing[1] + 1;
-                    continue;
-                }
-            }
-
-            if ($name === 'li') {
-                if (!$tagInfo['closing'] && !$tagInfo['selfClosing']) {
-                    $items[] = '';
-                    $openItems[] = array('index' => count($items) - 1, 'text' => '');
-                } elseif ($tagInfo['closing'] && !empty($openItems)) {
-                    $item = array_pop($openItems);
-                    $items[$item['index']] = self::normalizeFeedText($item['text']);
-                }
-            } elseif (!empty($openItems) && self::isFeedTextSeparatorTag($name)) {
-                $itemIndex = count($openItems) - 1;
-                $openItems[$itemIndex]['text'] .= ' ';
-            }
-
-            $offset = $tagEnd + 1;
-        }
-
-        foreach ($openItems as $item) {
-            $items[$item['index']] = self::normalizeFeedText($item['text']);
-        }
-        $items = array_values(array_filter($items, function ($item) {
-            return $item !== '';
-        }));
-
-        if (!empty($items)) {
-            return implode('；', $items);
-        }
-
-        return self::extractFeedVisibleText($content);
-    }
-
-    /**
-     * 移除标签及非导语节点，只收集读者实际可见的文本节点。
-     */
-    static private function extractFeedVisibleText($content)
-    {
-        $text = '';
-        $offset = 0;
-        $length = strlen($content);
-
-        while ($offset < $length) {
-            $tagStart = strpos($content, '<', $offset);
-            if (false === $tagStart) {
-                $text .= substr($content, $offset);
-                break;
-            }
-
-            $text .= substr($content, $offset, $tagStart - $offset);
-            $tagEnd = self::findHtmlTokenEnd($content, $tagStart);
-            if (null === $tagEnd) {
-                $text .= '<';
-                $offset = $tagStart + 1;
-                continue;
-            }
-
-            $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
-            if (null === $tagInfo) {
-                $offset = $tagEnd + 1;
-                continue;
-            }
-
-            $name = $tagInfo['name'];
-            if (!$tagInfo['closing']
-                && (self::isFeedExcludedTag($name)
-                    || self::isFeedHiddenElementTag($tag, $name)
-                    || self::isFeedMoreParagraphTag($tag, $name))) {
-                if (!$tagInfo['selfClosing']) {
-                    $closing = self::findClosingFeedElement($content, $name, $tagEnd + 1);
-                    if (null === $closing) {
-                        break;
-                    }
-                    $offset = $closing[1] + 1;
-                    continue;
-                }
-            }
-
-            if (self::isFeedTextSeparatorTag($name)) {
-                $text .= ' ';
-            }
-            $offset = $tagEnd + 1;
-        }
-
-        return self::normalizeFeedText($text);
-    }
-
-    /**
      * 解析开始或结束标签的最小信息。
      */
-    static private function parseFeedTag($tag)
+    static private function parseHtmlTag($tag)
     {
         // findHtmlTokenEnd 已处理属性引号中的 >，这里只读取标签名。
         if (!preg_match('/\A<\s*(\/?)\s*([a-z][a-z0-9:_-]*)\b/i', $tag, $matches)) {
@@ -525,10 +233,10 @@ Class Contents
     /**
      * 查找与开始标签配对的结束标签，正确跨过同名嵌套元素。
      */
-    static private function findClosingFeedElement($content, $name, $offset)
+    static private function findClosingHtmlElement($content, $name, $offset)
     {
-        if (self::isFeedRawTextTag($name)) {
-            return self::findClosingFeedRawTextElement($content, $name, $offset);
+        if (self::isHtmlRawTextTag($name)) {
+            return self::findClosingHtmlRawTextElement($content, $name, $offset);
         }
 
         $depth = 1;
@@ -546,10 +254,10 @@ Class Contents
             }
 
             $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
+            $tagInfo = self::parseHtmlTag($tag);
             if (null !== $tagInfo && !$tagInfo['closing'] && !$tagInfo['selfClosing']
-                && self::isFeedRawTextTag($tagInfo['name'])) {
-                $rawClosing = self::findClosingFeedRawTextElement(
+                && self::isHtmlRawTextTag($tagInfo['name'])) {
+                $rawClosing = self::findClosingHtmlRawTextElement(
                     $content,
                     $tagInfo['name'],
                     $tagEnd + 1
@@ -581,7 +289,7 @@ Class Contents
     /**
      * script/style 等原始文本元素内部的 <tag> 只是文本，不能参与标签计数。
      */
-    static private function findClosingFeedRawTextElement($content, $name, $offset)
+    static private function findClosingHtmlRawTextElement($content, $name, $offset)
     {
         $pattern = '/<\s*\/\s*' . preg_quote($name, '/') . '\s*>/i';
         if (!preg_match($pattern, $content, $matches, PREG_OFFSET_CAPTURE, $offset)) {
@@ -592,95 +300,9 @@ Class Contents
         return array($tagStart, $tagStart + strlen($matches[0][0]) - 1);
     }
 
-    static private function isFeedRawTextTag($name)
+    static private function isHtmlRawTextTag($name)
     {
         return in_array($name, array('script', 'style', 'textarea', 'title'), true);
-    }
-
-    /**
-     * 这些节点不适合作为 Feed 导语，也不参与全文回退。
-     */
-    static private function isFeedExcludedTag($name)
-    {
-        return in_array($name, array(
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'figure', 'picture', 'video', 'audio', 'svg', 'canvas', 'object', 'embed', 'map',
-            'pre', 'code', 'script', 'style', 'template', 'iframe', 'form', 'noscript',
-            'textarea', 'select', 'button'
-        ), true);
-    }
-
-    /**
-     * 跳过明确隐藏的节点；关闭的 details 仅显示 summary，不把折叠正文当作导语。
-     */
-    static private function isFeedHiddenElementTag($tag, $name)
-    {
-        $attributes = self::parseHtmlAttributes($tag);
-        if (array_key_exists('hidden', $attributes)) {
-            return true;
-        }
-
-        return $name === 'details' && !array_key_exists('open', $attributes);
-    }
-
-    /**
-     * 主题 CTA 不参与摘要或全文回退。
-     */
-    static private function isFeedMoreParagraphTag($tag, $name)
-    {
-        if ($name !== 'p') {
-            return false;
-        }
-
-        $attributes = self::parseHtmlAttributes($tag);
-        if (!isset($attributes['class']) || !is_string($attributes['class'])) {
-            return false;
-        }
-
-        return in_array('more', preg_split('/\s+/', trim($attributes['class'])), true);
-    }
-
-    static private function isFeedTextSeparatorTag($name)
-    {
-        return in_array($name, array(
-            'br', 'p', 'blockquote', 'ul', 'ol', 'li', 'div', 'section', 'article',
-            'header', 'footer', 'aside', 'tr', 'td', 'th', 'dt', 'dd', 'hr'
-        ), true);
-    }
-
-    /**
-     * 解码实体并折叠 Unicode 空白。
-     */
-    static private function normalizeFeedText($text)
-    {
-        $text = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $normalized = preg_replace('/[\s\p{Z}]+/u', ' ', $text);
-        return trim(null === $normalized ? $text : $normalized);
-    }
-
-    /**
-     * 使用 Typecho 的宽字符串能力，将导语和省略号控制在 300 个字符内。
-     */
-    static private function truncateFeedText($text)
-    {
-        if (class_exists('Typecho_Common') && is_callable(array('Typecho_Common', 'strLen'))
-            && is_callable(array('Typecho_Common', 'subStr'))) {
-            return Typecho_Common::strLen($text) > 300
-                ? Typecho_Common::subStr($text, 0, 300, '...') : $text;
-        }
-
-        if (class_exists('Typecho\\Common') && is_callable(array('Typecho\\Common', 'strLen'))
-            && is_callable(array('Typecho\\Common', 'subStr'))) {
-            return Typecho\Common::strLen($text) > 300
-                ? Typecho\Common::subStr($text, 0, 300, '...') : $text;
-        }
-
-        preg_match_all('/./us', $text, $characters);
-        if (count($characters[0]) <= 300) {
-            return $text;
-        }
-
-        return implode('', array_slice($characters[0], 0, 297)) . '...';
     }
 
     /**
@@ -750,7 +372,7 @@ Class Contents
             }
 
             $tag = substr($content, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
+            $tagInfo = self::parseHtmlTag($tag);
             if (null === $tagInfo) {
                 $result .= $tag;
                 $offset = $tagEnd + 1;
@@ -758,8 +380,8 @@ Class Contents
             }
 
             if (!$tagInfo['closing'] && !$tagInfo['selfClosing']
-                && self::isFeedRawTextTag($tagInfo['name'])) {
-                $closing = self::findClosingFeedElement($content, $tagInfo['name'], $tagEnd + 1);
+                && self::isHtmlRawTextTag($tagInfo['name'])) {
+                $closing = self::findClosingHtmlElement($content, $tagInfo['name'], $tagEnd + 1);
                 if (null === $closing) {
                     $result .= substr($content, $tagStart);
                     break;
@@ -772,7 +394,7 @@ Class Contents
 
             if (empty($openElements) && !$tagInfo['closing'] && !$tagInfo['selfClosing']
                 && ($tagInfo['name'] === 'blockquote' || $tagInfo['name'] === 'p')) {
-                $closing = self::findClosingFeedElement($content, $tagInfo['name'], $tagEnd + 1);
+                $closing = self::findClosingHtmlElement($content, $tagInfo['name'], $tagEnd + 1);
                 if (null !== $closing) {
                     $inner = substr($content, $tagEnd + 1, $closing[0] - $tagEnd - 1);
                     $transformed = $tagInfo['name'] === 'blockquote'
@@ -858,7 +480,7 @@ Class Contents
             }
 
             $tag = substr($inner, $tagStart, $tagEnd - $tagStart + 1);
-            $tagInfo = self::parseFeedTag($tag);
+            $tagInfo = self::parseHtmlTag($tag);
             if (null === $tagInfo) {
                 $current .= $tag;
                 $offset = $tagEnd + 1;
@@ -867,7 +489,7 @@ Class Contents
 
             if (!$tagInfo['closing'] && !$tagInfo['selfClosing']
                 && $tagInfo['name'] === 'p' && empty($openElements)) {
-                $closing = self::findClosingFeedElement($inner, 'p', $tagEnd + 1);
+                $closing = self::findClosingHtmlElement($inner, 'p', $tagEnd + 1);
                 if (null !== $closing) {
                     $paragraphInner = substr(
                         $inner,
@@ -941,14 +563,14 @@ Class Contents
             return null;
         }
         $paragraphTag = substr($inner, $paragraphStart, $paragraphTagEnd - $paragraphStart + 1);
-        $paragraphInfo = self::parseFeedTag($paragraphTag);
+        $paragraphInfo = self::parseHtmlTag($paragraphTag);
         if (null === $paragraphInfo || $paragraphInfo['name'] !== 'p'
             || $paragraphInfo['closing'] || $paragraphInfo['selfClosing']
             || !empty(self::parseHtmlAttributes($paragraphTag))) {
             return null;
         }
 
-        $paragraphClosing = self::findClosingFeedElement($inner, 'p', $paragraphTagEnd + 1);
+        $paragraphClosing = self::findClosingHtmlElement($inner, 'p', $paragraphTagEnd + 1);
         if (null === $paragraphClosing) {
             return null;
         }

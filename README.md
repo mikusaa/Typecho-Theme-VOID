@@ -65,6 +65,8 @@
 3. 将插件文件夹重命名为 `VOID`，上传至站点 /usr/plugins 目录下
 4. 后台启用插件
 
+Feed 截断、Media RSS 和浏览器预览可选安装 [FeedEnhancer 1.1.0 或更高版本](https://github.com/mikusaa/Typecho-Plugin-FeedEnhancer)。`theme:VOID` 与 `plugin:FeedEnhancer` 属于不同配置空间，主题中的旧 Feed 设置不会自动迁移；需要接近旧版输出长度时可在插件中将正文开头长度设为 `300`，其他配置以插件文档为准。
+
 ## **常见问题（请务必仔细阅读）**
 
 <details><summary>如何开启文章点赞？</summary><br>

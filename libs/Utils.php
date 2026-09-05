@@ -608,22 +608,6 @@ class Utils
     }
 
     /**
-     * 规范化 Feed 内容模式，只接受整数或单字符字符串 0/1。
-     */
-    public static function normalizeFeedContentMode($value)
-    {
-        if (is_int($value)) {
-            $mode = $value;
-        } elseif (is_string($value) && preg_match('/^[01]$/D', $value)) {
-            $mode = intval($value);
-        } else {
-            return 0;
-        }
-
-        return in_array($mode, array(0, 1), true) ? $mode : 0;
-    }
-
-    /**
      * 返回经过校验的 HTTP(S) 或相对 URL，非法输入返回 null。
      */
     public static function getSafeHttpUrl($value)
@@ -734,7 +718,6 @@ class Utils
             'indexBannerSubtitle' => '',
             'serviceworker' => '',
             'colorScheme' => 3, // 1: 日间，2: 夜间，3: 跟随设备；旧值 0 迁移为 3
-            'feedContentMode' => 0, // 0: 保持 Typecho 默认行为，1: 仅输出正文开头
             'reward' => ''
         );
 
@@ -749,7 +732,6 @@ class Utils
         $themeSetting['enableMath'] = boolval($themeSetting['enableMath']);
         $themeSetting['lazyload'] = boolval($themeSetting['lazyload']);
         $themeSetting['colorScheme'] = self::normalizeColorScheme($themeSetting['colorScheme']);
-        $themeSetting['feedContentMode'] = self::normalizeFeedContentMode($themeSetting['feedContentMode']);
         $themeSetting['pjax'] = boolval($themeSetting['pjax']);
         $themeSetting['serifincontent'] = boolval($themeSetting['serifincontent']);
         $themeSetting['indexStyle'] = intval($themeSetting['indexStyle']);
@@ -794,7 +776,8 @@ class Utils
             $advanceSetting['followSystemColorScheme'],
             $advanceSetting['bluredLazyload'],
             $advanceSetting['CDNType'],
-            $advanceSetting['browserLevelLoadingLazy']
+            $advanceSetting['browserLevelLoadingLazy'],
+            $advanceSetting['feedContentMode']
         );
 
         if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
@@ -802,8 +785,7 @@ class Utils
         }
 
         $output = array_merge($themeSetting, $advanceSetting);
-        // 公开设置不允许被自由格式的高级设置同名键覆盖。
-        $output['feedContentMode'] = $themeSetting['feedContentMode'];
+        // 公开的懒加载设置不允许被自由格式的高级设置同名键覆盖。
         $output['lazyload'] = $themeSetting['lazyload'];
         $output['VOIDPlugin'] = self::hasVOIDPlugin($GLOBALS['VOIDPluginREQ']);
 
