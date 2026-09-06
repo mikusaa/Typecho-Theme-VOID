@@ -42,6 +42,7 @@ test('theme-owned frontend sources and templates contain no jQuery references', 
         ...voidSourcePaths,
         ...headerSourcePaths,
         'assets/VOIDCacheRule.js',
+        'assets/service-worker-registration.js',
         'assets/libs/emotes/emote-picker.js',
         'assets/libs/hyphen/hyphen.js',
         'assets/libs/pjax/void-pjax.js'

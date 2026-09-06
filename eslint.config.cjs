@@ -6,6 +6,7 @@ const firstPartyBrowserFiles = [
     ...headerJsSources,
     'assets/js/void/**/*.js',
     'assets/VOIDCacheRule.js',
+    'assets/service-worker-registration.js',
     'assets/check_update.js',
     'assets/editor.js',
     'assets/libs/emotes/emote-picker.js',
@@ -140,6 +141,17 @@ module.exports = [
                 caughtErrors: 'none',
                 varsIgnorePattern: '^(VOID_DialogScrollLock|VOID_RewardDialog)$'
             }]
+        }
+    },
+    {
+        files: ['assets/service-worker-registration.js'],
+        languageOptions: {
+            globals: {
+                Promise: 'readonly'
+            }
+        },
+        rules: {
+            'no-unused-vars': ['error', { caughtErrors: 'none' }]
         }
     },
     {

@@ -54,7 +54,8 @@ var scssSources = [
 
 var standaloneJsSources = [
     './assets/editor.js',
-    './assets/check_update.js'
+    './assets/check_update.js',
+    './assets/service-worker-registration.js'
 ];
 
 var runtimePhpSources = [

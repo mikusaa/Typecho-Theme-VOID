@@ -1,8 +1,10 @@
 # 前台 JavaScript 架构
 
-VOID 的前台主题代码按领域维护在 `assets/js/void/` 与 `assets/js/header/`。两组权威
+VOID 的主要前台主题代码按领域维护在 `assets/js/void/` 与 `assets/js/header/`。两组权威
 加载顺序分别只定义在 `scripts/void-sources.cjs` 和 `scripts/header-sources.cjs`；Gulp
 生产构建、开发构建、lint 和测试必须读取对应清单，不能各自维护第二份顺序。
+独立的 `assets/service-worker-registration.js` 负责 Service Worker 的注册、所有权记录、
+旧 Worker 迁移和安全卸载，不属于两个连接脚本的生命周期。
 
 ## 构建模型
 
@@ -11,6 +13,9 @@ VOID 的前台主题代码按领域维护在 `assets/js/void/` 与 `assets/js/he
 会在独立的 `dev-build/` 中生成完整、未压缩且使用逻辑资源名的本地运行单元，不会把
 `VOID.js`、`header.js`、`VOID.css` 或 bundle 写回 `assets/`。`make watch` 先生成该运行
 单元，再根据对应源码清单持续更新它；生产 `build/` 始终由 `make build` 清理后完整生成。
+Service Worker 管理脚本也作为独立内容哈希资源发布；模板仅通过不可执行的
+`application/json` 节点传递启用或禁用配置。站点根目录和主题目录中的
+`VOIDCacheRule.js` 仍必须来自同一次完整构建。
 
 ## 领域边界
 

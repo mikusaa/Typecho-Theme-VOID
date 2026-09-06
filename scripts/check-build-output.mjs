@@ -43,6 +43,7 @@ const developmentAssets = Object.freeze([
     'assets/editor-admin.css',
     'assets/editor.js',
     'assets/header.js',
+    'assets/service-worker-registration.js',
     'assets/libs/emotes/emote-picker.css',
     'assets/libs/emotes/emote-picker.js'
 ]);
@@ -56,6 +57,7 @@ const productionAssets = Object.freeze([
     ['assets', /^editor-admin-[a-f0-9]+\.css$/],
     ['assets', /^editor-[a-f0-9]+\.js$/],
     ['assets', /^header-[a-f0-9]+\.js$/],
+    ['assets', /^service-worker-registration-[a-f0-9]+\.js$/],
     ['assets/libs/emotes', /^emote-picker-[a-f0-9]+\.css$/],
     ['assets/libs/emotes', /^emote-picker-[a-f0-9]+\.js$/]
 ]);

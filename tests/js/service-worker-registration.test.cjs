@@ -6,24 +6,12 @@ const vm = require('node:vm');
 
 const FOOTER_PATH = path.resolve(__dirname, '../../includes/footer.php');
 const FOOTER_SOURCE = fs.readFileSync(FOOTER_PATH, 'utf8').replace(/\r\n/g, '\n');
+const REGISTRATION_PATH = path.resolve(
+    __dirname,
+    '../../assets/service-worker-registration.js'
+);
+const REGISTRATION_SOURCE = fs.readFileSync(REGISTRATION_PATH, 'utf8').replace(/\r\n/g, '\n');
 const OWNERSHIP_KEY = 'VOIDServiceWorkerOwnership';
-
-function extractRegistrationScript(configuredUri) {
-    const marker = "var ownershipKey = 'VOIDServiceWorkerOwnership';";
-    const markerIndex = FOOTER_SOURCE.indexOf(marker);
-    const scriptStart = FOOTER_SOURCE.lastIndexOf('<script>', markerIndex);
-    const scriptEnd = FOOTER_SOURCE.indexOf('</script>', markerIndex);
-
-    assert.notEqual(markerIndex, -1, 'Service Worker ownership script should exist');
-    assert.notEqual(scriptStart, -1, 'Service Worker script should have an opening tag');
-    assert.notEqual(scriptEnd, -1, 'Service Worker script should have a closing tag');
-
-    return FOOTER_SOURCE.slice(scriptStart + '<script>'.length, scriptEnd)
-        .replace(
-            '<?php echo Utils::encodeJsonForHtml($serviceWorkerUri); ?>',
-            JSON.stringify(configuredUri)
-        );
-}
 
 function createStorage(initial = {}) {
     const values = new Map(Object.entries(initial));
@@ -120,8 +108,21 @@ async function runRegistrationScript(options = {}) {
     const configuredUri = Object.prototype.hasOwnProperty.call(options, 'configuredUri')
         ? options.configuredUri
         : null;
+    const configurationSource = Object.prototype.hasOwnProperty.call(options, 'configurationSource')
+        ? options.configurationSource
+        : JSON.stringify(configuredUri);
+    const configurationElement = options.missingConfiguration
+        ? null
+        : { textContent: configurationSource };
+    const document = {
+        getElementById(id) {
+            assert.equal(id, 'void-service-worker-config');
+            return configurationElement;
+        }
+    };
 
-    vm.runInContext(extractRegistrationScript(configuredUri), context);
+    context.document = document;
+    vm.runInContext(REGISTRATION_SOURCE, context);
     for (let index = 0; index < 2; index += 1) {
         await new Promise((resolve) => setImmediate(resolve));
     }
@@ -141,11 +142,19 @@ function readOwnership(storage) {
     return JSON.parse(storage.value(OWNERSHIP_KEY));
 }
 
-test('Service Worker URI is safely serialized without global registration cleanup', () => {
+test('footer safely serializes configuration and loads the first-party runtime', () => {
     assert.match(
         FOOTER_SOURCE,
         /Utils::encodeJsonForHtml\(\$serviceWorkerUri\)/,
         'configured URI should use the shared HTML-safe JSON encoder'
+    );
+    assert.match(
+        FOOTER_SOURCE,
+        /<script id="void-service-worker-config" type="application\/json">/
+    );
+    assert.match(
+        FOOTER_SOURCE,
+        /Utils::indexTheme\('\/assets\/service-worker-registration\.js'\)/
     );
     assert.match(
         FOOTER_SOURCE,
@@ -154,6 +163,27 @@ test('Service Worker URI is safely serialized without global registration cleanu
     );
     assert.doesNotMatch(FOOTER_SOURCE, /\.getRegistrations\s*\(/);
     assert.match(FOOTER_SOURCE, /empty\(\$serviceWorkerSetting\)/);
+    assert.doesNotMatch(FOOTER_SOURCE, /VOIDServiceWorkerOwnership/);
+    assert.match(REGISTRATION_SOURCE, /VOIDServiceWorkerOwnership/);
+    assert.doesNotMatch(REGISTRATION_SOURCE, /<\?php/);
+    assert.doesNotMatch(REGISTRATION_SOURCE, /\.getRegistrations\s*\(/);
+});
+
+test('missing or invalid configuration cannot trigger registration cleanup', async (t) => {
+    const cases = [
+        { name: 'missing element', options: { missingConfiguration: true } },
+        { name: 'invalid JSON', options: { configurationSource: '{invalid' } },
+        { name: 'non-string JSON', options: { configurationSource: '{}' } }
+    ];
+
+    for (const item of cases) {
+        await t.test(item.name, async () => {
+            const result = await runRegistrationScript(item.options);
+
+            assert.deepEqual(result.calls, { getRegistration: [], register: [] });
+            assert.equal(result.storage.value(OWNERSHIP_KEY), null);
+        });
+    }
 });
 
 test('successful registration records its canonical script URL and actual scope', async () => {
