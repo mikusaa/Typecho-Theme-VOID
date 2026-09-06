@@ -258,6 +258,14 @@ make verify
 
 </details>
 
+### 维护文档
+
+- [构建与 nightly 发布](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/build-and-release.md)
+- [前端与编辑器 JavaScript](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/frontend-javascript.md)
+- [PHP 内容管线与查询边界](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/php-content-pipeline.md)
+- [设置兼容合同](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/settings-contract.md)
+- [测试与验证](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/testing.md)
+
 ## 更新日志
 
 完整更新日志（包括未发布内容与历史版本）请查看 [`change-log.md`](./change-log.md)。
