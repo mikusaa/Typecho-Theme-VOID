@@ -2,25 +2,24 @@
 
 **开发中 | Unreleased**
 
-**🧪 2026-09-06 Version 4.0.0-beta.1**
+* 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
+* 调整：[PJAX] 移除后台设置中的 Beta 标记和过时提示，新安装及缺少该设置时默认开启；已明确关闭 PJAX 的站点保留原选择。
+* 调整：[文档] 将超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。
 
-> **测试版说明：** 4.0 包含大范围前台、评论、构建和内部架构改动，部分问题可能需要长期使用才能复现。本版本先作为测试版发布，欢迎在实际使用中反馈问题。
+**🧩 2026-09-05 Version 4.0.0**
 
 > **兼容性升级提醒：** VOID 4.0 不再在前台提供全局 `$` / `jQuery`。升级前请迁移依赖它们的自定义 `head`、`footer`、`pjaxreload` 和第三方插件脚本，或由使用方自行加载 jQuery。
 >
 > **缓存升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。
 
-* 兼容性变更：[前台 jQuery] 清理主题内部调用并从前台构建与发布包删除 vendored jQuery；ExSearch 跳转继续兼容旧 array-like 参数，后台编辑器仍使用 Typecho 管理端提供的 jQuery。
-* 重构：[前台交互与 PJAX] 将页头、内容、提示、搜索、分享、投票、运行时间、代码复制和 PJAX 生命周期迁移到原生 DOM、事件与 fetch API；保留单次 `CustomEvent`、容器隔离、旧版参数兼容、PJAX 历史滚动位置恢复和失败回退。
-* 重构：[评论] 将评论查询、回复、取消、hash 同步、线程展开收起、分页、表单提交和富文本提示迁移到原生 DOM、FormData、fetch 和 DOMParser；保持 Typecho 协议、焦点与滚动位置、PJAX 幂等以及防重复和陈旧请求写入。
-* 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并移除已停用的 ResizeSensor 依赖。
-* 修复：[PJAX/历史导航] 记录并恢复每个历史条目的滚动位置，避免前进或后退时目标坐标提前应用到尚未替换的旧页面；新安装及缺少设置时默认开启 PJAX，已明确关闭的站点保留原选择。
-* 移除：[Feed] 移除主题内置的正文截断及后台选项，改由可选的 FeedEnhancer 1.1.0 或更高版本负责；旧设置不会自动迁移，未安装插件时恢复 Typecho 原生输出。
-* 重构：[JavaScript 与 Service Worker] 将页头、前台、后台编辑器和 Service Worker 注册逻辑拆为按职责维护的源码，生产构建仍输出单个带内容哈希的兼容资源，并保留 Worker 所有权、缓存清理和安全卸载行为。
-* 重构：[PHP 内容与查询] 将内容转换、HTML 扫描、题图来源、表情、图片、图集以及内容/归档查询拆分为独立模块，保留 `Contents`、`Utils`、Hook 和 Typecho 模板兼容入口。
-* 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
-* 调整：[工程与依赖] 统一 `make dev-build`、`make verify` 和 `make build`，开发运行单元不再写回源码目录；升级 Node.js 26 与相关依赖，补充 JavaScript、PHP、表情资源和构建输出校验，CI 分离 PR 验证与同一提交制品的 nightly 发布。
-* 调整：[文档] 增加 4.0 兼容性升级说明、构建发布、前端 JavaScript、PHP 内容管线、设置合同和测试验证文档；超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。
+* 兼容性变更：[前台 jQuery] 清理主题内部剩余调用后，从页头构建与发布包删除 vendored jQuery；ExSearch 跳转继续优先使用 DOM 元素并兼容旧 array-like 参数，后台编辑器仍使用 Typecho 管理端提供的 jQuery。
+* 重构：[PJAX] 将主题内部生命周期与自定义重载监听迁移到原生事件 API，保留单次 `CustomEvent`、容器隔离及旧版 jQuery 参数兼容。
+* 修复：[PJAX/历史导航] 由 PJAX 记录并恢复每个历史条目的滚动位置，避免前进或后退时浏览器把目标坐标提前应用到尚未替换的旧页面，短暂闪过页首头图或文章中段。
+* 重构：[前台交互] 将提示、搜索、分享、投票、运行时间和代码复制按钮迁移到原生 DOM 与事件 API，投票改用 fetch 并保留既有 Cookie、防重复提交、状态码文案和失败提示。
+* 重构：[首页瀑布流] 改用原生 Masonry 实例和 ResizeObserver 管理布局，在不支持尺寸观察的环境中保留窗口与图片加载重排，并清理已停用的 ResizeSensor 依赖。
+* 重构：[评论交互] 将评论查询、回复与取消、hash 同步、线程展开收起、分页渲染以及评论提交迁移到原生 DOM、FormData、fetch 和 DOMParser，保持 URL-encoded 协议、PJAX 幂等、焦点恢复、滚动位置及防重复/陈旧写入。
+* 移除：[Feed] 移除主题内置的正文截断及后台选项，改由可选的 FeedEnhancer 1.1.0 或更高版本负责；旧主题设置不会自动迁移，未安装插件时恢复 Typecho 原生输出，需要接近旧版长度时可在插件中设置为 300 字。
+* 调整：[工程] 统一 `make dev-build`、`make verify` 和 `make build`，开发运行单元不再写回源码目录；PHP 测试与语法检查自动发现目标，CI 验证 PR 和 PHP 7.0/8.5，并只从通过验证的同一提交制品发布 nightly。
 
 **🖼️ 2026-09-04 Version 3.6.2**
 

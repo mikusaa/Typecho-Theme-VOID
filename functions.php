@@ -105,7 +105,7 @@ function themeInit($archive = null)
 }
 
 $GLOBALS['VOIDPluginREQ'] = '1.4.0';
-$GLOBALS['VOIDVersion'] = '4.0.0-beta.1';
+$GLOBALS['VOIDVersion'] = '4.0.0';
 
 /**
  * Build Typecho form elements from the shared settings schema.
