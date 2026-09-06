@@ -166,6 +166,7 @@ $GLOBALS['VOIDPluginREQ'] = '1.4.0';
 $desktop = VOID_Settings_Resolver::resolve(Helper::$options, array('isMobile' => false));
 settingsContractAssertSame(3, $desktop['colorScheme'], '旧颜色模式通过 compatibility fallback 归一为跟随设备');
 settingsContractAssertSame(false, $desktop['lazyload'], '公开主题设置优先于同名高级设置');
+settingsContractAssertSame(true, $desktop['pjax'], '缺少 PJAX 设置时默认启用');
 settingsContractAssertSame('<script>theme extension</script>', $desktop['head'], 'head 自由格式扩展内容原样保留');
 settingsContractAssertSame(2, $desktop['headerMode'], '已知高级枚举归一为整数');
 settingsContractAssertSame(0, $desktop['headerModeMobile'], '桌面运行时继续保留移动端覆盖键');
@@ -179,6 +180,10 @@ foreach ($expectedRetiredKeys as $retiredKey) {
 
 $mobile = VOID_Settings_Resolver::resolve(Helper::$options, array('isMobile' => true));
 settingsContractAssertSame(0, $mobile['headerMode'], '移动端使用已规范化的 headerModeMobile 覆盖');
+
+Helper::$options = new SettingsContractOptions(array('pjax' => '0'));
+$pjaxDisabled = VOID_Settings_Resolver::resolve(Helper::$options, array('isMobile' => false));
+settingsContractAssertSame(false, $pjaxDisabled['pjax'], '显式关闭 PJAX 时保留用户选择');
 
 Helper::$options = new SettingsContractOptions(array('advance' => '{invalid json'));
 $invalidJson = VOID_Settings_Resolver::resolve(Helper::$options, array('isMobile' => false));

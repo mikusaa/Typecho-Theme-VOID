@@ -115,12 +115,12 @@ class VOID_Settings_Schema
                 array('element' => 'Textarea', 'default' => '', 'title' => 'footer 标签输出内容', 'description' => '备案号等。')
             ),
             'pjax' => self::entry(
-                'theme', false, 'boolean', 'boolean', array(false, true), false, false, true, 'PJAX',
-                array('element' => 'Radio', 'options' => array('0' => '不启用', '1' => '启用'), 'default' => '0', 'title' => '启用 PJAX (BETA)', 'description' => '是否启用 PJAX。如果你发现站点有点不对劲，又不知道这个选项是啥意思，请关闭此项。')
+                'theme', true, 'boolean', 'boolean', array(false, true), false, false, true, 'PJAX',
+                array('element' => 'Radio', 'options' => array('1' => '启用', '0' => '不启用'), 'default' => '1', 'title' => '启用 PJAX', 'description' => '使用 PJAX 进行站内页面的局部无刷新切换，通常建议开启；如与自定义脚本或插件不兼容，可关闭。')
             ),
             'pjaxreload' => self::entry(
                 'theme', '', 'string', 'raw', null, null, false, false, null,
-                array('element' => 'Textarea', 'default' => null, 'title' => 'PJAX 重载函数', 'description' => '输入要重载的 JS，如果你发现站点有点不对劲，又不知道这个选项是啥意思，请关闭 PJAX 并留空此项。')
+                array('element' => 'Textarea', 'default' => null, 'title' => 'PJAX 重载函数', 'description' => '仅在站点已有自定义脚本需要在 PJAX 切换后重新执行时填写；普通情况下留空。')
             ),
             'serviceworker' => self::entry(
                 'theme', '', 'string', 'string', null, null, false, false, null,
