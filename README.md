@@ -253,7 +253,8 @@ make verify
 
 只需重新生成生产运行单元时使用 `make build`。生产输出位于 `./build`，包含内容哈希
 资源和已同步改写引用的 PHP 文件；部署时必须整体使用同一次构建，不能与
-`./dev-build` 或旧资源混合。如果你对自己的更改很满意，**欢迎提出 Pull Request**。
+`./dev-build` 或旧资源混合。PHP 内容 Hook、转换顺序和查询边界由源码与 PHP 合同测试覆盖。
+如果你对自己的更改很满意，**欢迎提出 Pull Request**。
 
 </details>
 

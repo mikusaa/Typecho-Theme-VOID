@@ -11,9 +11,9 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
-require_once('libs/Utils.php');
-require_once('libs/Contents.php');
-require_once('libs/Comments.php');
+require_once __DIR__ . '/libs/Utils.php';
+require_once __DIR__ . '/libs/Contents.php';
+require_once __DIR__ . '/libs/Comments.php';
 
 /**
  * 统一 Typecho 1.2 / 1.3 的插件句柄格式，避免别名导致重复注册。

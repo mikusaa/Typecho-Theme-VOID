@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('__TYPECHO_ROOT_DIR__')) {
+    define('__TYPECHO_ROOT_DIR__', dirname(__DIR__, 2));
+}
+
 define('VOID_EMOTE_MANIFEST_DIR', dirname(__DIR__) . '/fixtures/emotes/packs');
 
 class Utils

@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('__TYPECHO_ROOT_DIR__')) {
+    define('__TYPECHO_ROOT_DIR__', dirname(__DIR__, 2));
+}
+
 require_once dirname(__DIR__, 2) . '/libs/Contents.php';
 
 $failures = 0;
