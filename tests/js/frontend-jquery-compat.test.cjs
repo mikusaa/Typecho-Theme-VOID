@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readEditorSource } = require('./helpers/editor-source.cjs');
 const { headerSourcePaths } = require('./helpers/header-source.cjs');
 const { voidSourcePaths } = require('./helpers/void-source.cjs');
 
@@ -64,8 +65,8 @@ test('theme-owned frontend sources and templates contain no jQuery references', 
     }
 });
 
-test('4.0 removes frontend jQuery while editor.js uses the Typecho admin boundary', () => {
-    const editor = read('assets/editor.js');
+test('4.0 removes frontend jQuery while editor sources use the Typecho admin boundary', () => {
+    const editor = readEditorSource();
     const functions = read('functions.php');
     const gulpfile = read('gulpfile.js');
     const index = read('index.php');

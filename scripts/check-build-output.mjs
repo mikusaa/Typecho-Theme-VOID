@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import editorSourcePaths from './editor-sources.cjs';
 import headerSourcePaths from './header-sources.cjs';
 import { checkFontsourceBuild } from './check-fontsource-build.mjs';
 
@@ -259,6 +260,10 @@ export async function checkBuildOutput(options = {}) {
         await assertAssembledSource(
             headerSourcePaths,
             path.join(outputRoot, 'assets/header.js')
+        );
+        await assertAssembledSource(
+            editorSourcePaths,
+            path.join(outputRoot, 'assets/editor.js')
         );
     } else {
         for (const [directory, pattern] of productionAssets) {

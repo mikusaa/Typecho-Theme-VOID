@@ -120,6 +120,9 @@ git log --oneline -5
 - `assets/js/header/` 是页头脚本的受维护源码；文件顺序以
   `scripts/header-sources.cjs` 为唯一事实来源。开发任务将合并结果写入
   `dev-build/assets/header.js`，不在源码目录生成副本。
+- `assets/js/editor/` 是后台编辑器脚本的受维护源码；文件顺序以
+  `scripts/editor-sources.cjs` 为唯一事实来源。开发任务将合并结果写入
+  `dev-build/assets/editor.js`，生产仍只发布一个带内容哈希的编辑器脚本。
 - 每个 DOM 初始化器都必须支持首次加载，以及 PJAX 替换后的重建。
 - 重复初始化不得重复创建 DOM、监听器、观察器、定时器、请求或全局状态。
 - 对可替换 DOM 优先使用事件委托。需要销毁时，应为处理程序添加命名空间，
@@ -159,9 +162,9 @@ temp/
 ```
 
 - 不要编辑或提交上述被忽略的输出。
-- `assets/` 中的 `VOID.js`、`header.js`、编译后 `VOID.css`、bundle 和源映射不是合法
-  输出；构建任务会清理历史遗留文件。`header.js` 是明确忽略的开发逻辑产物，其他
-  遗留文件不会由 `.gitignore` 隐藏。
+- `assets/` 中的 `VOID.js`、`header.js`、`editor.js`、编译后 `VOID.css`、bundle 和源映射
+  不是合法输出；构建任务会清理历史遗留文件。`header.js` 与 `editor.js` 是明确忽略的
+  开发逻辑产物，其他遗留文件不会由 `.gitignore` 隐藏。
 - `tests/` 是受维护的源码，必须始终纳入版本控制。
 - 压缩、内容哈希、PHP 引用改写和资源复制均由 Gulp 负责。绝不能硬编码生成的
   哈希文件名。

@@ -1,12 +1,11 @@
 /* global __dirname */
 
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readEditorModule } = require('./helpers/editor-source.cjs');
 
-const editorSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor.js'), 'utf8');
+const fieldsSource = readEditorModule('fields');
 
 function extract(source, startMarker, endMarker) {
     const start = source.indexOf(startMarker);
@@ -97,7 +96,10 @@ class FakeWrapper {
 
 function createSwitchEnvironment(initialValue = '0') {
     const empty = new FakeWrapper('empty', 0);
-    const select = new FakeWrapper('select').val(initialValue).attr('title', '原生字段说明');
+    const select = new FakeWrapper('select')
+        .val(initialValue)
+        .attr('name', 'fields[showOutdated]')
+        .attr('title', '原生字段说明');
     const label = new FakeWrapper('label');
     const description = new FakeWrapper('description');
     const field = new FakeWrapper('field');
@@ -145,8 +147,8 @@ function createSwitchEnvironment(initialValue = '0') {
     };
     jQuery.trim = (value) => String(value).trim();
 
-    const start = editorSource.indexOf('function initSwitchControls');
-    const end = editorSource.indexOf('    function compactFieldDescriptions', start);
+    const start = fieldsSource.indexOf('function initSwitchControls');
+    const end = fieldsSource.indexOf('    function compactFieldDescriptions', start);
     assert.notEqual(start, -1, 'missing initSwitchControls');
     assert.notEqual(end, -1, 'missing compactFieldDescriptions');
 
@@ -166,7 +168,7 @@ function createSwitchEnvironment(initialValue = '0') {
     };
 
     vm.runInNewContext(
-        `${editorSource.slice(start, end)}\nthis.runSwitchInitializer = initSwitchControls;`,
+        `${fieldsSource.slice(start, end)}\nthis.runSwitchInitializer = initSwitchControls;`,
         context
     );
 
@@ -181,7 +183,7 @@ function createSwitchEnvironment(initialValue = '0') {
 }
 
 test('content freshness switch keeps its label and description', () => {
-    const field = extract(editorSource, 'showOutdated: {', '        }\n    };');
+    const field = extract(fieldsSource, 'showOutdated: {', '        }\n    };');
 
     assert.match(field, /label:\s*'显示内容时效提醒'/);
     assert.match(field, /description:\s*'启用后，当文章最后更新时间超过 90 天时，在正文顶部显示时效提醒。'/);
@@ -190,7 +192,7 @@ test('content freshness switch keeps its label and description', () => {
 });
 
 test('generated switch exposes an accessible name and description', () => {
-    const implementation = extract(editorSource, 'function initSwitchControls', '    function compactFieldDescriptions');
+    const implementation = extract(fieldsSource, 'function initSwitchControls', '    function compactFieldDescriptions');
 
     assert.match(implementation, /<button type="button" class="void-switch-control" role="switch">/);
     assert.match(implementation, /aria-labelledby/);
@@ -216,6 +218,7 @@ test('switch interaction contracts remain synchronized with the native select', 
     control.trigger('click');
     assert.equal(environment.select.val(), '1');
     assert.equal(control.attr('aria-checked'), 'true');
+    assert.equal(environment.select.attr('name'), 'fields[showOutdated]');
 
     let prevented = false;
     control.trigger('keydown', {

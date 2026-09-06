@@ -1,14 +1,15 @@
 const js = require('@eslint/js');
 const globals = require('globals');
+const editorJsSources = require('./scripts/editor-sources.cjs');
 const headerJsSources = require('./scripts/header-sources.cjs');
 
 const firstPartyBrowserFiles = [
     ...headerJsSources,
+    ...editorJsSources,
     'assets/js/void/**/*.js',
     'assets/VOIDCacheRule.js',
     'assets/service-worker-registration.js',
     'assets/check_update.js',
-    'assets/editor.js',
     'assets/libs/emotes/emote-picker.js',
     'assets/libs/pjax/void-pjax.js'
 ];
@@ -140,6 +141,24 @@ module.exports = [
             'no-unused-vars': ['error', {
                 caughtErrors: 'none',
                 varsIgnorePattern: '^(VOID_DialogScrollLock|VOID_RewardDialog)$'
+            }]
+        }
+    },
+    {
+        files: editorJsSources,
+        languageOptions: {
+            globals: {
+                VOID_BannerMeta: 'writable',
+                VOID_Editor_Admin: 'writable',
+                VOID_Editor_Menu: 'writable',
+                initEditorToolbar: 'readonly'
+            }
+        },
+        rules: {
+            'no-redeclare': ['error', { builtinGlobals: false }],
+            'no-unused-vars': ['error', {
+                caughtErrors: 'none',
+                varsIgnorePattern: '^(VOID_BannerMeta|VOID_Editor_Admin)$'
             }]
         }
     },

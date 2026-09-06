@@ -3,6 +3,7 @@
 /build/
 /dev-build/
 /assets/header.js
+/assets/editor.js
 /build.zip
 .DS_Store
 .playwright-cli/

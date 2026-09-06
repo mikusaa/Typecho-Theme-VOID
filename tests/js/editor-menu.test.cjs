@@ -5,17 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readEditorModule } = require('./helpers/editor-source.cjs');
 
-const editorSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor.js'), 'utf8');
+const menuSource = readEditorModule('menu');
 const editorCss = fs.readFileSync(path.resolve(__dirname, '../../assets/editor-admin.css'), 'utf8');
-
-function extract(source, startMarker, endMarker) {
-    const start = source.indexOf(startMarker);
-    const end = source.indexOf(endMarker, start);
-    assert.notEqual(start, -1, `missing ${startMarker}`);
-    assert.notEqual(end, -1, `missing ${endMarker}`);
-    return source.slice(start, end + endMarker.length);
-}
 
 function createEnvironment() {
     let document;
@@ -246,7 +239,7 @@ function createEnvironment() {
     const context = { document, Element, window };
 
     vm.runInNewContext(
-        extract(editorSource, 'function insertAtCursor', '})(window.jQuery);'),
+        menuSource,
         context
     );
 

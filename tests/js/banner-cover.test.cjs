@@ -6,10 +6,14 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readEditorModule, readEditorSource } = require('./helpers/editor-source.cjs');
 const { readHeaderModule, readHeaderSource } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
-const editorSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor.js'), 'utf8');
+const editorSource = readEditorSource();
+const bannerMetaSource = readEditorModule('banner-meta');
+const fieldsSource = readEditorModule('fields');
+const bootstrapSource = readEditorModule('bootstrap');
 const editorAdminCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor-admin.css'), 'utf8');
 const headerSource = readHeaderSource();
 const cardCoverSource = readHeaderModule('card-cover');
@@ -18,14 +22,6 @@ const indexCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/par
 const functionsSource = fs.readFileSync(path.resolve(__dirname, '../../functions.php'), 'utf8');
 const utilsSource = fs.readFileSync(path.resolve(__dirname, '../../libs/Utils.php'), 'utf8');
 const indexTemplateSource = fs.readFileSync(path.resolve(__dirname, '../../index.php'), 'utf8');
-
-function extract(source, startMarker, endMarker) {
-    const start = source.indexOf(startMarker);
-    const end = source.indexOf(endMarker, start);
-    assert.notEqual(start, -1, `missing ${startMarker}`);
-    assert.notEqual(end, -1, `missing ${endMarker}`);
-    return source.slice(start, end + endMarker.length);
-}
 
 function createControl(value = '') {
     return {
@@ -104,7 +100,7 @@ function loadBannerMeta(initialBanner = '', initialMeta = '') {
     const context = { window };
 
     vm.runInNewContext(
-        extract(editorSource, 'var VOID_BannerMeta =', '})(window.jQuery);'),
+        bannerMetaSource,
         context
     );
 
@@ -389,8 +385,6 @@ test('destroying banner metadata collection cancels pending asynchronous work', 
 });
 
 test('banner dimension probing does not depend on the card preview', () => {
-    const bannerMetaSource = extract(editorSource, 'var VOID_BannerMeta =', '})(window.jQuery);');
-
     assert.match(bannerMetaSource, /new window\.Image\(\)/);
     assert.match(bannerMetaSource, /window\.setTimeout/);
     assert.doesNotMatch(bannerMetaSource, /voidIndexPreview|void-post-preview|cardVariants/);
@@ -428,9 +422,9 @@ test('editor removes both card and server-backed preview implementations', () =>
         fs.existsSync(path.resolve(__dirname, '../../libs', ['Home', 'Preview.php'].join(''))),
         false
     );
-    assert.match(editorSource, /initMediaFieldLayout\(\$panel\);/);
-    assert.match(editorSource, /var VOID_BannerMeta =/);
-    assert.match(editorSource, /window\.VOID_BannerMeta\.init\(\)/);
+    assert.match(fieldsSource, /initMediaFieldLayout\(\$panel\);/);
+    assert.match(bannerMetaSource, /var VOID_BannerMeta =/);
+    assert.match(bootstrapSource, /window\.VOID_BannerMeta\.init\(\)/);
 });
 
 test('card cover listeners bind once before the root transition class is enabled', () => {
@@ -608,8 +602,8 @@ test('templates and lifecycles expose the decoded card cover contract', () => {
         assert.match(template, /loading="lazy" decoding="async" data-void-card-cover/);
     }
 
-    assert.match(editorSource, /preserveHiddenMetadataField\(\$customField, 'bannerMeta'\)/);
-    assert.match(editorSource, /\$control\.detach\(\);[\s\S]*?\$customField\.before\(\$control\);[\s\S]*?\$row\.remove\(\);/);
+    assert.match(fieldsSource, /preserveHiddenMetadataField\(\$customField, 'bannerMeta'\)/);
+    assert.match(fieldsSource, /\$control\.detach\(\);[\s\S]*?\$customField\.before\(\$control\);[\s\S]*?\$row\.remove\(\);/);
     assert.doesNotMatch(cardCoverSource, /new Image\(|new window\.Image\(|data-src|lazyload/);
     assert.match(cardCoverSource, /document\.addEventListener\('load', VOID_CardCover\.handleLoad, true\)/);
     assert.match(cardCoverSource, /document\.addEventListener\('error', VOID_CardCover\.handleError, true\)/);
