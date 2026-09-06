@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import headerSourcePaths from './header-sources.cjs';
 import { checkFontsourceBuild } from './check-fontsource-build.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -102,6 +103,18 @@ async function assertFileEqual(sourcePath, outputPath) {
     ]);
     if (!source.equals(output)) {
         throw new Error(`Copied runtime file differs from source: ${outputPath}`);
+    }
+}
+
+async function assertAssembledSource(sourcePaths, outputPath) {
+    const sources = await Promise.all(sourcePaths.map((relativePath) =>
+        fs.readFile(path.join(repositoryRoot, ...relativePath.split('/')), 'utf8')
+    ));
+    const expected = sources.join('\n');
+    const actual = await fs.readFile(outputPath, 'utf8');
+
+    if (actual !== expected) {
+        throw new Error(`Assembled source differs from manifest order: ${outputPath}`);
     }
 }
 
@@ -236,6 +249,10 @@ export async function checkBuildOutput(options = {}) {
             await assertFileExists(path.join(outputRoot, ...relativePath.split('/')));
             referencedAssets.push(relativePath);
         }
+        await assertAssembledSource(
+            headerSourcePaths,
+            path.join(outputRoot, 'assets/header.js')
+        );
     } else {
         for (const [directory, pattern] of productionAssets) {
             referencedAssets.push(await requireSingleAsset(outputRoot, directory, pattern));

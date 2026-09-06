@@ -2,6 +2,7 @@
 /temp/
 /build/
 /dev-build/
+/assets/header.js
 /build.zip
 .DS_Store
 .playwright-cli/

@@ -6,11 +6,13 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderModule, readHeaderSource } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
 const editorSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor.js'), 'utf8');
 const editorAdminCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/editor-admin.css'), 'utf8');
-const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+const headerSource = readHeaderSource();
+const cardCoverSource = readHeaderModule('card-cover');
 const mainSource = readVoidSource();
 const indexCssSource = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_index.scss'), 'utf8');
 const functionsSource = fs.readFileSync(path.resolve(__dirname, '../../functions.php'), 'utf8');
@@ -229,9 +231,10 @@ function loadCardCover(options = {}) {
     const context = { document, window };
 
     vm.runInNewContext(
-        extract(headerSource, 'VOID_CardCover =', 'VOID_CardCover.bind();'),
+        cardCoverSource,
         context
     );
+    context.VOID_CardCover.bind();
 
     return {
         api: context.VOID_CardCover,
@@ -597,8 +600,6 @@ test('reduced motion reveals decoded covers without animation frames', async () 
 test('templates and lifecycles expose the decoded card cover contract', () => {
     const indexTemplate = fs.readFileSync(path.resolve(__dirname, '../../index.php'), 'utf8');
     const archiveTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/archives.php'), 'utf8');
-    const cardCoverSource = extract(headerSource, 'VOID_CardCover =', 'VOID_CardCover.bind();');
-
     for (const template of [indexTemplate, archiveTemplate]) {
         assert.match(template, /Contents::getBannerDimensions/);
         assert.match(template, /width=".*height="/s);

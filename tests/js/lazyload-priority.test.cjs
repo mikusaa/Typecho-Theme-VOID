@@ -1,8 +1,7 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 
 function createItem(attributes, options = {}) {
     const classes = new Set(['lazyload']);
@@ -113,7 +112,7 @@ function loadLazyload(items, isVisible) {
     };
 
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8'),
+        readHeaderSource(),
         context
     );
     context.VOID_GalleryLazyload.inViewport = isVisible;
@@ -224,4 +223,33 @@ test('Gallery lazy-load initialization retains only one scroll listener', () => 
     fixture.context.VOID_GalleryLazyload.init();
 
     assert.equal(fixture.scrollListeners.size, 1);
+
+    fixture.context.VOID_GalleryLazyload.destroy();
+    fixture.context.VOID_GalleryLazyload.destroy();
+    assert.equal(fixture.scrollListeners.size, 0);
+});
+
+test('Gallery teardown invalidates stale PJAX image callbacks and permits a clean rebuild', () => {
+    const item = createItem({
+        'data-src': 'https://example.test/replaced.jpg',
+        loading: 'eager'
+    });
+    const fixture = loadLazyload([item], () => false);
+    const lazyload = fixture.context.VOID_GalleryLazyload;
+
+    lazyload.callback();
+    const staleLoad = fixture.preloadImages[0].onload;
+    lazyload.destroy();
+    staleLoad();
+
+    assert.equal(item.getAttribute('src'), null);
+    assert.equal(item.classes.has('loaded'), false);
+    assert.equal(item.parentClasses.has('loaded'), false);
+    assert.equal(item.__voidLazyLoading, false);
+
+    lazyload.init();
+    assert.equal(fixture.preloadImages.length, 2);
+    fixture.preloadImages[1].onload();
+    assert.equal(item.getAttribute('src'), 'https://example.test/replaced.jpg');
+    assert.equal(item.classes.has('loaded'), true);
 });

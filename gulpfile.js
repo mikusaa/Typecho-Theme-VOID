@@ -10,6 +10,7 @@ var del = require('del');
 var path = require('path');
 var Transform = require('stream').Transform;
 var finished = require('stream/promises').finished;
+var headerJsSources = require('./scripts/header-sources.cjs');
 var voidJsSources = require('./scripts/void-sources.cjs');
 
 var productionRoot = './build';
@@ -53,7 +54,6 @@ var scssSources = [
 
 var standaloneJsSources = [
     './assets/editor.js',
-    './assets/header.js',
     './assets/check_update.js'
 ];
 
@@ -244,6 +244,17 @@ gulp.task('pack:js:void', function () {
     );
 });
 
+// 页头源码按权威顺序合并、压缩混淆
+gulp.task('pack:js:header-source', function () {
+    return writeRevisioned(
+        gulp.src(headerJsSources)
+            .pipe(concat('header.js'))
+            .pipe(uglify()),
+        path.join(productionRoot, 'assets'),
+        'js_header-source'
+    );
+});
+
 // 其他独立 JS 压缩混淆
 gulp.task('pack:js:main', function () {
     return writeRevisioned(
@@ -300,6 +311,7 @@ gulp.task('build', gulp.series(gulp.parallel('clean:build', 'clean:legacy'), gul
     'pack:css:emotes',
     'pack:css:dep',
     'pack:js:void',
+    'pack:js:header-source',
     'pack:js:main',
     'pack:js:header',
     'pack:js:emotes',
@@ -347,6 +359,12 @@ gulp.task('dev:js:dep', function () {
 gulp.task('dev:js:void', function () {
     return gulp.src(voidJsSources)
         .pipe(concat('VOID.js'))
+        .pipe(gulp.dest(path.join(developmentRoot, 'assets')));
+});
+
+gulp.task('dev:js:header-source', function () {
+    return gulp.src(headerJsSources)
+        .pipe(concat('header.js'))
         .pipe(gulp.dest(path.join(developmentRoot, 'assets')));
 });
 
@@ -406,6 +424,7 @@ gulp.task('dev-build', gulp.series(gulp.parallel('clean:dev', 'clean:legacy'), g
     'dev:js:header',
     'dev:js:dep',
     'dev:js:void',
+    'dev:js:header-source',
     'dev:js:main',
     'dev:js:emotes',
     'dev:move'
@@ -432,6 +451,7 @@ gulp.task('watch', gulp.series('dev-build', function watchDevelopment() {
         ),
         gulp.watch('./assets/libs/header/**/*.js', watchOptions, gulp.series('dev:js:header')),
         gulp.watch(dependencyJsSources, watchOptions, gulp.series('dev:js:dep')),
+        gulp.watch(headerJsSources, watchOptions, gulp.series('dev:js:header-source')),
         gulp.watch(voidJsSources, watchOptions, gulp.series('dev:js:void')),
         gulp.watch(standaloneJsSources, watchOptions, gulp.series('dev:js:main')),
         gulp.watch(

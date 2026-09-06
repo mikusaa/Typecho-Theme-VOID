@@ -4,18 +4,11 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderModule } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
-const HEADER_PATH = path.resolve(__dirname, '../../assets/header.js');
-
 function controllerSource() {
-    const source = fs.readFileSync(HEADER_PATH, 'utf8');
-    const start = source.indexOf('VOID_ControllerPanel = {');
-    const end = source.indexOf('\n\nVOID_Ui = {', start);
-
-    assert.notEqual(start, -1, 'controller panel implementation should exist');
-    assert.notEqual(end, -1, 'controller panel implementation should end before VOID_Ui');
-    return source.slice(start, end) + ';';
+    return readHeaderModule('controller-panel');
 }
 
 function createEnvironment(options = {}) {

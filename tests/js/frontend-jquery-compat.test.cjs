@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { headerSourcePaths } = require('./helpers/header-source.cjs');
 const { voidSourcePaths } = require('./helpers/void-source.cjs');
 
 const root = path.resolve(__dirname, '../..');
@@ -39,8 +40,8 @@ function createSearchItem(url) {
 test('theme-owned frontend sources and templates contain no jQuery references', () => {
     const frontendSources = [
         ...voidSourcePaths,
+        ...headerSourcePaths,
         'assets/VOIDCacheRule.js',
-        'assets/header.js',
         'assets/libs/emotes/emote-picker.js',
         'assets/libs/hyphen/hyphen.js',
         'assets/libs/pjax/void-pjax.js'

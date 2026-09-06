@@ -1,11 +1,10 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
-const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+const headerSource = readHeaderSource();
 const voidSource = readVoidSource();
 const scrollerStart = headerSource.indexOf('VOID_SmoothScroller = {');
 const scrollerEnd = headerSource.indexOf('\n\nVOID_ControllerPanel = {', scrollerStart);

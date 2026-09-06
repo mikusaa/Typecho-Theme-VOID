@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 
 class FakeClassList {
     constructor(initial = []) {
@@ -251,7 +252,7 @@ function loadHeaderEnvironment() {
     };
 
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8'),
+        readHeaderSource(),
         context
     );
 
@@ -494,8 +495,47 @@ test('TOC, click containment, archive toggles, and global listeners use native s
     assert.equal(event.stopped, true);
 });
 
+test('Headroom initialization and destruction own one instance per header', () => {
+    const environment = loadHeaderEnvironment();
+    const instances = [];
+
+    environment.context.VOIDConfig.headerMode = 0;
+    environment.context.Headroom = function (element, options) {
+        const instance = {
+            destroyCount: 0,
+            element,
+            initCount: 0,
+            options,
+            destroy() {
+                this.destroyCount += 1;
+            },
+            init() {
+                this.initCount += 1;
+            }
+        };
+        instances.push(instance);
+        return instance;
+    };
+
+    environment.context.VOID_Ui.headroom();
+    environment.context.VOID_Ui.headroom();
+    assert.equal(instances.length, 1);
+    assert.equal(instances[0].element, environment.header);
+    assert.equal(instances[0].options.offset, 60);
+    assert.equal(instances[0].initCount, 1);
+
+    environment.context.VOID_Ui.destroyHeadroom();
+    environment.context.VOID_Ui.destroyHeadroom();
+    assert.equal(instances[0].destroyCount, 1);
+    assert.equal(environment.context.VOID_Ui.headroomInstance, null);
+
+    environment.context.VOID_Ui.headroom();
+    assert.equal(instances.length, 2);
+    assert.equal(instances[1].initCount, 1);
+});
+
 test('stage 6 removes jQuery from the frontend build boundary', () => {
-    const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+    const headerSource = readHeaderSource();
     const bannerTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/banner.php'), 'utf8');
     const footerTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/footer.php'), 'utf8');
     const headerStyles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_header.scss'), 'utf8');

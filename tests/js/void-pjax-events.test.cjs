@@ -1182,19 +1182,23 @@ test('main PJAX teardown suspends the Gallery before photo-set and UI cleanup', 
     assert.deepEqual(calls, ['progress', 'reward', 'photoSwipe', 'gallery', 'photoSets', 'emotes', 'ui']);
 });
 
-test('main before-replace teardown clears MathJax before destroying Masonry', () => {
+test('main before-replace teardown invalidates async header work before destroying Masonry', () => {
     const { context } = loadVoidEnvironment();
     const calls = [];
 
+    context.VOID_GalleryLazyload = {
+        destroy: () => calls.push('gallery-lazyload')
+    };
     context.VOID_Ui = {
         MasonryCtrler: {
             destroy: () => calls.push('masonry')
-        }
+        },
+        invalidateLoginAction: () => calls.push('login')
     };
     context.VOID_Content.clearMath = () => calls.push('math');
 
     context.VOID.beforePjaxReplace();
-    assert.deepEqual(calls, ['math', 'masonry']);
+    assert.deepEqual(calls, ['math', 'gallery-lazyload', 'login', 'masonry']);
 });
 
 test('main PJAX completion reinitializes Masonry once on the replaced DOM', () => {

@@ -1,12 +1,13 @@
 const js = require('@eslint/js');
 const globals = require('globals');
+const headerJsSources = require('./scripts/header-sources.cjs');
 
 const firstPartyBrowserFiles = [
+    ...headerJsSources,
     'assets/js/void/**/*.js',
     'assets/VOIDCacheRule.js',
     'assets/check_update.js',
     'assets/editor.js',
-    'assets/header.js',
     'assets/libs/emotes/emote-picker.js',
     'assets/libs/pjax/void-pjax.js'
 ];
@@ -74,6 +75,31 @@ module.exports = [
         rules: sharedRules
     },
     {
+        files: headerJsSources,
+        languageOptions: {
+            globals: {
+                Headroom: 'readonly',
+                Masonry: 'readonly',
+                TOC: 'writable',
+                VOID: 'readonly',
+                VOIDConfig: 'readonly',
+                VOID_AnchorScroller: 'writable',
+                VOID_CardCover: 'writable',
+                VOID_ControllerPanel: 'writable',
+                VOID_GalleryLazyload: 'writable',
+                VOID_SmoothScroller: 'writable',
+                VOID_Ui: 'writable',
+                VOID_Util: 'writable',
+                tocbot: 'readonly'
+            }
+        },
+        rules: {
+            ...sharedRules,
+            'no-redeclare': ['error', { builtinGlobals: false }],
+            'no-unused-vars': ['error', { caughtErrors: 'none' }]
+        }
+    },
+    {
         files: ['assets/js/void/**/*.js'],
         languageOptions: {
             globals: {
@@ -93,6 +119,7 @@ module.exports = [
                 VOID_ControllerPanel: 'readonly',
                 VOID_DialogScrollLock: 'writable',
                 VOID_Gallery: 'writable',
+                VOID_GalleryLazyload: 'readonly',
                 VOID_PhotoSets: 'writable',
                 VOID_PhotoSwipe: 'writable',
                 VOID_RewardDialog: 'writable',

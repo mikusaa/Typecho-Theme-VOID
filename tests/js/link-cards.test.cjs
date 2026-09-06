@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
 class FakeClassList {
@@ -276,7 +277,7 @@ test('friend cards load immediately when lazy loading is disabled', () => {
 
 test('friend card source includes the dark surface and two-line title contract', () => {
     const styles = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_article.scss'), 'utf8');
-    const lazyload = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+    const lazyload = readHeaderSource();
 
     assert.match(styles, /\.theme-dark & \{\s*background: \$td-bgColor-light;/);
     assert.match(styles, /-webkit-line-clamp: 2;/);

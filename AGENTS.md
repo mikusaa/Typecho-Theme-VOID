@@ -117,6 +117,9 @@ git log --oneline -5
 - `assets/js/void/` 是前台主脚本的受维护源码；文件顺序以
   `scripts/void-sources.cjs` 为唯一事实来源。开发任务将合并结果写入
   `dev-build/assets/VOID.js`，不在源码目录生成副本。
+- `assets/js/header/` 是页头脚本的受维护源码；文件顺序以
+  `scripts/header-sources.cjs` 为唯一事实来源。开发任务将合并结果写入
+  `dev-build/assets/header.js`，不在源码目录生成副本。
 - 每个 DOM 初始化器都必须支持首次加载，以及 PJAX 替换后的重建。
 - 重复初始化不得重复创建 DOM、监听器、观察器、定时器、请求或全局状态。
 - 对可替换 DOM 优先使用事件委托。需要销毁时，应为处理程序添加命名空间，
@@ -156,8 +159,9 @@ temp/
 ```
 
 - 不要编辑或提交上述被忽略的输出。
-- `assets/` 中的 `VOID.js`、编译后 `VOID.css`、bundle 和源映射不是合法输出；构建任务
-  会清理历史遗留文件，`.gitignore` 也不会隐藏它们的回归。
+- `assets/` 中的 `VOID.js`、`header.js`、编译后 `VOID.css`、bundle 和源映射不是合法
+  输出；构建任务会清理历史遗留文件。`header.js` 是明确忽略的开发逻辑产物，其他
+  遗留文件不会由 `.gitignore` 隐藏。
 - `tests/` 是受维护的源码，必须始终纳入版本控制。
 - 压缩、内容哈希、PHP 引用改写和资源复制均由 Gulp 负责。绝不能硬编码生成的
   哈希文件名。
@@ -207,7 +211,7 @@ temp/
 
 - 保持跟随设备、固定浅色和固定深色行为。已删除的定时模式值 `0` 和无效的
   已保存值应视为跟随设备模式 `3`；绝不能重新利用旧数值。
-- 保持 `includes/head.php` 中的首次绘制逻辑与 `assets/header.js` 中的运行时
+- 保持 `includes/head.php` 中的首次绘制逻辑与 `assets/js/header/theme-mode.js` 中的运行时
   状态一致，避免闪烁和状态分歧。
 - 除非新的产品决定要求改变，否则保持前端循环
   `auto -> manual light -> manual dark -> auto`。

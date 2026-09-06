@@ -284,6 +284,13 @@ var VOID = {
 
     beforePjaxReplace: function () {
         VOID_Content.clearMath(VOID_Content.getMathContainer());
+        if (typeof VOID_GalleryLazyload !== 'undefined'
+            && typeof VOID_GalleryLazyload.destroy === 'function') {
+            VOID_GalleryLazyload.destroy();
+        }
+        if (VOID_Ui && typeof VOID_Ui.invalidateLoginAction === 'function') {
+            VOID_Ui.invalidateLoginAction();
+        }
         VOID_Ui.MasonryCtrler.destroy();
     },
 

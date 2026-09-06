@@ -4,6 +4,7 @@ const path = require('node:path');
 const sass = require('sass');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 
 function loadMasonryEnvironment(options = {}) {
     const elements = [];
@@ -194,7 +195,7 @@ function loadMasonryEnvironment(options = {}) {
     };
 
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8'),
+        readHeaderSource(),
         context
     );
 

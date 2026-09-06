@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { readHeaderSource } = require('./helpers/header-source.cjs');
 
 class FakeClassList {
     constructor() {
@@ -143,7 +144,7 @@ function loadThemeEnvironment(mode, prefersDark = false) {
     };
 
     vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8'),
+        readHeaderSource(),
         context
     );
 
@@ -252,7 +253,7 @@ test('serif toggle injects the local stylesheet into head once and preserves the
 });
 
 test('time-based configuration and scheduling are absent from runtime sources', () => {
-    const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+    const headerSource = readHeaderSource();
     const headTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/head.php'), 'utf8');
     const advancedSample = fs.readFileSync(path.resolve(__dirname, '../../advanceSetting.sample.json'), 'utf8');
 
@@ -262,7 +263,7 @@ test('time-based configuration and scheduling are absent from runtime sources', 
 });
 
 test('runtime font loading no longer contains Google Fonts or Droid Serif URLs', () => {
-    const headerSource = fs.readFileSync(path.resolve(__dirname, '../../assets/header.js'), 'utf8');
+    const headerSource = readHeaderSource();
     const headTemplate = fs.readFileSync(path.resolve(__dirname, '../../includes/head.php'), 'utf8');
     const fontVariables = fs.readFileSync(path.resolve(__dirname, '../../assets/parts/_var.scss'), 'utf8');
 
