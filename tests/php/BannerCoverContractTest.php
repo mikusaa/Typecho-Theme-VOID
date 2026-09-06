@@ -78,10 +78,16 @@ bannerCoverAssertSame(null, Contents::getBannerDimensions($source . '#vwid=1&vhe
 bannerCoverAssertSame(null, Contents::getBannerDimensions('javascript:alert(1)', $validMeta), '来源不匹配不采用元数据');
 bannerCoverAssertSame(null, Contents::getBannerDimensions('', $validMeta), '空封面不采用旧元数据');
 
-$functions = file_get_contents(dirname(__DIR__, 2) . '/functions.php');
+require_once dirname(__DIR__, 2) . '/libs/Settings/bootstrap.php';
+$bannerMetaDefinition = VOID_Settings_Schema::definition('bannerMeta');
 bannerCoverAssertSame(
-    1,
-    preg_match('/Form_Element_Hidden\(\'bannerMeta\',\s*null,\s*null,\s*\'[^\']+\'\)/', $functions),
+    'Hidden',
+    isset($bannerMetaDefinition['form']['element']) ? $bannerMetaDefinition['form']['element'] : null,
+    '主题通过 schema 注册隐藏 bannerMeta 字段'
+);
+bannerCoverAssertSame(
+    true,
+    !empty($bannerMetaDefinition['form']['title']),
     '主题注册带非空标签的隐藏 bannerMeta 字段'
 );
 

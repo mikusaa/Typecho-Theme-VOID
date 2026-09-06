@@ -81,7 +81,6 @@ var rootSources = [
     './LICENSE',
     './README.md',
     './screenshot.webp',
-    './advanceSetting.md',
     './advanceSetting.sample.json',
     './change-log.md'
 ];

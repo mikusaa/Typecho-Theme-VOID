@@ -596,6 +596,14 @@ class Utils
      */
     public static function normalizeColorScheme($value)
     {
+        if (defined('__TYPECHO_ROOT_DIR__')) {
+            require_once __DIR__ . '/Settings/bootstrap.php';
+            if (class_exists('VOID_Settings_Resolver', false)) {
+                return VOID_Settings_Resolver::normalizeColorScheme($value);
+            }
+        }
+
+        // Keep this small CLI-safe fallback for callers that load Utils alone.
         if (is_int($value)) {
             $mode = $value;
         } elseif (is_string($value) && preg_match('/^[123]$/D', $value)) {
@@ -701,94 +709,7 @@ class Utils
      */
     public static function getVOIDSettings()
     {
-        $options = Helper::options();
-
-        // 主题设置
-        $themeSetting = array(
-            'defaultBanner' => '',
-            'enableMath' => false,
-            'head' => '',
-            'footer' => '',
-            'serifincontent' => false,
-            'pjax' => false,
-            'pjaxreload' => '',
-            'indexStyle' => 0,
-            'lazyload' => true,
-            'indexBannerTitle' => '',
-            'indexBannerSubtitle' => '',
-            'serviceworker' => '',
-            'colorScheme' => 3, // 1: 日间，2: 夜间，3: 跟随设备；旧值 0 迁移为 3
-            'reward' => ''
-        );
-
-        $keys = array_keys($themeSetting);
-        foreach ($keys as $key) {
-            if($options->{$key} !== null && $options->{$key} !== ''){
-                $themeSetting[$key] = $options->{$key};
-            }
-        }
-
-        // 一些类型变换
-        $themeSetting['enableMath'] = boolval($themeSetting['enableMath']);
-        $themeSetting['lazyload'] = boolval($themeSetting['lazyload']);
-        $themeSetting['colorScheme'] = self::normalizeColorScheme($themeSetting['colorScheme']);
-        $themeSetting['pjax'] = boolval($themeSetting['pjax']);
-        $themeSetting['serifincontent'] = boolval($themeSetting['serifincontent']);
-        $themeSetting['indexStyle'] = intval($themeSetting['indexStyle']);
-
-        // 高级设置
-        $advanceSetting = array(
-            'nav' => '',
-            'name' => '',
-            'brandFont' => array(
-                'src' => '',
-                'style' => 'normal',
-                'weight' => 'normal'
-            ),
-            'desktopBannerHeight' => '',
-            'mobileBannerHeight' => '',
-            'twitterId' => '',
-            'weiboId' => '',
-            'headerMode' => 1,
-            'defaultFontSize' => 3,
-            'useFiraCodeFont' => false,
-            'largePhotoSet' => true,
-            'macStyleCodeBlock' => true,
-            'lineNumbers' => true,
-            'parseFigcaption' => true,
-            'link' => array(),
-            'commentFoldThreshold' => array(5, 1.5),
-            'commentNotification' => ''
-        );
-
-        if(!empty($options->advance)){
-            $settings = json_decode($options->advance, true);
-            if (is_array($settings)) {
-                foreach ($settings as $key => $value) {
-                    $advanceSetting[$key] = $value;
-                }
-            }
-        }
-
-        // 废弃键可以留在用户的自由格式配置中，但不再进入主题运行时设置。
-        unset(
-            $advanceSetting['darkModeTime'],
-            $advanceSetting['followSystemColorScheme'],
-            $advanceSetting['bluredLazyload'],
-            $advanceSetting['CDNType'],
-            $advanceSetting['browserLevelLoadingLazy'],
-            $advanceSetting['feedContentMode']
-        );
-
-        if(self::isMobile() && array_key_exists('headerModeMobile', $advanceSetting)){
-            $advanceSetting['headerMode'] = $advanceSetting['headerModeMobile'];
-        }
-
-        $output = array_merge($themeSetting, $advanceSetting);
-        // 公开的懒加载设置不允许被自由格式的高级设置同名键覆盖。
-        $output['lazyload'] = $themeSetting['lazyload'];
-        $output['VOIDPlugin'] = self::hasVOIDPlugin($GLOBALS['VOIDPluginREQ']);
-
-        return $output;
+        require_once __DIR__ . '/Settings/bootstrap.php';
+        return VOID_Settings_Resolver::resolve();
     }
 }

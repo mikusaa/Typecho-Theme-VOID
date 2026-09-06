@@ -13,9 +13,16 @@ test('advanced setting sample is valid JSON without retired keys', () => {
 
     assert.equal(Array.isArray(sample), false);
     assert.equal(sample === null, false);
-    assert.equal(Object.prototype.hasOwnProperty.call(sample, 'bluredLazyload'), false);
-    assert.equal(Object.prototype.hasOwnProperty.call(sample, 'CDNType'), false);
-    assert.equal(Object.prototype.hasOwnProperty.call(sample, 'browserLevelLoadingLazy'), false);
+    for (const retired of [
+        'darkModeTime',
+        'followSystemColorScheme',
+        'bluredLazyload',
+        'CDNType',
+        'browserLevelLoadingLazy',
+        'feedContentMode'
+    ]) {
+        assert.equal(Object.prototype.hasOwnProperty.call(sample, retired), false);
+    }
     assert.equal(sample.twitterId, '');
     assert.equal(sample.weiboId, '');
 });
@@ -23,8 +30,19 @@ test('advanced setting sample is valid JSON without retired keys', () => {
 test('README links the advanced setting reference and JSON sample', () => {
     const readme = fs.readFileSync(path.join(repositoryRoot, 'README.md'), 'utf8');
 
-    assert.match(readme, /\[超高级设置说明\]\(\.\/advanceSetting\.md\)/);
+    assert.match(readme, /\[超高级设置说明\]\(https:\/\/github\.com\/mikusaa\/Typecho-Theme-VOID\/blob\/master\/docs\/advanceSetting\.md\)/);
     assert.match(readme, /\[JSON 示例\]\(\.\/advanceSetting\.sample\.json\)/);
+    assert.equal(fs.existsSync(path.join(repositoryRoot, 'advanceSetting.md')), false);
+    assert.equal(fs.existsSync(path.join(repositoryRoot, 'docs/advanceSetting.md')), true);
+});
+
+test('advanced setting documentation stays outside theme build inputs', () => {
+    const gulpfile = fs.readFileSync(path.join(repositoryRoot, 'gulpfile.js'), 'utf8');
+    const buildCheck = fs.readFileSync(path.join(repositoryRoot, 'scripts/check-build-output.mjs'), 'utf8');
+
+    assert.doesNotMatch(gulpfile, /['"]\.\/docs\/advanceSetting\.md['"]/);
+    assert.doesNotMatch(gulpfile, /['"]\.\/advanceSetting\.md['"]/);
+    assert.match(buildCheck, /file === 'docs\/advanceSetting\.md'/);
 });
 
 test('runtime sources no longer contain the blurred placeholder contract', () => {

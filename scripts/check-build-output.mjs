@@ -11,7 +11,6 @@ const rootSources = Object.freeze([
     'LICENSE',
     'README.md',
     'screenshot.webp',
-    'advanceSetting.md',
     'advanceSetting.sample.json',
     'change-log.md'
 ]);
@@ -218,6 +217,12 @@ async function checkCopiedRuntime(outputRoot, mode) {
 
 async function checkForbiddenOutput(outputRoot) {
     const files = await listFiles(outputRoot);
+    const documentation = files.find((file) =>
+        file === 'advanceSetting.md' || file === 'docs/advanceSetting.md'
+    );
+    if (documentation) {
+        throw new Error(`Documentation-only file is present in the theme unit: ${documentation}`);
+    }
     const forbidden = files.find((file) =>
         file.startsWith('tests/') ||
         file.startsWith('node_modules/') ||

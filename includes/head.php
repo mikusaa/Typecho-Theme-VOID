@@ -8,6 +8,7 @@
  * @version     2019-01-15 0.1
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
+require_once __DIR__ . '/../libs/Settings/bootstrap.php';
 $setting = $GLOBALS['VOIDSetting']; 
 
 if (isset($_POST['void_action'])) {
@@ -95,31 +96,23 @@ if (isset($_POST['void_action'])) {
     Utils::indexTheme('/assets/fonts/fontsource/noto-serif-sc/5.3.0-r1/wght.css');
     $serifFontStylesheet = ob_get_clean();
 
-    $voidConfig = array(
-        'PJAX' => (bool) $setting['pjax'],
+    $voidConfig = VOID_Settings_FrontendConfig::build($setting, array(
         'searchBase' => $searchBase,
         'home' => $homeUrl,
         'buildTime' => $buildTime,
-        'enableMath' => (bool) $setting['enableMath'],
         'mathJaxUrl' => $mathJaxUrl,
-        'lazyload' => (bool) $setting['lazyload'],
-        'colorScheme' => (int) $setting['colorScheme'],
-        'headerMode' => (int) $setting['headerMode'],
         'emotesBase' => $emotesBase,
-        'VOIDPlugin' => (bool) $setting['VOIDPlugin'],
         'votePath' => $votePath,
         'lightBg' => '',
         'darkBg' => '',
-        'lineNumbers' => (bool) $setting['lineNumbers'],
         'horizontalBg' => !empty($setting['siteBg']),
         'verticalBg' => !empty($setting['siteBgVertical']),
-        'indexStyle' => (int) $setting['indexStyle'],
         'fontStylesheets' => array(
             'serif' => $serifFontStylesheet
         ),
         'version' => (string) $GLOBALS['VOIDVersion'],
         'isDev' => true
-    );
+    ));
     ?>
     <title><?php echo Utils::escapeHtml($pageTitle); ?></title>
     <?php if($isContentPage): ?>

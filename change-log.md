@@ -2,6 +2,9 @@
 
 **开发中 | Unreleased**
 
+* 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
+* 调整：[文档] 将超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。
+
 **🧩 2026-09-05 Version 4.0.0**
 
 > **兼容性升级提醒：** VOID 4.0 不再在前台提供全局 `$` / `jQuery`。升级前请迁移依赖它们的自定义 `head`、`footer`、`pjaxreload` 和第三方插件脚本，或由使用方自行加载 jQuery。

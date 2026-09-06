@@ -54,7 +54,7 @@
 4. 后台启用主题
 
 * 可选：将主题 `assets` 文件夹下的 `VOIDCacheRule.js` 复制一份到站点根目录，并在主题设置中启用 Service Worker 缓存。
-* 可选：按[超高级设置说明](./advanceSetting.md)从合法的 [JSON 示例](./advanceSetting.sample.json)中选取所需配置。
+* 可选：按[超高级设置说明](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/advanceSetting.md)从合法的 [JSON 示例](./advanceSetting.sample.json)中选取所需配置。
 
 开发版主题可以在这里获取：[开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
 
