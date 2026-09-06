@@ -6,7 +6,7 @@
  * 
  * @package     Typecho-Theme-VOID
  * @author      熊猫小A
- * @version     4.0.0
+ * @version     4.0.0-beta.1
  * @link        https://blog.imalan.cn/archives/247/
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
