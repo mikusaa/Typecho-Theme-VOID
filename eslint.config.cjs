@@ -2,11 +2,12 @@ const js = require('@eslint/js');
 const globals = require('globals');
 const editorJsSources = require('./scripts/editor-sources.cjs');
 const headerJsSources = require('./scripts/header-sources.cjs');
+const voidJsSources = require('./scripts/void-sources.cjs');
 
 const firstPartyBrowserFiles = [
     ...headerJsSources,
     ...editorJsSources,
-    'assets/js/void/**/*.js',
+    ...voidJsSources,
     'assets/VOIDCacheRule.js',
     'assets/service-worker-registration.js',
     'assets/check_update.js',
@@ -102,7 +103,7 @@ module.exports = [
         }
     },
     {
-        files: ['assets/js/void/**/*.js'],
+        files: voidJsSources,
         languageOptions: {
             globals: {
                 AjaxComment: 'writable',

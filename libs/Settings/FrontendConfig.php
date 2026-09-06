@@ -65,11 +65,6 @@ class VOID_Settings_FrontendConfig
         return $config;
     }
 
-    public static function fromSettings($settings, $runtime = array())
-    {
-        return self::build($settings, $runtime);
-    }
-
     private static function normalizePublicValue($value, $definition)
     {
         return VOID_Settings_Resolver::normalize($value, $definition);

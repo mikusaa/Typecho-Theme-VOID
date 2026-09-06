@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import editorSourcePaths from './editor-sources.cjs';
 import headerSourcePaths from './header-sources.cjs';
+import voidSourcePaths from './void-sources.cjs';
 import { checkFontsourceBuild } from './check-fontsource-build.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -264,6 +265,10 @@ export async function checkBuildOutput(options = {}) {
         await assertAssembledSource(
             editorSourcePaths,
             path.join(outputRoot, 'assets/editor.js')
+        );
+        await assertAssembledSource(
+            voidSourcePaths,
+            path.join(outputRoot, 'assets/VOID.js')
         );
     } else {
         for (const [directory, pattern] of productionAssets) {

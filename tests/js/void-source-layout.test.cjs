@@ -20,6 +20,7 @@ test('VOID source manifest is complete, unique, and keeps bootstrap last', () =>
     assert.equal(new Set(voidSourcePaths).size, voidSourcePaths.length, 'manifest entries must be unique');
     assert.deepEqual(manifestEntries, discovered, 'manifest must include every VOID source module');
     assert.equal(path.basename(voidSourcePaths.at(-1)), 'bootstrap.js');
+    assert.equal(fs.existsSync(path.join(repositoryRoot, 'assets/VOID.js')), false);
 
     for (const relativePath of voidSourcePaths) {
         assert.equal(fs.existsSync(path.join(repositoryRoot, relativePath)), true, relativePath);
@@ -58,4 +59,24 @@ test('assembled VOID source preserves the public classic-script globals and star
         /VOID_PhotoSwipe\.destroy\(\);\s*VOID_Gallery\.suspend\(\);\s*VOID_PhotoSets\.destroy\(\);/
     );
     assert.ok(source.indexOf('VOID.bindPjaxLifecycle();') < source.indexOf('VOID.init();'));
+});
+
+test('build, development, watch, lint, and tests consume the authoritative VOID manifest', () => {
+    const gulpfile = fs.readFileSync(path.join(repositoryRoot, 'gulpfile.js'), 'utf8');
+    const eslintConfig = fs.readFileSync(path.join(repositoryRoot, 'eslint.config.cjs'), 'utf8');
+    const buildCheck = fs.readFileSync(
+        path.join(repositoryRoot, 'scripts/check-build-output.mjs'),
+        'utf8'
+    );
+    const helper = fs.readFileSync(
+        path.join(repositoryRoot, 'tests/js/helpers/void-source.cjs'),
+        'utf8'
+    );
+
+    assert.match(gulpfile, /require\('\.\/scripts\/void-sources\.cjs'\)/);
+    assert.equal((gulpfile.match(/gulp\.src\(voidJsSources\)/g) || []).length, 2);
+    assert.match(gulpfile, /gulp\.watch\(voidJsSources/);
+    assert.match(eslintConfig, /require\('\.\/scripts\/void-sources\.cjs'\)/);
+    assert.match(buildCheck, /import voidSourcePaths from '\.\/void-sources\.cjs'/);
+    assert.match(helper, /require\('\.\.\/\.\.\/\.\.\/scripts\/void-sources\.cjs'\)/);
 });

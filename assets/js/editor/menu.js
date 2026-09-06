@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* exported VOID_Editor_Menu, initEditorToolbar */
 
 function insertAtCursor(myField, myValue) {
     var textTop = myField.scrollTop;

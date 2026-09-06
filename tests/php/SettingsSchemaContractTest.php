@@ -93,9 +93,6 @@ settingsContractAssertSame($expectedThemeKeys, settingsContractKeys('theme', fal
 settingsContractAssertSame($expectedAdvancedKeys, settingsContractKeys('advanced', false), 'schema 保留全部公开高级设置键');
 settingsContractAssertSame($expectedFieldKeys, settingsContractKeys('field', false), 'schema 保留全部文章字段键和持久化名称');
 settingsContractAssertSame($expectedRetiredKeys, VOID_Settings_Schema::retiredKeys(), 'schema 集中维护全部当前废弃键');
-settingsContractAssertSame(true, class_exists('VOID\\Settings\\Schema', false), 'Settings Schema 架构名称可用');
-settingsContractAssertSame(true, class_exists('VOID\\Settings\\Resolver', false), 'Settings Resolver 架构名称可用');
-settingsContractAssertSame(true, class_exists('VOID\\Settings\\FrontendConfig', false), 'Settings FrontendConfig 架构名称可用');
 
 $requiredDefinitionKeys = array(
     'source', 'default', 'type', 'normalizer', 'allowedValues', 'exposeToFrontend',

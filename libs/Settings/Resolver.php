@@ -41,11 +41,6 @@ class VOID_Settings_Resolver
         return $settings;
     }
 
-    public static function get($options = null, $context = array())
-    {
-        return self::resolve($options, $context);
-    }
-
     private static function resolveTheme($options)
     {
         $settings = array();

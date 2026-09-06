@@ -184,11 +184,6 @@ class VOID_Settings_Schema
         return self::$definitions;
     }
 
-    public static function definitions()
-    {
-        return self::all();
-    }
-
     public static function forSource($source, $includeRetired = true)
     {
         $result = array();
