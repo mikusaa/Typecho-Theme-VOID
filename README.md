@@ -15,7 +15,7 @@
 > 介绍文章：[VOID：现在可以公开的情报](https://blog.imalan.cn/archives/247/)。
 
 * 响应式设计
-* PJAX 无刷新体验
+* PJAX 无刷新体验（默认开启，可在主题设置中关闭）
 * AJAX 评论
 * 前台无跳转登陆（兼容 PJAX）
 * 跟随设备及固定深浅色的主题颜色模式
@@ -54,7 +54,7 @@
 4. 后台启用主题
 
 * 可选：将主题 `assets` 文件夹下的 `VOIDCacheRule.js` 复制一份到站点根目录，并在主题设置中启用 Service Worker 缓存。
-* 可选：按[超高级设置说明](./advanceSetting.md)从合法的 [JSON 示例](./advanceSetting.sample.json)中选取所需配置。
+* 可选：按[超高级设置说明](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/advanceSetting.md)从合法的 [JSON 示例](./advanceSetting.sample.json)中选取所需配置。
 
 开发版主题可以在这里获取：[开发版](https://github.com/mikusaa/Typecho-Theme-VOID/archive/refs/heads/nightly.zip)。注意，不保证开发版有更新更多的功能。而且开发版变动频繁，若无必要请使用发布版主题。
 
@@ -253,9 +253,18 @@ make verify
 
 只需重新生成生产运行单元时使用 `make build`。生产输出位于 `./build`，包含内容哈希
 资源和已同步改写引用的 PHP 文件；部署时必须整体使用同一次构建，不能与
-`./dev-build` 或旧资源混合。如果你对自己的更改很满意，**欢迎提出 Pull Request**。
+`./dev-build` 或旧资源混合。PHP 内容 Hook、转换顺序和查询边界由源码与 PHP 合同测试覆盖。
+如果你对自己的更改很满意，**欢迎提出 Pull Request**。
 
 </details>
+
+### 维护文档
+
+- [构建与 nightly 发布](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/build-and-release.md)
+- [前端与编辑器 JavaScript](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/frontend-javascript.md)
+- [PHP 内容管线与查询边界](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/php-content-pipeline.md)
+- [设置兼容合同](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/settings-contract.md)
+- [测试与验证](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/testing.md)
 
 ## 更新日志
 
