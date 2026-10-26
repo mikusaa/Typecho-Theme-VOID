@@ -25,11 +25,11 @@ html{
     box-sizing: border-box;
 }
 
-a, a:hover{
+:where(a, a:hover){
     text-decoration: none;
     border: none;
     color: $textColor;
-    .theme-dark &{
+    :where(.theme-dark) &{
         color: $td-textColor;
     }
     outline: none;
@@ -89,6 +89,7 @@ body{
 }
 
 .btn{
+    text-decoration: none;
     display: inline-block;
     font-size: 14px;
     font-weight: 700;

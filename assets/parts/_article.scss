@@ -224,6 +224,7 @@ article {
         height: 3em;
     }
     a.void-image-link {
+        text-decoration: none;
         display: block;
         width: 100%;
         img {
@@ -1100,6 +1101,7 @@ article {
         border-color: $td-borderColor;
     }
     a.social-button-icon {
+        text-decoration: none;
         border: none !important;
         font-size: 1.5rem;
         display: inline-flex;

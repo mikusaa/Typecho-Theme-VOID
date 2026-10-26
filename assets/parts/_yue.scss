@@ -83,78 +83,71 @@
 .yue p {
     margin: 0.92em 0;
 }
-.yue a {
+:where(.yue) a {
     word-wrap: break-word;
     word-break: break-all;
-    &:not(.void-image-link):not(.post-like):not(.edit-button) {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.2);
-        &:hover {
-            border-color: #000;
-        }
-        .theme-dark & {
-            border-color: #909090;
-            &:hover {
-                border-color: #fff;
-            }
+}
+:where(.yue) a:where(:not(.void-image-link, .post-like, .edit-button)) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    &:where(:hover) {
+        border-color: #000;
+    }
+    :where(.theme-dark) & {
+        border-color: #909090;
+        &:where(:hover) {
+            border-color: #fff;
         }
     }
 }
-.yue .articleBody a {
+// Typography defaults must yield to component classes, including interaction states.
+:where(.yue) :where(.articleBody) a {
     overflow-wrap: anywhere;
     word-break: normal;
 
-    &:not(.void-image-link):not(.post-like):not(.edit-button):not(.board-item):not(.littlefoot--print) {
-        border-bottom: 0;
-        color: inherit;
-        text-decoration-line: underline;
-        text-decoration-style: solid;
-        text-decoration-thickness: 1px;
-        text-decoration-color: rgba(#000, 0.28);
-        text-underline-offset: 0.18em;
-        text-decoration-skip-ink: auto;
-        transition: $animationTime $animationTimingFunc color,
-                    $animationTime $animationTimingFunc text-decoration-color,
-                    $animationTime $animationTimingFunc text-decoration-thickness;
+    border-bottom: 0;
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgba(#000, 0.28);
+    text-underline-offset: 0.18em;
+    text-decoration-skip-ink: auto;
+    transition: $animationTime $animationTimingFunc color,
+                $animationTime $animationTimingFunc text-decoration-color,
+                $animationTime $animationTimingFunc text-decoration-thickness;
 
-        &:hover,
-        &:focus-visible {
-            color: $articleLinkColor;
+    &:where(:hover, :focus-visible) {
+        color: $articleLinkColor;
+        text-decoration-color: currentColor;
+        text-decoration-thickness: 1.5px;
+    }
+
+    &:where(:focus-visible) {
+        outline: 2px solid $articleLinkColor;
+        outline-offset: 3px;
+    }
+
+    :where(.theme-dark) & {
+        text-decoration-color: rgba(#fff, 0.42);
+
+        &:where(:hover, :focus-visible) {
+            color: $td-articleLinkColor;
             text-decoration-color: currentColor;
             text-decoration-thickness: 1.5px;
         }
 
-        &:focus-visible {
-            border-radius: 1px;
-            outline: 2px solid $articleLinkColor;
-            outline-offset: 3px;
-        }
-
-        .theme-dark & {
-            text-decoration-color: rgba(#fff, 0.42);
-
-            &:hover,
-            &:focus-visible {
-                color: $td-articleLinkColor;
-                text-decoration-color: currentColor;
-            }
-
-            &:focus-visible {
-                outline-color: $td-articleLinkColor;
-            }
+        &:where(:focus-visible) {
+            outline-color: $td-articleLinkColor;
         }
     }
 }
-.yue .articleBody h1 a,
-.yue .articleBody h2 a,
-.yue .articleBody h3 a,
-.yue .articleBody h4 a,
-.yue .articleBody h5 a,
-.yue .articleBody h6 a {
-    text-decoration: none!important;
+:where(.yue) :where(.articleBody) :where(h1, h2, h3, h4, h5, h6) a {
+    color: inherit;
+    text-decoration: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .yue .articleBody a:not(.void-image-link):not(.post-like):not(.edit-button):not(.board-item):not(.littlefoot--print) {
+    :where(.yue) :where(.articleBody) a {
         transition: none;
     }
 }
@@ -218,12 +211,6 @@
     }
     > :last-child {
         margin-bottom: 0;
-    }
-}
-.yue .articleBody blockquote a {
-    color: $fadeColor;
-    .theme-dark & {
-        color: $td-textColor-dark;
     }
 }
 .yue ul,
