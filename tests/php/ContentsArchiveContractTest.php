@@ -242,12 +242,21 @@ class Widget_Metas_Category_Related
     }
 }
 
+class Typecho_Common
+{
+    public static function subStr($str, $start, $length, $trim = '...')
+    {
+        return mb_substr($str, $start, $length, 'UTF-8') . (mb_strlen($str, 'UTF-8') > $length ? $trim : '');
+    }
+}
+
 class Widget_Abstract_Contents
 {
     public static $allocCalls = 0;
     public static $pushedCategoriesByCid = array();
     public $title;
     public $permalink;
+    public $plainExcerpt;
 
     public static function alloc()
     {
@@ -264,6 +273,7 @@ class Widget_Abstract_Contents
             ? '此内容被密码保护' : 'Visible ' . $row['title'];
         $this->permalink = 'https://example.test/posts/' . $cid
             . '?from=archive&name="' . $cid . '"';
+        $this->plainExcerpt = '摘要' . $cid . str_repeat('字', 40);
         return $row;
     }
 
@@ -487,6 +497,18 @@ contentsArchiveAssertSame(
     false,
     array_key_exists('words', contentsArchiveFindPost($pluginArchives, 101)),
     '插件字段缺失时不生成未定义字数'
+);
+
+$excerptArchives = Contents::archives($widget, true);
+contentsArchiveAssertSame(
+    '摘要102' . str_repeat('字', 25) . '...',
+    contentsArchiveFindPost($excerptArchives, 102)['excerpt'],
+    '请求摘要时取文章纯文本摘要的前 30 个字符'
+);
+contentsArchiveAssertSame(
+    false,
+    array_key_exists('excerpt', contentsArchiveFindPost($pluginArchives, 102)),
+    '默认不生成归档摘要'
 );
 
 contentsArchiveResetCounters();

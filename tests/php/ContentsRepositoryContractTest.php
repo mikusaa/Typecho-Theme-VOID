@@ -180,6 +180,26 @@ class Widget_Metas_Category_Related
     }
 }
 
+class RepositoryTagRelated
+{
+    public static $rows = array();
+    public static $requests = array();
+
+    public function toArray($columns)
+    {
+        return self::$rows;
+    }
+}
+
+class Widget_Metas_Tag_Related
+{
+    public static function allocWithAlias($cid, $parameters)
+    {
+        RepositoryTagRelated::$requests[] = array($cid, $parameters);
+        return new RepositoryTagRelated();
+    }
+}
+
 class Typecho_Date
 {
     public static function time()
@@ -250,12 +270,21 @@ repositoryAssertSame('上一篇', Contents::thePrev($archive)->title, '上一篇
 repositoryAssertSame('下一篇', Contents::theNext($archive)->title, '下一篇查询后通过文章组件返回');
 repositoryAssertSame(null, Contents::theNext($archive), '没有下一篇时返回 null');
 
-Typecho_Db::$relationshipRows = array(array('mid' => 11), array('mid' => 12));
-repositoryAssertSame(
-    array(array('name' => '标签', 'permalink' => '/tag/test')),
-    Contents::getTags(7),
-    '标签查询继续通过 Meta 类型过滤'
+RepositoryTagRelated::$rows = array(
+    array('mid' => 11, 'name' => '标签', 'slug' => 'test', 'permalink' => '/tag/test'),
+    array('mid' => 13, 'name' => '另一个', 'slug' => 'other', 'permalink' => '/tag/other')
 );
+$queriesBeforeTags = count(Typecho_Db::$queries);
+repositoryAssertSame(
+    array(
+        array('name' => '标签', 'permalink' => '/tag/test'),
+        array('name' => '另一个', 'permalink' => '/tag/other')
+    ),
+    Contents::getTags(7),
+    '标签通过 Typecho Tag Related Widget 读取并只保留名称与链接'
+);
+repositoryAssertSame(array(array(7, array('cid' => 7))), RepositoryTagRelated::$requests, '标签按文章 cid 一次取出');
+repositoryAssertSame($queriesBeforeTags, count(Typecho_Db::$queries), '标签不再按关系逐条查询 Meta');
 
 RepositoryCategoryRelated::$rows = array(
     array('name' => '分类一', 'permalink' => '/category/one'),
@@ -269,7 +298,7 @@ foreach (Typecho_Db::$queries as $query) {
         $oneRowQueries++;
     }
 }
-repositoryAssertSame(9, $oneRowQueries, '单对象读取全部保留 limit(1)');
+repositoryAssertSame(7, $oneRowQueries, '单对象读取全部保留 limit(1)');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} repository contract test(s) failed.\n");

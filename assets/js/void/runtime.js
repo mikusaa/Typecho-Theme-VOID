@@ -1,6 +1,7 @@
 var VOID = {
     pjaxLifecycleBound: false,
     pjaxLifecycleHandlers: null,
+    pjaxAbortRestorePending: false,
     emotePicker: null,
     emoteContentObserver: null,
     typographyGeneration: 0,
@@ -109,6 +110,11 @@ var VOID = {
             send: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
 
+                if (VOID.isMainPjaxRequest(options)) {
+                    // 新的主导航会立即重新销毁页面，被取代的请求无需先恢复旧 DOM。
+                    VOID.pjaxAbortRestorePending = false;
+                }
+
                 if (AjaxComment.isCommentPjaxRequest(options)) {
                     AjaxComment.cancelSubmit();
                     VOID.destroyEmotes();
@@ -149,9 +155,20 @@ var VOID = {
             abort: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
 
-                if (VOID.isMainPjaxRequest(options)) {
-                    VOID.afterPjax();
+                if (!VOID.isMainPjaxRequest(options)) {
+                    return;
                 }
+
+                // VoidPjax 在同一调用中先派发 abort、再派发替代请求的 send；
+                // 延到微任务判断，只有替代请求不是主导航时才恢复旧页面。
+                VOID.pjaxAbortRestorePending = true;
+                Promise.resolve().then(function () {
+                    if (!VOID.pjaxAbortRestorePending) {
+                        return;
+                    }
+                    VOID.pjaxAbortRestorePending = false;
+                    VOID.afterPjax();
+                });
             },
             end: function () {
                 var options = VOID.resolvePjaxOptions(arguments);
@@ -190,6 +207,7 @@ var VOID = {
         document.removeEventListener('pjax:end', handlers.end);
         this.pjaxLifecycleHandlers = null;
         this.pjaxLifecycleBound = false;
+        this.pjaxAbortRestorePending = false;
     },
 
     // 初始化单页应用

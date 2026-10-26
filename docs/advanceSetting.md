@@ -32,8 +32,8 @@ JSON 不支持注释或末尾多余的逗号。保存前建议使用 JSON 校验
 | --- | --- | --- |
 | `headerMode` | `enum`，`1` | 导航栏模式：`0` 随滚动显隐，`1` 固定，`2` 不固定。 |
 | `headerModeMobile` | `enum|null`，未设置 | 移动设备的导航栏模式：`0` 随滚动显隐，`1` 固定，`2` 不固定；未设置或无效时沿用 `headerMode`。移动设备由服务端 User-Agent 判断，缩窄桌面浏览器窗口不会触发。 |
-| `link` | `array`，`[]` | 设置面板中的社交链接。每项必须包含 `name`、`icon`、`href`、`target`；`icon` 对应主题已有的 `voidicon-*` 图标名。 |
-| `nav` | `array`，`[]` | 桌面和移动导航中的自定义分组。每组包含 `name` 和 `items`；子项包含 `link`、`title`，可选 `target`，未设置时使用 `_blank`。 |
+| `link` | `array`，`[]` | 设置面板中的社交链接。每项必须包含 `name`、`icon`、`href`、`target`；`icon` 对应主题已有的 `voidicon-*` 图标名；`href` 只接受 HTTP(S)、站内相对地址和 `mailto:`，其他协议（如 `javascript:`）的条目不会输出。 |
+| `nav` | `array`，`[]` | 桌面和移动导航中的自定义分组。每组包含 `name` 和 `items`；子项包含 `link`、`title`，可选 `target`，未设置时使用 `_blank`；`link` 只接受 HTTP(S)、站内相对地址和 `mailto:`，其他协议的子项不会输出。 |
 
 ## 正文与代码
 

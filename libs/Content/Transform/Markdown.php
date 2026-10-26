@@ -20,16 +20,14 @@ class VOID_Content_Transform_Markdown
         $pattern = '/\[links.*?\](.*?)\[\/links\]/s';
         $text = preg_replace_callback($pattern, array(__CLASS__, 'renderBoard'), $text);
 
-        if (0 == strpos($text, '<!--markdown-->')) {
-            $text = str_replace("```objective-c", "```objectivec", $text);
-            $text = str_replace("```c++", "```cpp", $text);
-            $text = str_replace("```c#", "```csharp", $text);
-            $text = str_replace("```f#", "```fsharp", $text);
-            $text = str_replace("```F#", "```Fsharp", $text);
-            $text = Markdown::convert($text);
-        }
+        // Typecho 只对 Markdown 内容调用该 Hook，且传入前已去掉 <!--markdown--> 标记。
+        $text = str_replace("```objective-c", "```objectivec", $text);
+        $text = str_replace("```c++", "```cpp", $text);
+        $text = str_replace("```c#", "```csharp", $text);
+        $text = str_replace("```f#", "```fsharp", $text);
+        $text = str_replace("```F#", "```Fsharp", $text);
 
-        return $text;
+        return Markdown::convert($text);
     }
 
     public static function flattenBoard($matches)
@@ -42,10 +40,17 @@ class VOID_Content_Transform_Markdown
     {
         $text = "\n\n<div class=\"board-list link-list\">%boards%</div>\n\n";
         $pattern = '/\[(.*?)\]\((.*?)\)\+\((.*?)\)/s';
-        $replacement = '<a target="_blank" href="$2" class="board-item link-item"><div class="board-thumb" data-thumb="$3"></div><div class="board-title">$1</div></a>';
-        $boards = trim(preg_replace($pattern, $replacement, $matches[1]));
+        $boards = trim(preg_replace_callback($pattern, array(__CLASS__, 'renderBoardItem'), $matches[1]));
 
         return str_replace('%boards%', $boards, $text);
+    }
+
+    public static function renderBoardItem($matches)
+    {
+        $href = htmlspecialchars($matches[2], ENT_QUOTES, 'UTF-8', false);
+        $thumb = htmlspecialchars($matches[3], ENT_QUOTES, 'UTF-8', false);
+        return '<a target="_blank" href="' . $href . '" class="board-item link-item"><div class="board-thumb" data-thumb="'
+            . $thumb . '"></div><div class="board-title">' . $matches[1] . '</div></a>';
     }
 
     public static function parseRuby($string)

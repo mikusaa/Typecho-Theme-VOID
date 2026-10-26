@@ -186,7 +186,7 @@ module.exports = [
         rules: sharedRules
     },
     {
-        files: ['assets/libs/pjax/void-pjax.js'],
+        files: ['assets/libs/pjax/void-pjax.js', 'assets/check_update.js'],
         rules: {
             'no-unused-vars': ['error', { caughtErrors: 'none' }]
         }

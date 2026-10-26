@@ -21,7 +21,10 @@ var VOID_Content = {
 
         titles = document.querySelectorAll('a.archive-title');
         for (var index = 0; index < titles.length; index++) {
-            total += parseInt(titles[index].getAttribute('data-words'), 10);
+            var words = parseInt(titles[index].getAttribute('data-words'), 10);
+            if (!isNaN(words)) {
+                total += words;
+            }
         }
 
         totalWordCount.textContent = total;
@@ -472,7 +475,8 @@ var VOID_Content = {
 
         for (index = 0; index < links.length; index++) {
             item = links[index];
-            if (!item.getAttribute('target') && item.hostname != domain) {
+            // 只为外站网页链接开新标签页，mailto:、javascript: 等没有主机名的链接保持原样。
+            if (!item.getAttribute('target') && /^https?:$/.test(item.protocol) && item.hostname != domain) {
                 item.setAttribute('target', '_blank');
             }
         }

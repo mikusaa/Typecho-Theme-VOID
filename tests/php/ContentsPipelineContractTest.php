@@ -112,6 +112,21 @@ pipelineAssertSame(false, strpos(Markdown::$lastInput, '```c++') !== false, 'Mar
 pipelineAssertSame(true, strpos(Markdown::$lastInput, 'board-list link-list') !== false, '友链先渲染再进入 Markdown 转换');
 pipelineAssertSame(true, strpos($markdown, '<converted>') === 0, 'facade 保留 Markdown Hook 返回值');
 
+// Typecho 调用 markdown Hook 前已去掉 <!--markdown--> 标记
+Markdown::$lastInput = null;
+Contents::markdown("正文\n```c#\n");
+pipelineAssertSame(true, is_string(Markdown::$lastInput) && strpos(Markdown::$lastInput, '```csharp') !== false, '不带标记的 Hook 输入同样规范化并转换');
+
+Contents::markdown('[links][A&B](https://example.test/?a=1&b="x")+(thumb.jpg?x=1&y=2)[/links]');
+pipelineAssertSame(
+    true,
+    strpos(Markdown::$lastInput, 'href="https://example.test/?a=1&amp;b=&quot;x&quot;"') !== false
+        && strpos(Markdown::$lastInput, 'data-thumb="thumb.jpg?x=1&amp;y=2"') !== false,
+    '友链 href 与 data-thumb 按属性上下文转义'
+);
+Contents::markdown('[links][站点](https://example.test/?a=1&amp;b=2)+(t.jpg)[/links]');
+pipelineAssertSame(true, strpos(Markdown::$lastInput, 'href="https://example.test/?a=1&amp;b=2"') !== false, '已转义的实体不重复转义');
+
 $ordinary = new PipelineContractWidget(array(), 'post.php');
 $combined = Contents::contentEx(
     '<h2>标题</h2>{{汉:han}}[photos]<img src="/a.jpg#vwid=2&vhei=1" alt="图 :@(高兴)">[/photos]',

@@ -223,6 +223,7 @@ test('word totals, details summaries, and code classes use native DOM state idem
     const total = document.createElement('span');
     const firstTitle = document.createElement('a');
     const secondTitle = document.createElement('a');
+    const emptyTitle = document.createElement('a');
     const missingSummary = document.createElement('details');
     const existingSummary = document.createElement('details');
     const paragraph = document.createElement('p');
@@ -235,11 +236,12 @@ test('word totals, details summaries, and code classes use native DOM state idem
     total.setAttribute('id', 'totalWordCount');
     firstTitle.setAttribute('data-words', '12');
     secondTitle.setAttribute('data-words', '30');
+    emptyTitle.setAttribute('data-words', '');
     missingSummary.appendChild(paragraph);
     existingSummary.appendChild(summary);
     customCode.setAttribute('class', 'line-numbers');
     languageCode.setAttribute('class', 'language-js');
-    document.setQuery('a.archive-title', [firstTitle, secondTitle]);
+    document.setQuery('a.archive-title', [firstTitle, emptyTitle, secondTitle]);
     document.setQuery('article.yue details', [missingSummary, existingSummary]);
     document.setQuery('.yue pre code', [plainCode, customCode, languageCode]);
 
@@ -253,7 +255,7 @@ test('word totals, details summaries, and code classes use native DOM state idem
     content.highlight();
     content.highlight();
 
-    assert.equal(total.textContent, 42);
+    assert.equal(total.textContent, 42, '空的 data-words 不应让总字数变成 NaN');
     assert.equal(missingSummary.children.length, 2);
     assert.equal(missingSummary.children[0].tagName, 'SUMMARY');
     assert.equal(missingSummary.children[0].textContent, '展开详情');
@@ -326,9 +328,18 @@ test('external links and PJAX classes preserve the existing link rules', () => {
     const internal = document.createElement('a');
     const commentPager = document.createElement('a');
     const noPjax = document.createElement('a');
-    const links = [external, externalSelf, internal, commentPager, noPjax];
+    const mail = document.createElement('a');
+    const script = document.createElement('a');
+    const links = [external, externalSelf, internal, commentPager, noPjax, mail, script];
     const binds = [];
 
+    [external, externalSelf, internal, commentPager, noPjax].forEach((link) => {
+        link.protocol = 'https:';
+    });
+    mail.protocol = 'mailto:';
+    mail.hostname = '';
+    script.protocol = 'javascript:';
+    script.hostname = '';
     external.hostname = 'outside.example.test';
     externalSelf.hostname = 'outside.example.test';
     externalSelf.setAttribute('target', '_self');
@@ -357,6 +368,8 @@ test('external links and PJAX classes preserve the existing link rules', () => {
 
     assert.equal(external.getAttribute('target'), '_blank');
     assert.equal(externalSelf.getAttribute('target'), '_self');
+    assert.equal(mail.getAttribute('target'), null, 'mailto: 链接不应开新标签页');
+    assert.equal(script.getAttribute('target'), null, 'javascript: 链接不应开新标签页');
     assert.equal(internal.classList.contains('pjax'), true);
     assert.equal(commentPager.classList.contains('pjax'), false);
     assert.equal(noPjax.classList.contains('pjax'), false);

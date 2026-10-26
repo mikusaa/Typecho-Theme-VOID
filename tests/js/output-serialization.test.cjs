@@ -388,6 +388,51 @@ test('update checker builds remote release details with text and safe links', ()
     assert.equal(releaseLinks[1].rel, 'noopener noreferrer');
 });
 
+test('update checker falls back to the release page when a release has no assets', () => {
+    const { container, request } = loadUpdateChecker();
+
+    request.readyState = 4;
+    request.status = 200;
+    request.responseText = JSON.stringify({
+        assets: [],
+        html_url: 'https://releases.example.test/void',
+        name: 'VOID 9',
+        tag_name: '9.0.0'
+    });
+    request.onreadystatechange();
+
+    const links = container.children.filter((child) => child.tagName === 'A');
+    assert.equal(links.length, 2);
+    assert.equal(links[0].href, 'https://releases.example.test/void');
+    assert.equal(links[0].textContent, '点击下载');
+});
+
+test('update checker reports failed or unreadable responses instead of waiting forever', () => {
+    for (const response of [
+        { status: 403, responseText: '{"message":"rate limited"}' },
+        { status: 0, responseText: '' },
+        { status: 200, responseText: 'not json' },
+        { status: 200, responseText: '{}' }
+    ]) {
+        const { container, request } = loadUpdateChecker();
+
+        request.readyState = 3;
+        request.onreadystatechange();
+        assert.equal(container.children.length, 0, '请求未完成时不改写检查中提示');
+
+        request.readyState = 4;
+        request.status = response.status;
+        request.responseText = response.responseText;
+        request.onreadystatechange();
+
+        assert.match(container.textContent, /^检查更新失败/, `HTTP ${response.status} ${response.responseText}`);
+        const links = container.children.filter((child) => child.tagName === 'A');
+        assert.equal(links.length, 1);
+        assert.equal(links[0].protocol, 'https:');
+        assert.equal(links[0].target, '_blank');
+    }
+});
+
 test('dynamic output sources no longer assign innerHTML', () => {
     const updateSource = fs.readFileSync(path.resolve(__dirname, '../../assets/check_update.js'), 'utf8');
     const voidSource = readVoidModule('runtime');

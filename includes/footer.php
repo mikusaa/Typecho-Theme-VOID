@@ -71,9 +71,11 @@ $setting = $GLOBALS['VOIDSetting'];
                 <a class="link" title="RSS" target="_blank" href="<?php $this->options->feedUrl(); ?>"><i class="voidicon-rss"></i></a>
                 <?php
                     foreach ($setting['link'] as $link) {
+                        $safeHref = Utils::getSafeLinkUrl(isset($link['href']) ? $link['href'] : null);
+                        if (null === $safeHref) continue;
                         $name = Utils::escapeHtml($link['name']);
                         $target = Utils::escapeHtml($link['target']);
-                        $href = Utils::escapeHtml($link['href']);
+                        $href = Utils::escapeHtml($safeHref);
                         $icon = Utils::escapeHtml($link['icon']);
                         echo "<a class=\"link\" title=\"{$name}\" target=\"{$target}\" href=\"{$href}\"><i class=\"voidicon-{$icon}\"></i></a>";
                     }

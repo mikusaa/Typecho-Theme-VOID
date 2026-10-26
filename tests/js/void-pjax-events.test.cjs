@@ -1375,7 +1375,7 @@ test('typography uses a two-frame timeout fallback without requestAnimationFrame
     assert.deepEqual(calls, ['pangu', 'littlefoot', 'math', 'hyphenate']);
 });
 
-test('only an aborted main request restores the main-container lifecycle', () => {
+test('only an aborted main request restores the main-container lifecycle', async () => {
     const { context } = loadVoidEnvironment();
     const calls = [];
 
@@ -1387,5 +1387,45 @@ test('only an aborted main request restores the main-container lifecycle', () =>
     context.document.dispatchEvent(nativePjaxEvent('pjax:abort', { container: '#pjax-container' }));
     context.document.dispatchEvent(nativePjaxEvent('pjax:abort', { container: '#comments' }));
 
+    assert.deepEqual(calls, []);
+    await Promise.resolve();
     assert.deepEqual(calls, ['afterPjax']);
+});
+
+test('a main request superseded by another main request is not rebuilt on the old DOM', async () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID.afterPjax = () => calls.push('afterPjax');
+    context.VOID.beforePjax = () => calls.push('beforePjax');
+    context.AjaxComment.cancelSubmit = () => {};
+    context.AjaxComment.isCommentPjaxRequest = (options) => options.container === '#comments';
+    context.VOIDConfig = { PJAX: true };
+
+    context.VOID.bindPjaxLifecycle();
+    context.document.dispatchEvent(nativePjaxEvent('pjax:abort', { container: '#pjax-container' }));
+    context.document.dispatchEvent(nativePjaxEvent('pjax:send', { container: '#pjax-container' }));
+    await Promise.resolve();
+
+    assert.deepEqual(calls, ['beforePjax']);
+});
+
+test('a main request superseded by a comment page request restores the old page', async () => {
+    const { context } = loadVoidEnvironment();
+    const calls = [];
+
+    context.VOID.afterPjax = () => calls.push('afterPjax');
+    context.VOID.beforePjax = () => calls.push('beforePjax');
+    context.VOID.destroyEmotes = () => {};
+    context.AjaxComment.cancelSubmit = () => {};
+    context.AjaxComment.setCommentPageLoading = () => calls.push('commentLoading');
+    context.AjaxComment.isCommentPjaxRequest = (options) => options.container === '#comments';
+    context.VOIDConfig = { PJAX: true };
+
+    context.VOID.bindPjaxLifecycle();
+    context.document.dispatchEvent(nativePjaxEvent('pjax:abort', { container: '#pjax-container' }));
+    context.document.dispatchEvent(nativePjaxEvent('pjax:send', { container: '#comments' }));
+    await Promise.resolve();
+
+    assert.deepEqual(calls, ['commentLoading', 'afterPjax']);
 });

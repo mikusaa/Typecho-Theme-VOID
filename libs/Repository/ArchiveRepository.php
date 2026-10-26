@@ -135,7 +135,7 @@ class VOID_Repository_ArchiveRepository
             }
 
             if ($excerpt) {
-                $item['excerpt'] = substr($row['content'], 30);
+                $item['excerpt'] = Typecho_Common::subStr((string) $post->plainExcerpt, 0, 30, '...');
             }
             $archives[$date->format('Y')][] = $item;
         }
@@ -144,22 +144,16 @@ class VOID_Repository_ArchiveRepository
 
     public static function getTags($cid)
     {
-        $db = Typecho_Db::get();
-        $rows = $db->fetchAll($db->select('mid')
-            ->from('table.relationships')
-            ->where('cid = ?', $cid));
+        $rows = Widget_Metas_Tag_Related::allocWithAlias($cid, array('cid' => $cid))
+            ->toArray(array('name', 'permalink'));
 
         $metas = array();
         foreach ($rows as $row) {
-            $meta = VOID_Repository_ContentRepository::getMeta($row['mid']);
-            if ($meta->type == 'tag') {
-                $metas[] = array(
-                    'name' => $meta->name,
-                    'permalink' => $meta->permalink
-                );
-            }
+            $metas[] = array(
+                'name' => $row['name'],
+                'permalink' => $row['permalink']
+            );
         }
-
         return $metas;
     }
 

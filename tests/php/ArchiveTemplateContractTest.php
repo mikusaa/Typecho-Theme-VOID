@@ -182,6 +182,22 @@ archiveTemplateAssertNotContains('<ul id="masonry">', $emptyList, '合法空归�
 archiveTemplateAssertSame(0, $emptyListWidget->pageNavCalls, '合法空归档不输出无效分页');
 archiveTemplateAssertSame(1, $emptyListWidget->archiveTitleCalls, '合法空归档仍输出语义标题');
 
+$archiveListSource = file_get_contents(dirname(__DIR__, 2) . '/includes/archives.php');
+archiveTemplateAssertNotContains("is('index')", $archiveListSource, '归档列表不保留永远不会成立的首页分支');
+archiveTemplateAssertNotContains('full-link', $archiveListSource, '归档卡片内不再嵌套“阅读全文”链接');
+
+$templatePaths = array_merge(
+    glob(dirname(__DIR__, 2) . '/includes/*.php'),
+    glob(dirname(__DIR__, 2) . '/*.php')
+);
+$duplicateClassTemplates = array();
+foreach ($templatePaths as $templatePath) {
+    if (preg_match('/<[a-z][^<>]*\sclass="[^"]*"[^<>]*\sclass="/i', file_get_contents($templatePath))) {
+        $duplicateClassTemplates[] = basename($templatePath);
+    }
+}
+archiveTemplateAssertSame(array(), $duplicateClassTemplates, '模板元素不重复声明 class 属性');
+
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} archive template contract test(s) failed.\n");
     exit(1);

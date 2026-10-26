@@ -580,7 +580,37 @@ outputSerializationAssertSame(
     outputSerializationMetaContent($subdirectoryHead, 'property', 'og:url'),
     '子目录安装的归档页 Open Graph URL 不重复子目录'
 );
+outputSerializationAssertNotContains('property="og:image"', $subdirectoryHead, '没有封面的页面不输出空的 og:image');
+outputSerializationAssertNotContains('name="twitter:image"', $subdirectoryHead, '没有封面的页面不输出空的 twitter:image');
+
+$GLOBALS['VOIDSetting']['twitterId'] = '';
+$noTwitterHead = $subdirectoryArchive->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertNotContains('name="twitter:site"', $noTwitterHead, '未设置 twitterId 时不输出 content="@" 的 twitter:site');
+outputSerializationAssertNotContains('name="twitter:creator"', $noTwitterHead, '未设置 twitterId 时不输出 twitter:creator');
+outputSerializationAssertContains('name="twitter:card"', $noTwitterHead, '未设置 twitterId 时仍输出 twitter:card');
+$GLOBALS['VOIDSetting']['twitterId'] = $attackPayload;
 Helper::$options = $subdirectoryOptions;
+
+$safeLinkCases = array(
+    array('https://example.test/about', 'https://example.test/about', 'HTTPS 导航链接保留'),
+    array('/about/', '/about/', '站内相对地址保留'),
+    array('mailto:me@example.test', 'mailto:me@example.test', 'mailto: 社交链接保留'),
+    array('javascript:alert(1)', null, 'javascript: 链接被拒绝'),
+    array(' JaVaScRiPt:alert(1)', null, '大小写混写并带空格的 javascript: 被拒绝'),
+    array('&#106;avascript:alert(1)', null, '实体编码的 javascript: 被拒绝'),
+    array('data:text/html,<b>x</b>', null, 'data: 链接被拒绝'),
+    array('mailto:a@example.test"onmouseover=x', null, '带引号的 mailto: 被拒绝'),
+    array(null, null, '缺少链接时返回 null')
+);
+foreach ($safeLinkCases as $case) {
+    outputSerializationAssertSame($case[1], Utils::getSafeLinkUrl($case[0]), $case[2]);
+}
+$headerSource = file_get_contents(dirname(__DIR__, 2) . '/includes/header.php');
+$footerSource = file_get_contents(dirname(__DIR__, 2) . '/includes/footer.php');
+outputSerializationAssertSame(2, substr_count($headerSource, "Utils::getSafeLinkUrl(isset(\$item['link']) ? \$item['link'] : null)"), '桌面与移动导航都校验自定义链接协议');
+outputSerializationAssertSame(0, substr_count($headerSource, "Utils::escapeHtml(\$item['link'])"), '导航不再直接输出未校验的链接');
+outputSerializationAssertContains("Utils::getSafeLinkUrl(isset(\$link['href']) ? \$link['href'] : null)", $footerSource, '社交链接校验协议');
+outputSerializationAssertNotContains("Utils::escapeHtml(\$link['href'])", $footerSource, '社交链接不再直接输出未校验的地址');
 
 $GLOBALS['VOIDSetting'] = array('defaultBanner' => $attackBannerUrl);
 $ldjsonTemplate = dirname(__DIR__, 2) . '/includes/ldjson.php';
