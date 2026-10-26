@@ -118,7 +118,7 @@ function themeConfig($form)
 
     echo '<p id="void-check-update" class="notice">正在检查更新……</p>';
     echo '<script>var VOIDVersion=' . Utils::encodeJsonForHtml($GLOBALS['VOIDVersion']) . '</script>';
-    echo '<script src="' . Utils::escapeHtml(Helper::options()->themeUrl . '/assets/check_update-9fc641bc91.js') . '"></script>';
+    echo '<script src="' . Utils::escapeHtml(Helper::options()->themeUrl . '/assets/check_update-164da64e55.js') . '"></script>';
 
     VOID_addSchemaFormElements($form, 'theme', 'addInput');
 }

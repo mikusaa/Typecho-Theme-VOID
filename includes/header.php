@@ -61,9 +61,11 @@ if($this->is('post') || $this->is('page')) {
                 <span class="dropdown"><?php echo Utils::escapeHtml($listItem['name']); ?>
                     <ul>
                         <?php foreach ($listItem['items'] as $item) {
+                            $safeLink = Utils::getSafeLinkUrl(isset($item['link']) ? $item['link'] : null);
+                            if (null === $safeLink) continue;
                             $target = '_blank';
                             if(isset($item['target'])) $target = Utils::escapeHtml($item['target']);
-                            $link = Utils::escapeHtml($item['link']);
+                            $link = Utils::escapeHtml($safeLink);
                             $title = Utils::escapeHtml(Utils::decodeHtmlText($item['title']));
                             echo "<li><a target=\"{$target}\" href=\"{$link}\">{$title}</a></li>";
                         }?>
@@ -106,9 +108,11 @@ if($this->is('post') || $this->is('page')) {
         <section data-title="<?php echo Utils::escapeHtml($listItem['name']); ?>">
             <nav>
                 <?php foreach ($listItem['items'] as $item) {
+                    $safeLink = Utils::getSafeLinkUrl(isset($item['link']) ? $item['link'] : null);
+                    if (null === $safeLink) continue;
                     $target = '_blank';
                     if(isset($item['target'])) $target = Utils::escapeHtml($item['target']);
-                    $link = Utils::escapeHtml($item['link']);
+                    $link = Utils::escapeHtml($safeLink);
                     $title = Utils::escapeHtml(Utils::decodeHtmlText($item['title']));
                     echo "<a target=\"{$target}\" href=\"{$link}\">{$title}</a>";
                 }?>

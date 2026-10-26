@@ -274,15 +274,6 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         }
 
         if ($author === '') {
-            $db = Typecho_Db::get();
-            $parentRow = $db->fetchRow($db->select('author')->from('table.comments')->where('coid = ?', $parentId));
-            if (is_array($parentRow) && !empty($parentRow['author'])) {
-                $author = trim((string)$parentRow['author']);
-            }
-            $this->_commentAuthors[$parentId] = $author;
-        }
-
-        if ($author === '') {
             $author = '已删除的评论';
         }
 
@@ -291,14 +282,45 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
     }
 
     /**
+     * 父评论不在当前列表中（如未通过审核）时，一次性补齐其作者名
+     */
+    private function loadMissingParentAuthors()
+    {
+        $missing = array();
+        foreach ($this->stack as $comment) {
+            $parentId = (int) $comment['parent'];
+            if ($parentId > 0 && !isset($this->_commentAuthors[$parentId])) {
+                $missing[$parentId] = true;
+            }
+        }
+
+        if (empty($missing)) {
+            return;
+        }
+
+        $parentIds = array_keys($missing);
+        foreach ($parentIds as $parentId) {
+            $this->_commentAuthors[$parentId] = '';
+        }
+
+        $rows = $this->db->fetchAll($this->db->select('coid', 'author')
+            ->from('table.comments')
+            ->where('coid IN ?', $parentIds));
+        foreach ($rows as $row) {
+            $this->_commentAuthors[(int) $row['coid']] = (string) $row['author'];
+        }
+    }
+
+    /**
      * 获取评论赞踩
      */
     private function getLikesAndDislikes() {
-        $db = Typecho_Db::get();
-        $row = $db->fetchRow($db->select('likes, dislikes')
-            ->from('table.comments')
-            ->where('coid = ?', $this->coid));
-        return array('likes' => $row['likes'], 'dislikes' => $row['dislikes']);
+        // 评论列表按整行查询，VOID 插件的赞踩列已在当前行中，无需逐条再查。
+        $row = is_array($this->row) ? $this->row : array();
+        return array(
+            'likes' => isset($row['likes']) ? (int) $row['likes'] : 0,
+            'dislikes' => isset($row['dislikes']) ? (int) $row['dislikes'] : 0
+        );
     }
     
     /**
@@ -396,6 +418,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
         
         $select->order('table.comments.coid', 'ASC');
         $this->db->fetchAll($select, array($this, 'push'));
+        $this->loadMissingParentAuthors();
         
         /** 需要输出的评论列表 */
         $outputComments = array();

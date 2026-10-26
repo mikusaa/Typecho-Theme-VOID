@@ -124,7 +124,9 @@ if (isset($_POST['void_action'])) {
     <meta property="og:site_name" content="<?php echo Utils::escapeHtml($siteTitle); ?>" />
     <meta property="og:type" content="<?php echo $isContentPage ? 'article' : 'website'; ?>" />
     <meta property="og:url" content="<?php echo Utils::escapeHtml($pageUrl); ?>" />
+    <?php if((string) $banner !== ''): ?>
     <meta property="og:image" content="<?php echo Utils::escapeHtml($banner); ?>" />
+    <?php endif; ?>
     <?php if($isContentPage): ?>
     <meta property="article:published_time" content="<?php echo date('c', $this->created); ?>" />
     <meta property="article:modified_time" content="<?php echo date('c', $this->modified); ?>" />
@@ -132,9 +134,13 @@ if (isset($_POST['void_action'])) {
     <meta name="twitter:title" content="<?php echo Utils::escapeHtml($pageTitle); ?>" />
     <meta name="twitter:description" content="<?php echo Utils::escapeHtml($description); ?>" />
     <meta name="twitter:card" content="summary" />
+    <?php if(trim((string) $setting['twitterId']) !== ''): ?>
     <meta name="twitter:site" content="<?php echo Utils::escapeHtml('@' . $setting['twitterId']); ?>" />
     <meta name="twitter:creator" content="<?php echo Utils::escapeHtml('@' . $setting['twitterId']); ?>" />
+    <?php endif; ?>
+    <?php if((string) $banner !== ''): ?>
     <meta name="twitter:image" content="<?php echo Utils::escapeHtml($banner); ?>" />
+    <?php endif; ?>
     <?php $this->header('commentReply=&description=&social=0'); ?>
 
     <!--CSS-->

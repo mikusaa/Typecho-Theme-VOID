@@ -49,7 +49,7 @@ $socialWeibo = $setting['weiboId'] !== '' ? $setting['weiboId'] : $socialAuthor;
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <div class="articleBody" class="full">
+                    <div class="articleBody">
                         <?php $this->content(); ?>
                     </div>
                     

@@ -696,6 +696,26 @@ class Utils
     }
 
     /**
+     * 返回可用于导航和社交链接的 URL：HTTP(S)、相对地址或 mailto:，其他协议返回 null。
+     */
+    public static function getSafeLinkUrl($value)
+    {
+        $url = self::getSafeHttpUrl($value);
+        if (null !== $url) {
+            return $url;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if (preg_match('/^mailto:[^\s"\'<>\\\\]+$/iD', $value) === 1) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * 用站点地址的协议和主机拼出当前请求的绝对地址。
      *
      * 请求 URI 已经包含子目录，不能再拼完整的 rootUrl；主机取自后台配置，

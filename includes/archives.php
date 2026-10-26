@@ -72,7 +72,7 @@ $setting = $GLOBALS['VOIDSetting'];
                                 <?php if($this->fields->excerpt != ''): ?> 
                                     <p class="headline single"><?php echo Utils::escapeHtml(Utils::decodeHtmlText($this->fields->excerpt)); ?></p>
                                 <?php else: ?>
-                                    <p class="excerpt"><?php if(Utils::isMobile()) $this->excerpt(60); else $this->excerpt(100); ?><?php if($this->is('index')) echo ' | <a class="full-link" href="' . Utils::escapeHtml($postPermalink) . '">阅读全文</a>'; ?></p>
+                                    <p class="excerpt"><?php if(Utils::isMobile()) $this->excerpt(60); else $this->excerpt(100); ?></p>
                                 <?php endif; ?>
                             </div>
                         </article>

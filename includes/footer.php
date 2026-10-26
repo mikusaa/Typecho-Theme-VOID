@@ -71,9 +71,11 @@ $setting = $GLOBALS['VOIDSetting'];
                 <a class="link" title="RSS" target="_blank" href="<?php $this->options->feedUrl(); ?>"><i class="voidicon-rss"></i></a>
                 <?php
                     foreach ($setting['link'] as $link) {
+                        $safeHref = Utils::getSafeLinkUrl(isset($link['href']) ? $link['href'] : null);
+                        if (null === $safeHref) continue;
                         $name = Utils::escapeHtml($link['name']);
                         $target = Utils::escapeHtml($link['target']);
-                        $href = Utils::escapeHtml($link['href']);
+                        $href = Utils::escapeHtml($safeHref);
                         $icon = Utils::escapeHtml($link['icon']);
                         echo "<a class=\"link\" title=\"{$name}\" target=\"{$target}\" href=\"{$href}\"><i class=\"voidicon-{$icon}\"></i></a>";
                     }
@@ -122,7 +124,7 @@ $setting = $GLOBALS['VOIDSetting'];
         <script id="void-service-worker-config" type="application/json"><?php echo Utils::encodeJsonForHtml($serviceWorkerUri); ?></script>
         <script src="<?php Utils::indexTheme('/assets/service-worker-registration-231a2de8c8.js'); ?>"></script>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle-4ac796cc8e.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-5b702fb897.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-27574c7648.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             if (VOID.pjaxReloadHandler) {
