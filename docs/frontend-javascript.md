@@ -148,6 +148,32 @@ PJAX 请求与完整页面使用同一 URL，服务端按 `X-PJAX` 请求头决�
 - 只有遵守源站 `Cache-Control` 或按 `X-PJAX` 区分缓存的 CDN、反向代理和整页缓存插件
   才能受益；强制缓存 HTML 且忽略源站头的配置不在主题能控制的范围内。
 
+### 按访客变化的输出与整页缓存
+
+除 `X-PJAX` 外，完整页面还随以下请求信息变化。主题不为它们发送 `Vary`：`Vary: User-Agent`
+或 `Vary: Cookie` 会让共享缓存几乎无法命中，也无法只针对其中几个 Cookie。
+
+| 来源 | 影响的输出 | 页面加载后是否自行纠正 |
+| --- | --- | --- |
+| `User-Agent`、`X-Wap-Profile`、`Accept`（`Utils::isMobile()`） | `body.mobile`；首页与归档的摘要长度；设置了 `headerModeMobile` 时的导航栏模式 | 否 |
+| `User-Agent`（`Utils::isIosSafari()`） | `body.ios-safari` | 否 |
+| `void_theme_override` Cookie | `body.theme-dark` | 是：`<head>` 和 `<body>` 开头的内联脚本按 Cookie 与系统配色重新设置 |
+| `serif` Cookie | `body.serif` 与衬线字体样式表 | 否 |
+| `textsize` Cookie | `body[fontsize]` | 否 |
+| Typecho 登录 Cookie | 登录面板、后台入口与编辑链接 | 否 |
+| Typecho 评论者 Cookie（`__typecho_remember_author`、`mail`、`url`） | 评论表单预填的称呼、邮箱和网址 | 否 |
+
+Typecho 的 Cookie 名带有站点地址的 MD5 前缀，因此名称中包含 `__typecho_` 而不是以它
+开头。由此得出的部署约束：
+
+- 共享缓存（CDN、反向代理、整页缓存插件）缓存 HTML 时，必须让名称含 `__typecho_` 的
+  Cookie 请求绕过缓存，否则会把一位访客的登录状态或评论者邮箱返回给其他访客。这一约束
+  来自 Typecho 核心组件，不只是主题。
+- 带有 `serif`、`textsize` Cookie 的请求也应绕过缓存，否则命中缓存时访客的字号和衬线
+  字体偏好会失效。
+- 设置了 `headerModeMobile` 或需要保留移动端较短摘要时，按设备类型分开缓存；否则移动
+  设备可能拿到桌面版输出，反之亦然。
+
 ## 后台编辑器合同
 
 编辑器必须同时适配文章和独立页面后台已有的 Typecho DOM 形态。`fields.js` 可以重组展示，
