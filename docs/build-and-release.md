@@ -93,18 +93,20 @@ Typecho 安装在子目录时，只要把 `VOIDCacheRule.js` 放在 Typecho 根�
 
 | 请求 | 策略 | 缓存 |
 | --- | --- | --- |
-| 主题 `assets/` 下的 Bangumi 动图表情 | 缓存优先，命中时刷新 LRU | `emote-animated-native-v6`，48 条 |
+| 主题 `assets/` 下的 Bangumi 动图表情 | 缓存优先 | `emote-animated-native-v6`，48 条 |
 | 表情清单 `packs.json`、`packs/*.json` | 网络优先，失败时回退缓存 | `emote-static-native-v6`，140 条 |
 | Bangumi 海报 | 缓存优先 | `emote-static-native-v6` |
-| Fontsource 字体（路径含版本） | 缓存优先，命中时刷新 LRU | `font-assets-native-v1`，160 条 |
+| Fontsource 字体（路径含版本） | 缓存优先 | `font-assets-native-v1`，160 条 |
 | 主题 `assets/` 顶层的内容哈希 JS、CSS，以及 `assets/libs/<名称>/<版本号>/` 下的文件 | 缓存优先 | `static-assets-native-v6`，200 条 |
 | 站点 `usr/` 下的其他文件（上传附件、插件资源、未带哈希的主题文件） | 网络优先，失败时回退缓存 | `static-assets-native-v6` |
-| Gravatar 头像、Google Fonts | 缓存优先 | `static-vendor-native-v7`，200 条 |
 
-只有状态码为 2xx 的响应会写入缓存。跨域请求未启用 CORS 时得到的不透明响应（状态码 0）
-可能掩盖错误页，Worker 只把它转交给页面，不写入缓存；因此普通 `<img>` 加载的 Gravatar
-头像和未加 `crossorigin` 的 Google Fonts 样式表不会被 Worker 缓存，`@font-face` 以 CORS
-加载的字体文件仍可缓存。`static-vendor-native-v6` 可能保存过不透明响应，激活时会被清退。
+Worker 只接管同源请求，Gravatar 头像等第三方请求直接走网络和浏览器 HTTP 缓存；曾用于
+第三方资源的 `static-vendor-native-v6`、`static-vendor-native-v7` 会在激活时清退。只有状态码
+为 2xx 的响应会写入缓存，失败响应不会覆盖已缓存的成功版本。
+
+每次写入后，超出上限的缓存按写入先后删除最早的条目（Cache API 按写入顺序列出条目，
+替换同一 URL 会把它排到最后）。缓存命中只读取，不再改写条目来维持最近使用顺序；网络优先
+的路由每次成功取回都会重新写入，因此常用的清单和上传文件不会先被淘汰。
 
 ## CI 与 nightly 权限
 

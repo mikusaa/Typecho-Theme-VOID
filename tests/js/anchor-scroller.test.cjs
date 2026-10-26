@@ -1,16 +1,15 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const vm = require('node:vm');
-const { readHeaderSource } = require('./helpers/header-source.cjs');
+const { readHeaderModule } = require('./helpers/header-source.cjs');
 const { readVoidSource } = require('./helpers/void-source.cjs');
 
-const headerSource = readHeaderSource();
+// VOID_AnchorScroller delegates smooth movement to VOID_SmoothScroller.
+const scrollerSource = [
+    readHeaderModule('smooth-scroller'),
+    readHeaderModule('anchor-scroller')
+].join('\n');
 const voidSource = readVoidSource();
-const scrollerStart = headerSource.indexOf('VOID_SmoothScroller = {');
-const scrollerEnd = headerSource.indexOf('\n\nVOID_ControllerPanel = {', scrollerStart);
-
-assert.notEqual(scrollerStart, -1, 'smooth scroller source should exist');
-assert.notEqual(scrollerEnd, -1, 'anchor scroller source should have a stable boundary');
 
 test('TOC links enable delayed-layout stabilization', () => {
     assert.match(
@@ -137,7 +136,7 @@ function createEnvironment(options = {}) {
         window
     };
 
-    vm.runInNewContext(headerSource.slice(scrollerStart, scrollerEnd), context);
+    vm.runInNewContext(scrollerSource, context);
 
     return {
         classes,

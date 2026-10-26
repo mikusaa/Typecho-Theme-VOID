@@ -81,7 +81,7 @@ $expectedAdvancedKeys = array(
     'nav', 'name', 'brandFont', 'desktopBannerHeight', 'mobileBannerHeight', 'twitterId',
     'weiboId', 'headerMode', 'headerModeMobile', 'defaultFontSize', 'useFiraCodeFont',
     'largePhotoSet', 'macStyleCodeBlock', 'lineNumbers', 'parseFigcaption', 'link',
-    'commentFoldThreshold', 'commentNotification', 'siteBg', 'siteBgVertical'
+    'commentFoldThreshold', 'commentNotification'
 );
 $expectedFieldKeys = array(
     'excerpt', 'banner', 'bannerMeta', 'bannerSource', 'bannerStyle', 'bannerascover',
@@ -89,7 +89,7 @@ $expectedFieldKeys = array(
 );
 $expectedRetiredKeys = array(
     'darkModeTime', 'followSystemColorScheme', 'bluredLazyload', 'CDNType',
-    'browserLevelLoadingLazy', 'feedContentMode'
+    'browserLevelLoadingLazy', 'feedContentMode', 'siteBg', 'siteBgVertical'
 );
 
 settingsContractAssertSame($expectedThemeKeys, settingsContractKeys('theme', false), 'schema 保留全部主题设置键和持久化名称');
@@ -256,23 +256,21 @@ $frontend = VOID_Settings_FrontendConfig::build($frontendSettings, array(
     'mathJaxUrl' => '/math.js',
     'emotesBase' => '/emotes/',
     'votePath' => '/action/void?',
+    'fontStylesheets' => array('serif' => '/serif.css'),
+    'version' => 4,
     'lightBg' => '',
     'darkBg' => '',
     'horizontalBg' => 1,
     'verticalBg' => 0,
-    'fontStylesheets' => array('serif' => '/serif.css'),
-    'version' => 4,
     'isDev' => 1,
     'unknownRuntimeValue' => 'must not leak'
 ));
 $expectedFrontendKeys = array(
     'colorScheme', 'indexStyle', 'lazyload', 'enableMath', 'PJAX', 'headerMode',
     'lineNumbers', 'VOIDPlugin', 'searchBase', 'home', 'buildTime', 'mathJaxUrl',
-    'emotesBase', 'votePath', 'lightBg', 'darkBg', 'horizontalBg', 'verticalBg',
-    'fontStylesheets', 'version', 'isDev'
+    'emotesBase', 'votePath', 'fontStylesheets', 'version'
 );
-settingsContractAssertSame($expectedFrontendKeys, array_keys($frontend), 'FrontendConfig 只投影显式公开字段');
-settingsContractAssertSame(true, $frontend['horizontalBg'], 'FrontendConfig 统一派生布尔类型');
+settingsContractAssertSame($expectedFrontendKeys, array_keys($frontend), 'FrontendConfig 只投影显式公开字段，已移除的背景标志与 isDev 不再输出');
 settingsContractAssertSame('4', $frontend['version'], 'FrontendConfig 统一版本字符串类型');
 settingsContractAssertSame(false, array_key_exists('head', $frontend), '自由格式 head 不公开到 VOIDConfig');
 settingsContractAssertSame(false, array_key_exists('unknownCustomSetting', $frontend), '未知高级设置不公开到 VOIDConfig');

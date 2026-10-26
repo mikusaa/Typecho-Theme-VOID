@@ -41,6 +41,12 @@ documented
 `allowedValues` 和 `compatibilityFallback` 约束已有枚举与历史回退。`form` 保存 Typecho
 控件、标题、说明、选项和校验规则；`exposeToFrontend` 与 `frontendKey` 决定是否进入浏览器。
 
+条目由 `entry($source, $default, $type, $normalizer, $options)` 定义：前四项必填，其余字段
+只在偏离默认值时写进具名 `$options`，未知选项名会直接抛出异常。布尔类型默认允许
+`false`/`true`；`exposeToFrontend` 由是否设置 `frontendKey` 推导，不单独填写；退役键统一用
+`retired()`。`compatibilityFallback` 不会自动取 `default`，`pjax` 这类二者不同的条目必须
+显式填写。
+
 `themeConfig()` 与 `themeFields()` 是 Typecho 要求的全局入口，它们通过
 `VOID_addSchemaFormElements()` 按 schema 顺序生成表单。不要在 `functions.php` 另建一份
 默认值或选项清单。
@@ -66,7 +72,8 @@ documented
 ## 退役键
 
 `darkModeTime`、`followSystemColorScheme`、`bluredLazyload`、`CDNType`、
-`browserLevelLoadingLazy` 和 `feedContentMode` 仍登记在 schema 中，但标记为 `retired`、
+`browserLevelLoadingLazy`、`feedContentMode`、`siteBg` 和 `siteBgVertical` 仍登记在 schema
+中，但标记为 `retired`、
 不进入运行时，也不出现在示例和公开设置表格中。
 
 保留这些名称是为了过滤旧配置，防止它们通过“未知高级键透传”重新生效。退役键只能继续
@@ -76,8 +83,9 @@ documented
 
 `VOID_Settings_FrontendConfig` 是服务器设置到 `window.VOIDConfig` 的唯一投影边界。
 `project()` 只读取 schema 中明确设置 `exposeToFrontend` 和 `frontendKey` 的值，`build()`
-再补充 `searchBase`、`home`、`buildTime`、MathJax/表情/投票 URL、背景存在标志、字体样式表、
-版本和开发模式等明确登记的运行时派生值。
+再补充 `searchBase`、`home`、`buildTime`、MathJax/表情/投票 URL、字体样式表和版本等明确登记
+的运行时派生值。旧版的 `lightBg`、`darkBg`、`horizontalBg`、`verticalBg` 与恒为 `true` 的
+`isDev` 没有使用方，已从 `VOIDConfig` 移除。
 
 自由格式扩展内容、未知高级键、退役键和未列入白名单的服务器设置不得进入
 `VOIDConfig`。新增浏览器字段时，应先决定它是持久化设置投影还是请求期派生值，并在

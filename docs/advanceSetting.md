@@ -73,7 +73,7 @@ JSON 不支持注释或末尾多余的逗号。保存前建议使用 JSON 校验
 
 头图、首页与归档封面、表情由主题根据位置自动安排加载优先级，不受该开关控制。
 
-`darkModeTime`、`followSystemColorScheme`、`bluredLazyload`、`CDNType`、`browserLevelLoadingLazy` 和 `feedContentMode` 已退役，会从运行时配置中过滤。旧配置无需手工删除这些字段，但它们不再产生效果，也不能作为新设置使用。
+`darkModeTime`、`followSystemColorScheme`、`bluredLazyload`、`CDNType`、`browserLevelLoadingLazy`、`feedContentMode`、`siteBg` 和 `siteBgVertical` 已退役，会从运行时配置中过滤。旧配置无需手工删除这些字段，但它们不再产生效果，也不能作为新设置使用。
 
 ## 自由格式扩展点
 

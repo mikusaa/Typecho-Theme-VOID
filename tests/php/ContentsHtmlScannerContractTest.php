@@ -57,6 +57,16 @@ scannerAssertSame(
     'void 元素被识别为自闭合边界'
 );
 
+$protectedTags = array();
+foreach (array('<pre>', '<CODE class="x">', '<code/>', '<span>', '</code>') as $tag) {
+    VOID_Content_HtmlScanner::updateProtectedTags($tag, $protectedTags);
+}
+scannerAssertSame(array('pre'), $protectedTags, '受保护元素按开闭标签入栈出栈，自闭合与普通元素不入栈');
+VOID_Content_HtmlScanner::updateProtectedTags('</textarea>', $protectedTags);
+scannerAssertSame(array('pre'), $protectedTags, '多余的结束标签不会弹出其他受保护元素');
+VOID_Content_HtmlScanner::updateProtectedTags('< / PRE >', $protectedTags);
+scannerAssertSame(array(), $protectedTags, '结束标签忽略空白与大小写');
+
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} HTML scanner contract test(s) failed.\n");
     exit(1);

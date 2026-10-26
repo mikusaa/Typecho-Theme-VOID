@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const {
     headerSourcePaths,
@@ -28,41 +29,60 @@ test('header source manifest is complete, unique, and keeps bootstrap last', () 
     }
 });
 
-test('assembled header source preserves classic globals and dependency order', () => {
-    const source = readHeaderSource();
-    const declarations = [
-        'TOC = {',
-        'VOID_Util = {',
-        'VOID_CardCover = {',
-        'VOID_GalleryLazyload = {',
-        'VOID_SmoothScroller = {',
-        'VOID_AnchorScroller = {',
-        'VOID_ControllerPanel = {',
-        'VOID_Ui = {',
-        'VOID_Ui.toggleLoginForm = function',
-        'VOID_Ui.MasonryCtrler = {',
-        'VOID_Ui.DarkModeSwitcher = {',
-        'VOID_Ui.Swiper = {'
-    ];
-    let previousIndex = -1;
+function topLevelLines(source) {
+    return source.split('\n').filter((line) => /^[A-Za-z_$]/.test(line));
+}
 
-    for (const declaration of declarations) {
-        const currentIndex = source.indexOf(declaration);
-        assert.ok(currentIndex > previousIndex, `${declaration} must keep its production order`);
-        previousIndex = currentIndex;
+test('every load-time reference follows the module that defines its global', () => {
+    const definedBy = new Map();
+    const modules = headerSourcePaths.map((relativePath) => ({
+        name: path.basename(relativePath),
+        lines: topLevelLines(readHeaderModule(path.basename(relativePath)))
+    }));
+
+    modules.forEach((module, index) => {
+        for (const line of module.lines) {
+            const definition = line.match(/^([A-Za-z_$][\w$]*) = /);
+            if (definition) {
+                assert.equal(definedBy.has(definition[1]), false, `${definition[1]} is defined once`);
+                definedBy.set(definition[1], index);
+            }
+        }
+    });
+    for (const expectedGlobal of ['TOC', 'VOID_Util', 'VOID_SmoothScroller', 'VOID_AnchorScroller', 'VOID_Ui']) {
+        assert.ok(definedBy.has(expectedGlobal), `${expectedGlobal} stays a classic global`);
     }
 
-    assert.ok(source.indexOf('VOID_SmoothScroller = {') < source.indexOf('VOID_AnchorScroller = {'));
-    assert.ok(source.indexOf('VOID_AnchorScroller = {') < source.indexOf('VOID_Ui = {'));
+    // Statements such as `VOID_Ui.Swiper = {` or `VOID_Ui.bindGlobalEvents();` run while the
+    // bundle loads, so the object they touch must already exist.
+    modules.forEach((module, index) => {
+        for (const line of module.lines) {
+            const reference = line.match(/^([A-Za-z_$][\w$]*)\./);
+            if (!reference) {
+                continue;
+            }
+            assert.ok(definedBy.has(reference[1]), `${module.name} references a defined global ${reference[1]}`);
+            assert.ok(
+                definedBy.get(reference[1]) < index,
+                `${module.name} must load after the module defining ${reference[1]}`
+            );
+        }
+    });
 });
 
-test('bootstrap owns the two loading-time side effects exactly once', () => {
+test('bootstrap runs the two loading-time side effects exactly once, in order', () => {
+    const calls = [];
+    const context = {
+        VOID_CardCover: { bind: () => calls.push('VOID_CardCover.bind') },
+        VOID_Ui: { bindGlobalEvents: () => calls.push('VOID_Ui.bindGlobalEvents') }
+    };
     const source = readHeaderSource();
-    const bootstrap = readHeaderModule('bootstrap');
 
-    assert.equal(bootstrap.trim(), 'VOID_CardCover.bind();\nVOID_Ui.bindGlobalEvents();');
-    assert.equal((source.match(/VOID_CardCover\.bind\(\);/g) || []).length, 1);
-    assert.equal((source.match(/VOID_Ui\.bindGlobalEvents\(\);/g) || []).length, 1);
+    vm.runInNewContext(readHeaderModule('bootstrap'), context);
+
+    assert.deepEqual(calls, ['VOID_CardCover.bind', 'VOID_Ui.bindGlobalEvents']);
+    assert.equal((source.match(/VOID_CardCover\.bind\(\)/g) || []).length, 1);
+    assert.equal((source.match(/VOID_Ui\.bindGlobalEvents\(\)/g) || []).length, 1);
 });
 
 test('build, development, lint, and tests consume the authoritative header manifest', () => {

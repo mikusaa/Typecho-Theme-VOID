@@ -19,6 +19,9 @@
 * 移除：[兼容性] 删除只为 PHP 8.0 及更早版本、Typecho 1.2 服务的兼容层：内容 Hook 直接注册到 Typecho 1.3 的 `Widget\Base\Contents`（移除全局函数 `VOID_normalizePluginHandle()` 与 `VOID_registerContentsHook()`），归档分类只走批量注入路径，评论网址必填设置不再兜底读取 1.2 的 `commentsRequireURL` 旧键。
 * 重构：[PHP] 主题源码改用 Typecho 1.3 的命名空间类（如 `\Typecho\Db`、`\Widget\Base\Contents`、`\Widget\Metas\Category\Rows`），不再引用 `Typecho_Db`、`Widget_Abstract_Contents` 等下划线别名；页面输出不变。
 * 重构：[评论] 评论组件改为继承 Typecho 1.3 核心评论归档组件，查询、嵌套、排序、分页和永久链接沿用核心实现，主题只保留评论节点渲染、父评论标签和回复链接，并通过全局 `threadedComments()` 回调接入；评论区 HTML 不变。
+* 优化：[Service Worker] 缓存命中只读取，不再为维持最近使用顺序删除并重写字体和动图条目，超出上限时按写入先后淘汰最早的条目；Gravatar、Google Fonts 等第三方请求不再经过 Worker，旧的 `static-vendor-native-v7` 在激活时清退。更新主题后需重新复制站点根目录的 `VOIDCacheRule.js`。
+* 移除：[前端配置] `window.VOIDConfig` 不再输出没有使用方的 `lightBg`、`darkBg`、`horizontalBg`、`verticalBg` 和恒为 `true` 的 `isDev`；超高级设置 `siteBg`、`siteBgVertical`（站点背景图功能已于 3.4.0 删除）改为退役键，旧配置会被安全忽略。
+* 重构：[主题设置/内容] 设置 schema 条目改用必填参数加具名选项定义，解析结果不变；正文图片与表情转换共用 `HtmlScanner` 中的受保护元素判断；Typecho 1.3 归档计算字段缓存改为在组件作用域内直接清除，并删除一行不生效的 `archiveDescription` 赋值。
 * 修复：[评论] 前端邮箱预检不再拒绝带连字符的域名（如 `foo-bar.com`）和超过 4 个字母的顶级域名（如 `.photography`），最终仍以 Typecho 服务端校验为准。
 * 修复：[评论] 评论时间恢复为带 `datetime` 属性的 `<time>` 元素，此前标签名与属性粘连导致机器可读时间丢失。
 * 修复：[子目录安装] 首页、归档、搜索等非内容页的 `og:url` 和登录表单 `referer` 不再重复站点子目录（如 `/blog/blog/...`），主机名取自站点地址设置而非请求头。

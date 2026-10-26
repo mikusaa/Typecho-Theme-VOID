@@ -20,13 +20,8 @@ class VOID_Settings_FrontendConfig
             'mathJaxUrl' => array('type' => 'string', 'default' => ''),
             'emotesBase' => array('type' => 'string', 'default' => ''),
             'votePath' => array('type' => 'string', 'default' => ''),
-            'lightBg' => array('type' => 'string', 'default' => ''),
-            'darkBg' => array('type' => 'string', 'default' => ''),
-            'horizontalBg' => array('type' => 'boolean', 'default' => false),
-            'verticalBg' => array('type' => 'boolean', 'default' => false),
             'fontStylesheets' => array('type' => 'object', 'default' => array()),
-            'version' => array('type' => 'string', 'default' => ''),
-            'isDev' => array('type' => 'boolean', 'default' => false)
+            'version' => array('type' => 'string', 'default' => '')
         );
     }
 
@@ -72,9 +67,6 @@ class VOID_Settings_FrontendConfig
 
     private static function normalizeRuntimeValue($value, $definition)
     {
-        if ($definition['type'] === 'boolean') {
-            return (bool) $value;
-        }
         if ($definition['type'] === 'object') {
             return is_array($value) ? $value : $definition['default'];
         }

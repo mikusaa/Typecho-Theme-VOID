@@ -9,7 +9,6 @@ const ANIMATED_CACHE = 'emote-animated-native-v6';
 const EMOTE_STATIC_CACHE = 'emote-static-native-v6';
 const FONT_ASSETS_CACHE = 'font-assets-native-v1';
 const STATIC_ASSETS_CACHE = 'static-assets-native-v6';
-const STATIC_VENDOR_CACHE = 'static-vendor-native-v7';
 const WORKER_PATH = path.resolve(__dirname, '../../assets/VOIDCacheRule.js');
 
 class FakeRequest {
@@ -66,6 +65,8 @@ class FakeCache {
             return Promise.reject(this.putError);
         }
         return waitForPut.then(() => {
+            // Cache API appends a replaced entry, so keys() order stays oldest write first.
+            this.entries.delete(request.url);
             this.entries.set(request.url, response.clone());
         });
     }
@@ -226,18 +227,22 @@ test('native routes replace sw-toolbox and leave unrelated requests alone', asyn
     ));
     await worker.dispatchFetch(new FakeRequest(fontUrl('open-sans-latin-400-normal')));
     await worker.dispatchFetch(new FakeRequest(localUrl('/usr/themes/VOID/assets/app.js')));
-    await worker.dispatchFetch(new FakeRequest('https://secure.gravatar.com/avatar/example'));
-    await worker.dispatchFetch(new FakeRequest('https://fonts.googleapis.com/css2?family=Roboto'));
-    await worker.dispatchFetch(new FakeRequest('https://fonts.googleapis.cn/css2?family=Roboto'));
-    await worker.dispatchFetch(new FakeRequest('https://fonts.gstatic.com/s/roboto.woff2'));
-    await worker.dispatchFetch(new FakeRequest('https://fonts.gstatic.cn/s/roboto.woff2'));
+    for (const url of [
+        'https://secure.gravatar.com/avatar/example',
+        'https://fonts.googleapis.com/css2?family=Roboto',
+        'https://fonts.gstatic.com/s/roboto.woff2'
+    ]) {
+        assert.equal(worker.dispatchFetch(new FakeRequest(url)), undefined, url);
+    }
     await worker.settleFetches();
 
     assert.equal((await worker.cacheStores.get(ANIMATED_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(EMOTE_STATIC_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(FONT_ASSETS_CACHE).keys()).length, 1);
     assert.equal((await worker.cacheStores.get(STATIC_ASSETS_CACHE).keys()).length, 1);
-    assert.equal((await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys()).length, 5);
+    assert.deepEqual([...worker.cacheStores.keys()].sort(), [
+        ANIMATED_CACHE, EMOTE_STATIC_CACHE, FONT_ASSETS_CACHE, STATIC_ASSETS_CACHE
+    ].sort(), 'third-party requests never open a cache');
 });
 
 test('font cache serves warm responses offline without another network request', async () => {
@@ -264,150 +269,63 @@ test('font cache serves warm responses offline without another network request',
     assert.equal((await worker.cacheStores.get(FONT_ASSETS_CACHE).keys()).length, 1);
 });
 
-test('font cache refreshes LRU order before strict 160-entry eviction', async () => {
-    let fetchCount = 0;
-    const worker = loadWorker((request) => {
-        fetchCount += 1;
-        return Promise.resolve(new FakeResponse(request.url));
-    });
+test('cache-first routes evict the oldest write once over their limit', async () => {
+    for (const [cacheName, maximumEntries, urlFor] of [
+        [FONT_ASSETS_CACHE, 160, fontUrl],
+        [ANIMATED_CACHE, 48, animatedUrl]
+    ]) {
+        let fetchCount = 0;
+        const worker = loadWorker((request) => {
+            fetchCount += 1;
+            return Promise.resolve(new FakeResponse(request.url));
+        });
 
-    for (let id = 1; id <= 160; id++) {
-        await worker.dispatchFetch(new FakeRequest(fontUrl(String(id).padStart(3, '0'))));
+        for (let id = 1; id <= maximumEntries; id++) {
+            await worker.dispatchFetch(new FakeRequest(urlFor(String(id).padStart(3, '0'))));
+        }
+        await worker.settleFetches();
+        await worker.dispatchFetch(new FakeRequest(urlFor('001')));
+        await worker.settleFetches();
+        await worker.dispatchFetch(new FakeRequest(urlFor(String(maximumEntries + 1))));
+        await worker.settleFetches();
+
+        const urls = (await worker.cacheStores.get(cacheName).keys()).map((request) => request.url);
+
+        assert.equal(fetchCount, maximumEntries + 1, `${cacheName} hit must not use the network`);
+        assert.equal(urls.length, maximumEntries, cacheName);
+        assert.ok(!urls.includes(urlFor('001')), `${cacheName} evicts the oldest write even after a hit`);
+        assert.equal(urls[0], urlFor('002'), cacheName);
+        assert.equal(urls.at(-1), urlFor(String(maximumEntries + 1)), cacheName);
     }
-    await worker.settleFetches();
-    await worker.dispatchFetch(new FakeRequest(fontUrl('001')));
-    await worker.settleFetches();
-    await worker.dispatchFetch(new FakeRequest(fontUrl('161')));
-    await worker.settleFetches();
-
-    const keys = await worker.cacheStores.get(FONT_ASSETS_CACHE).keys();
-    const urls = keys.map((request) => request.url);
-
-    assert.equal(fetchCount, 161, 'warm font hit must not use the network');
-    assert.equal(urls.length, 160);
-    assert.ok(urls.includes(fontUrl('001')), 'recently read font must remain cached');
-    assert.ok(!urls.includes(fontUrl('002')), 'least recently used font must be evicted');
-    assert.equal(urls.at(-1), fontUrl('161'));
 });
 
-test('animated cache hits refresh recency before strict 48-entry eviction', async () => {
+test('warm cache-first hits are read without any cache write or network request', async () => {
+    const urls = [HASHED_SCRIPT_URL, animatedUrl('001'), fontUrl('open-sans-latin-400-normal')];
     let fetchCount = 0;
     const worker = loadWorker((request) => {
         fetchCount += 1;
         return Promise.resolve(new FakeResponse(request.url));
     });
 
-    for (let id = 1; id <= 48; id++) {
-        await worker.dispatchFetch(new FakeRequest(animatedUrl(String(id).padStart(3, '0'))));
+    for (const url of urls) {
+        await worker.dispatchFetch(new FakeRequest(url));
     }
     await worker.settleFetches();
-    await worker.dispatchFetch(new FakeRequest(animatedUrl('001')));
-    await worker.settleFetches();
-    await worker.dispatchFetch(new FakeRequest(animatedUrl('049')));
-    await worker.settleFetches();
 
-    const keys = await worker.cacheStores.get(ANIMATED_CACHE).keys();
-    const urls = keys.map((request) => request.url);
-    assert.equal(fetchCount, 49, 'cache hit must not use the network');
-    assert.equal(urls.length, 48);
-    assert.ok(urls.includes(animatedUrl('001')), 'recently read entry must remain cached');
-    assert.ok(!urls.includes(animatedUrl('002')), 'least recently used entry must be evicted');
-    assert.equal(urls.at(-1), animatedUrl('049'));
-});
-
-test('warm static hits avoid rewrites while animated LRU refresh stays non-blocking', async () => {
-    const staticUrl = HASHED_SCRIPT_URL;
-    const animation = animatedUrl('001');
-    let fetchCount = 0;
-    const worker = loadWorker((request) => {
-        fetchCount += 1;
-        return Promise.resolve(new FakeResponse(request.url));
-    });
-
-    await worker.dispatchFetch(new FakeRequest(staticUrl));
-    await worker.dispatchFetch(new FakeRequest(animation));
-    await worker.settleFetches();
-
-    const staticCache = worker.cacheStores.get(STATIC_ASSETS_CACHE);
-    const staticMutationCounts = [
-        staticCache.deleteCount,
-        staticCache.putCount,
-        staticCache.keysCount
-    ];
-    const staticResponse = await worker.dispatchFetch(new FakeRequest(staticUrl));
-
-    await worker.settleFetches();
-    assert.equal(staticResponse.body, staticUrl);
-    assert.deepEqual([
-        staticCache.deleteCount,
-        staticCache.putCount,
-        staticCache.keysCount
-    ], staticMutationCounts);
-
-    const animatedCache = worker.cacheStores.get(ANIMATED_CACHE);
-    const animatedMutationCounts = [
-        animatedCache.deleteCount,
-        animatedCache.putCount,
-        animatedCache.keysCount
-    ];
-    let releaseDelete;
-
-    animatedCache.deleteGate = new Promise((resolve) => {
-        releaseDelete = resolve;
-    });
-    let timeout;
-    const animatedResponse = await Promise.race([
-        worker.dispatchFetch(new FakeRequest(animation)),
-        new Promise((resolve) => {
-            timeout = setTimeout(() => resolve(null), 100);
-        })
+    const counts = () => [...worker.cacheStores.values()].map((cache) => [
+        cache.deleteCount,
+        cache.putCount,
+        cache.keysCount
     ]);
-    clearTimeout(timeout);
+    const before = counts();
 
-    assert.ok(animatedResponse, 'cache hit must not wait for the LRU write');
-    assert.equal(animatedResponse.body, animation);
-    releaseDelete();
-    animatedCache.deleteGate = null;
-    await worker.settleFetches();
-    assert.deepEqual([
-        animatedCache.deleteCount,
-        animatedCache.putCount,
-        animatedCache.keysCount
-    ], [
-        animatedMutationCounts[0] + 1,
-        animatedMutationCounts[1] + 1,
-        animatedMutationCounts[2]
-    ]);
-    assert.equal(fetchCount, 2, 'warm cache hits must not use the network');
-});
-
-test('animated LRU order survives a Service Worker restart', async () => {
-    const sharedCacheStores = new Map();
-    const firstWorker = loadWorker(
-        (request) => Promise.resolve(new FakeResponse(request.url)),
-        sharedCacheStores
-    );
-
-    for (let id = 1; id <= 48; id++) {
-        await firstWorker.dispatchFetch(new FakeRequest(animatedUrl(String(id).padStart(3, '0'))));
+    for (const url of urls) {
+        assert.equal((await worker.dispatchFetch(new FakeRequest(url))).body, url);
     }
-    await firstWorker.settleFetches();
-    await firstWorker.dispatchFetch(new FakeRequest(animatedUrl('001')));
-    await firstWorker.settleFetches();
+    await worker.settleFetches();
 
-    const restartedWorker = loadWorker(
-        (request) => Promise.resolve(new FakeResponse(request.url)),
-        sharedCacheStores
-    );
-
-    await restartedWorker.dispatchFetch(new FakeRequest(animatedUrl('049')));
-    await restartedWorker.settleFetches();
-
-    const keys = await sharedCacheStores.get(ANIMATED_CACHE).keys();
-    const urls = keys.map((request) => request.url);
-
-    assert.ok(urls.includes(animatedUrl('001')));
-    assert.ok(!urls.includes(animatedUrl('002')));
+    assert.deepEqual(counts(), before);
+    assert.equal(fetchCount, urls.length, 'warm cache hits must not use the network');
 });
 
 test('response bodies enter Cache API before an earlier metadata trim finishes', async () => {
@@ -429,49 +347,6 @@ test('response bodies enter Cache API before an earlier metadata trim finishes',
     releaseKeys();
     cache.keysGate = null;
     await worker.settleFetches();
-});
-
-test('an in-flight trim delete cannot erase a later manifest replacement', async () => {
-    const target = localUrl('/usr/themes/VOID/assets/libs/emotes/packs/000.json');
-    const newcomer = localUrl('/usr/themes/VOID/assets/libs/emotes/packs/140.json');
-    const cacheStores = new Map();
-    const cache = new FakeCache();
-    let releaseTargetDelete;
-
-    cache.entries.set(target, new FakeResponse('cached-target'));
-    for (let id = 1; id < 140; id++) {
-        const url = localUrl(
-            `/usr/themes/VOID/assets/libs/emotes/packs/${String(id).padStart(3, '0')}.json`
-        );
-        cache.entries.set(url, new FakeResponse(url));
-    }
-    cache.deleteGate = new Promise((resolve) => {
-        releaseTargetDelete = resolve;
-    });
-    cacheStores.set(EMOTE_STATIC_CACHE, cache);
-
-    const worker = loadWorker(
-        (request) => Promise.resolve(new FakeResponse(`network:${request.url}`)),
-        cacheStores
-    );
-
-    await worker.dispatchFetch(new FakeRequest(newcomer));
-    await new Promise((resolve) => setImmediate(resolve));
-
-    assert.equal((await cache.match(new FakeRequest(target))).body, 'cached-target');
-    assert.equal(cache.deleteCount, 1);
-
-    await worker.dispatchFetch(new FakeRequest(target));
-    await new Promise((resolve) => setImmediate(resolve));
-
-    assert.equal((await cache.match(new FakeRequest(target))).body, 'cached-target');
-
-    releaseTargetDelete();
-    cache.deleteGate = null;
-    await worker.settleFetches();
-
-    assert.equal((await cache.match(new FakeRequest(target))).body, `network:${target}`);
-    assert.equal((await cache.keys()).length, 140);
 });
 
 test('concurrent animated misses settle to the 48-entry limit', async () => {
@@ -500,9 +375,7 @@ test('failed responses from every cache-first route are never stored', async () 
         new FakeRequest(localUrl('/usr/themes/VOID/assets/libs/emotes/bangumi/poster/001.webp')),
         new FakeRequest(fontUrl('missing')),
         new FakeRequest(localUrl('/usr/themes/VOID/assets/missing-0123456789.js')),
-        new FakeRequest(localUrl('/usr/themes/VOID/assets/missing.js')),
-        new FakeRequest('https://secure.gravatar.com/avatar/missing'),
-        new FakeRequest('https://fonts.gstatic.com/s/font.woff2')
+        new FakeRequest(localUrl('/usr/themes/VOID/assets/missing.js'))
     ];
 
     for (const request of requests) {
@@ -514,29 +387,6 @@ test('failed responses from every cache-first route are never stored', async () 
     for (const cache of worker.cacheStores.values()) {
         assert.equal((await cache.keys()).length, 0);
     }
-});
-
-test('opaque vendor responses pass through without entering the cache', async () => {
-    const opaqueUrls = [
-        'https://secure.gravatar.com/avatar/opaque',
-        'https://fonts.googleapis.com/css2?family=Opaque',
-        'https://fonts.gstatic.cn/s/opaque.woff2'
-    ];
-    const corsUrl = 'https://fonts.gstatic.com/s/cors.woff2';
-    const worker = loadWorker((request) => Promise.resolve(
-        request.url === corsUrl ? new FakeResponse('font') : new FakeResponse('hidden', 0)
-    ));
-
-    for (const url of opaqueUrls) {
-        const response = await worker.dispatchFetch(new FakeRequest(url));
-        assert.equal(response.status, 0, url);
-    }
-    await worker.dispatchFetch(new FakeRequest(corsUrl));
-    await worker.settleFetches();
-
-    const urls = (await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys())
-        .map((request) => request.url);
-    assert.deepEqual(urls, [corsUrl], 'only a readable successful response may be cached');
 });
 
 test('hashed and versioned theme assets are cache-first', async () => {
@@ -683,9 +533,6 @@ test('native caches settle at their configured limits after concurrent writes', 
     }
     for (let id = 1; id <= 210; id++) {
         requests.push(worker.dispatchFetch(new FakeRequest(localUrl(`/usr/assets/${id}.js`))));
-        requests.push(worker.dispatchFetch(new FakeRequest(
-            `https://secure.gravatar.com/avatar/${id}`
-        )));
     }
 
     await Promise.all(requests);
@@ -693,8 +540,7 @@ test('native caches settle at their configured limits after concurrent writes', 
 
     for (const [cacheName, maximumEntries] of [
         [EMOTE_STATIC_CACHE, 140],
-        [STATIC_ASSETS_CACHE, 200],
-        [STATIC_VENDOR_CACHE, 200]
+        [STATIC_ASSETS_CACHE, 200]
     ]) {
         const cache = worker.cacheStores.get(cacheName);
 
@@ -722,7 +568,30 @@ test('cache write failures preserve prior success without failing the network re
 
     assert.equal(response.body, 'network');
     assert.equal((await cache.match(new FakeRequest(url))).body, 'cached');
-    assert.equal((await cache.keys()).length, 140);
+    assert.equal((await cache.keys()).length, 141, 'a failed write does not trim earlier entries');
+});
+
+test('a refreshed network-first entry moves behind older entries for eviction', async () => {
+    const manifest = localUrl('/usr/themes/VOID/assets/libs/emotes/packs.json');
+    const posterUrl = (id) => localUrl(`/usr/themes/VOID/assets/libs/emotes/bangumi/poster/${id}.webp`);
+    const worker = loadWorker((request) => Promise.resolve(new FakeResponse(request.url)));
+
+    await worker.dispatchFetch(new FakeRequest(manifest));
+    await worker.settleFetches();
+    for (let id = 1; id < 140; id++) {
+        await worker.dispatchFetch(new FakeRequest(posterUrl(id)));
+    }
+    await worker.settleFetches();
+    await worker.dispatchFetch(new FakeRequest(manifest));
+    await worker.settleFetches();
+    await worker.dispatchFetch(new FakeRequest(posterUrl(140)));
+    await worker.settleFetches();
+
+    const urls = (await worker.cacheStores.get(EMOTE_STATIC_CACHE).keys()).map((request) => request.url);
+
+    assert.equal(urls.length, 140);
+    assert.ok(urls.includes(manifest), 'the manifest refreshed by the network stays cached');
+    assert.ok(!urls.includes(posterUrl(1)), 'the oldest untouched poster is evicted');
 });
 
 test('activation retires toolbox caches and metadata without deleting native caches', async () => {
@@ -731,7 +600,7 @@ test('activation retires toolbox caches and metadata without deleting native cac
 
     await worker.cacheStores.set('static-assets-toolbox-v5', new FakeCache());
     await worker.cacheStores.set('static-vendor-native-v6', new FakeCache());
-    await worker.cacheStores.set(STATIC_VENDOR_CACHE, new FakeCache());
+    await worker.cacheStores.set('static-vendor-native-v7', new FakeCache());
     await worker.cacheStores.set(defaultCache, new FakeCache());
     await worker.cacheStores.set(`${defaultCache}$$$inactive$$$`, new FakeCache());
     await worker.cacheStores.set(FONT_ASSETS_CACHE, new FakeCache());
@@ -744,7 +613,7 @@ test('activation retires toolbox caches and metadata without deleting native cac
     assert.equal(worker.getClaimCount(), 1);
     assert.ok(!worker.cacheStores.has('static-assets-toolbox-v5'));
     assert.ok(!worker.cacheStores.has('static-vendor-native-v6'), 'opaque-era vendor cache must retire');
-    assert.ok(worker.cacheStores.has(STATIC_VENDOR_CACHE));
+    assert.ok(!worker.cacheStores.has('static-vendor-native-v7'), 'unrouted vendor cache must retire');
     assert.ok(!worker.cacheStores.has(defaultCache));
     assert.ok(!worker.cacheStores.has(`${defaultCache}$$$inactive$$$`));
     assert.ok(worker.cacheStores.has(FONT_ASSETS_CACHE));
