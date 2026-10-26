@@ -1122,7 +1122,8 @@ var AjaxComment = {
         var mail = form ? form.querySelector('#mail') : null;
         var url = form ? form.querySelector('#url') : null;
         var textarea = form ? form.querySelector(AjaxComment.textarea) : null;
-        var filter = /^[^@\s<&>]+@([a-z0-9]+\.)+[a-z]{2,4}$/i;
+        // 只做宽松预检，最终以 Typecho 服务端校验为准。
+        var filter = /^[^@\s<&>]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
 
         if (author) {
             if (String(author.value || '').trim() === '') {

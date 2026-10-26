@@ -214,7 +214,7 @@ class VOID_Widget_Comments_Archive extends Widget_Abstract_Comments
             <div class="comment-content-inner"><?php echo Contents::parseBiaoQing($this->content); ?></div>
         </div>
         <div class="comment-actions">
-            <a href="<?php $this->permalink(); ?>"><timedatetime="<?php $this->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
+            <a href="<?php $this->permalink(); ?>"><time datetime="<?php $this->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
             echo date('Y-m-d H:i', $this->created);
             $singleCommentOptions->afterDate(); ?></time></a>
             <?php if ('waiting' == $this->status) { ?>

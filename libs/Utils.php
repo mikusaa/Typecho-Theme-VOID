@@ -682,6 +682,28 @@ class Utils
     }
 
     /**
+     * 用站点地址的协议和主机拼出当前请求的绝对地址。
+     *
+     * 请求 URI 已经包含子目录，不能再拼完整的 rootUrl；主机取自后台配置，
+     * 不信任请求的 Host 头。
+     */
+    public static function getRequestPageUrl($rootUrl, $requestUri)
+    {
+        $path = '/' . ltrim((string) $requestUri, '/');
+        $parts = parse_url((string) $rootUrl);
+        if (!is_array($parts) || !isset($parts['host']) || $parts['host'] === '') {
+            return rtrim((string) $rootUrl, '/') . $path;
+        }
+
+        $origin = (isset($parts['scheme']) ? $parts['scheme'] . ':' : '') . '//' . $parts['host'];
+        if (isset($parts['port'])) {
+            $origin .= ':' . $parts['port'];
+        }
+
+        return $origin . $path;
+    }
+
+    /**
      * 保留公开的赞赏 URL 校验入口。
      */
     public static function getSafeRewardUrl($value)

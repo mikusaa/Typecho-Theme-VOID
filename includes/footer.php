@@ -91,8 +91,7 @@ $setting = $GLOBALS['VOIDSetting'];
                                     $referer = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
                                     echo Utils::escapeHtml($referer);
                                 } else {
-                                    $referer = rtrim($this->options->rootUrl, '/') . '/'
-                                        . ltrim($this->request->getRequestUri(), '/');
+                                    $referer = Utils::getRequestPageUrl($this->options->rootUrl, $this->request->getRequestUri());
                                     echo htmlspecialchars($referer, ENT_QUOTES, 'UTF-8');
                                 }
                             ?>">

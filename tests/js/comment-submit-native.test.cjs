@@ -206,8 +206,14 @@ test('anonymous validation covers required identity fields while logged-in comme
     anonymous.fields['#author'].value = '访客';
     anonymous.fields['#mail'].value = '';
     assert.equal(ajaxComment.validateCommentForm(anonymous), ajaxComment.noMail);
-    anonymous.fields['#mail'].value = 'invalid@example.technology';
-    assert.equal(ajaxComment.validateCommentForm(anonymous), ajaxComment.invalidMail);
+    for (const invalidMail of ['visitor', 'visitor@example', 'visitor@-example.com', 'visitor@example-.com', 'a b@example.com']) {
+        anonymous.fields['#mail'].value = invalidMail;
+        assert.equal(ajaxComment.validateCommentForm(anonymous), ajaxComment.invalidMail, invalidMail);
+    }
+    for (const validMail of ['visitor@foo-bar.com', 'visitor@example.photography', 'visitor@mail.example.co.uk', 'visitor@example.xn--p1ai']) {
+        anonymous.fields['#mail'].value = validMail;
+        assert.notEqual(ajaxComment.validateCommentForm(anonymous), ajaxComment.invalidMail, validMail);
+    }
     anonymous.fields['#mail'].value = 'visitor@example.com';
     anonymous.fields['#url'].required = true;
     assert.equal(ajaxComment.validateCommentForm(anonymous), ajaxComment.noUrl);

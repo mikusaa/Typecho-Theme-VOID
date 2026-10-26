@@ -552,6 +552,36 @@ outputSerializationAssertContains(
 );
 outputSerializationAssertContains('font-family: "Fira Code"', $firaHead, '代码字体使用 Fontsource 字体族名');
 
+outputSerializationAssertSame(
+    'https://example.test/blog/category/topic/?page=2',
+    Utils::getRequestPageUrl('https://example.test/blog/', '/blog/category/topic/?page=2'),
+    '子目录安装时当前页地址不重复子目录'
+);
+outputSerializationAssertSame(
+    'http://example.test:8090/search/a/',
+    Utils::getRequestPageUrl('http://example.test:8090', 'search/a/'),
+    '当前页地址保留站点端口并补齐前导斜杠'
+);
+
+$subdirectoryOptions = Helper::$options;
+Helper::$options = new OutputSerializationOptions(array(
+    'description' => $encodedExcerpt,
+    'loginAction' => 'https://example.test/blog/action/login',
+    'rootUrl' => 'https://example.test/blog',
+    'title' => $encodedSiteTitle
+));
+$subdirectoryArchive = new OutputSerializationWidget('archive', outputSerializationWidgetValues(array(
+    'hasContent' => false,
+    'requestUri' => '/blog/category/topic/?a=1&label="quoted"'
+)));
+$subdirectoryHead = $subdirectoryArchive->render(dirname(__DIR__, 2) . '/includes/head.php');
+outputSerializationAssertSame(
+    'https://example.test/blog/category/topic/?a=1&label="quoted"',
+    outputSerializationMetaContent($subdirectoryHead, 'property', 'og:url'),
+    '子目录安装的归档页 Open Graph URL 不重复子目录'
+);
+Helper::$options = $subdirectoryOptions;
+
 $GLOBALS['VOIDSetting'] = array('defaultBanner' => $attackBannerUrl);
 $ldjsonTemplate = dirname(__DIR__, 2) . '/includes/ldjson.php';
 $expectedPublisherAvatar = 'https://avatar.example/avatar/hash?s=200&r=&d=';

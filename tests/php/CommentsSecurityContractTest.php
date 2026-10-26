@@ -116,6 +116,12 @@ commentsSecurityAssertContains(
     $commentWidget,
     '评论样式变量在所有分支中均已初始化'
 );
+commentsSecurityAssertContains(
+    '<time datetime="<?php $this->date(\'c\'); ?>">',
+    $commentWidget,
+    '评论时间使用带 datetime 属性的 time 元素'
+);
+commentsSecurityAssertSame(0, preg_match('/<time(?![\\s>])/', $commentWidget), '评论模板的 time 标签名后不直接粘连属性');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} comment security contract test(s) failed.\n");
