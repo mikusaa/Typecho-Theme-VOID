@@ -7,13 +7,13 @@ class VOID_Repository_ArchiveRepository
 {
     public static function getPrevious($archive)
     {
-        $db = Typecho_Db::get();
+        $db = \Typecho\Db::get();
         $content = $db->fetchRow($db->select()->from('table.contents')
             ->where('table.contents.created < ?', $archive->created)
             ->where('table.contents.status = ?', 'publish')
             ->where('table.contents.type = ?', $archive->type)
             ->where('table.contents.password IS NULL')
-            ->order('table.contents.created', Typecho_Db::SORT_DESC)
+            ->order('table.contents.created', \Typecho\Db::SORT_DESC)
             ->limit(1));
 
         return $content
@@ -23,8 +23,8 @@ class VOID_Repository_ArchiveRepository
 
     public static function getNext($archive)
     {
-        $db = Typecho_Db::get();
-        $currentTime = Typecho_Date::time();
+        $db = \Typecho\Db::get();
+        $currentTime = \Typecho\Date::time();
 
         $content = $db->fetchRow($db->select()->from('table.contents')
             ->where(
@@ -35,7 +35,7 @@ class VOID_Repository_ArchiveRepository
             ->where('table.contents.status = ?', 'publish')
             ->where('table.contents.type = ?', $archive->type)
             ->where('table.contents.password IS NULL')
-            ->order('table.contents.created', Typecho_Db::SORT_ASC)
+            ->order('table.contents.created', \Typecho\Db::SORT_ASC)
             ->limit(1));
 
         return $content
@@ -45,12 +45,12 @@ class VOID_Repository_ArchiveRepository
 
     public static function getArchives($widget, $excerpt, $settings)
     {
-        $db = Typecho_Db::get();
+        $db = \Typecho\Db::get();
         $currentTime = (int) Helper::options()->time;
         $rows = $db->fetchAll($db->select()
             ->from('table.contents')
-            ->order('table.contents.created', Typecho_Db::SORT_DESC)
-            ->order('table.contents.cid', Typecho_Db::SORT_DESC)
+            ->order('table.contents.created', \Typecho\Db::SORT_DESC)
+            ->order('table.contents.cid', \Typecho\Db::SORT_DESC)
             ->where('table.contents.type = ?', 'post')
             ->where('table.contents.status = ?', 'publish')
             ->where('table.contents.created < ?', $currentTime));
@@ -68,7 +68,7 @@ class VOID_Repository_ArchiveRepository
 
         $categoryRows = array();
         $categoriesByMid = array();
-        $categoryWidget = Widget_Metas_Category_List::alloc();
+        $categoryWidget = \Widget\Metas\Category\Rows::alloc();
         while ($categoryWidget->next()) {
             $category = array(
                 'mid' => (int) $categoryWidget->mid,
@@ -116,11 +116,11 @@ class VOID_Repository_ArchiveRepository
             $categories = isset($categoriesByPostId[$cid])
                 ? $categoriesByPostId[$cid] : array();
 
-            $post = Widget_Abstract_Contents::alloc();
+            $post = \Widget\Base\Contents::alloc();
             // 由 Typecho 1.3 的 #categories 缓存接收批量查询结果，避免每篇文章再查分类。
             $row['#categories'] = $categories;
             $row = $post->push($row);
-            $date = new Typecho_Date($created);
+            $date = new \Typecho\Date($created);
             $item = array(
                 'cid' => $cid,
                 'created' => $created,
@@ -135,7 +135,7 @@ class VOID_Repository_ArchiveRepository
             }
 
             if ($excerpt) {
-                $item['excerpt'] = Typecho_Common::subStr((string) $post->plainExcerpt, 0, 30, '...');
+                $item['excerpt'] = \Typecho\Common::subStr((string) $post->plainExcerpt, 0, 30, '...');
             }
             $archives[$date->format('Y')][] = $item;
         }
@@ -144,7 +144,7 @@ class VOID_Repository_ArchiveRepository
 
     public static function getTags($cid)
     {
-        $rows = Widget_Metas_Tag_Related::allocWithAlias($cid, array('cid' => $cid))
+        $rows = \Widget\Metas\Tag\Related::allocWithAlias($cid, array('cid' => $cid))
             ->toArray(array('name', 'permalink'));
 
         $metas = array();
@@ -159,7 +159,7 @@ class VOID_Repository_ArchiveRepository
 
     public static function getCategories($cid)
     {
-        $rows = Widget_Metas_Category_Related::allocWithAlias($cid, array('cid' => $cid))
+        $rows = \Widget\Metas\Category\Related::allocWithAlias($cid, array('cid' => $cid))
             ->toArray(array('name', 'permalink'));
 
         $metas = array();

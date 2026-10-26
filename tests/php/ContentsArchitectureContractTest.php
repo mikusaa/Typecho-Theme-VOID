@@ -45,7 +45,7 @@ $contentsSource = file_get_contents($root . '/libs/Contents.php');
 $functionsSource = file_get_contents($root . '/functions.php');
 $bootstrapSource = file_get_contents($root . '/libs/Content/bootstrap.php');
 
-architectureAssertSame(false, strpos($contentsSource, 'Typecho_Db') !== false, 'facade 不再直接访问数据库');
+architectureAssertSame(false, preg_match('/\bTypecho[_\\\\]Db\b/', $contentsSource) === 1, 'facade 不再直接访问数据库');
 architectureAssertSame(false, strpos($contentsSource, 'preg_replace') !== false, 'facade 不再保存转换实现');
 architectureAssertSame(true, strpos($contentsSource, "require_once __DIR__ . '/Content/bootstrap.php'") !== false, 'facade 通过确定路径加载内部组件');
 foreach (array('Utils.php', 'Contents.php', 'Comments.php') as $library) {
@@ -69,17 +69,17 @@ foreach ($requiredClasses as $className) {
 
 architectureAssertSame(
     true,
-    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->markdown = array('Contents', 'markdown');") !== false,
+    strpos($functionsSource, "\\Typecho\\Plugin::factory(\\Widget\\Base\\Contents::class)->markdown = array('Contents', 'markdown');") !== false,
     'markdown Hook 继续指向 Contents facade'
 );
 architectureAssertSame(
     true,
-    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->contentEx = array('Contents', 'contentEx');") !== false,
+    strpos($functionsSource, "\\Typecho\\Plugin::factory(\\Widget\\Base\\Contents::class)->contentEx = array('Contents', 'contentEx');") !== false,
     'contentEx Hook 继续指向 Contents facade'
 );
 architectureAssertSame(
     true,
-    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->excerptEx = array('Contents', 'excerptEx');") !== false,
+    strpos($functionsSource, "\\Typecho\\Plugin::factory(\\Widget\\Base\\Contents::class)->excerptEx = array('Contents', 'excerptEx');") !== false,
     'excerptEx Hook 继续指向 Contents facade'
 );
 
@@ -110,6 +110,24 @@ foreach ($directories as $directory) {
 
 foreach (array('contentEx_999', 'excerptEx_999', 'shouldTruncateFeed', 'renderFeedTeaser', 'feedFullText', 'feedContentMode') as $retired) {
     architectureAssertSame(false, strpos($runtimeSources, $retired) !== false, '运行时不恢复退役 Feed 符号 ' . $retired);
+}
+
+$themePhpFiles = glob($root . '/*.php');
+foreach (array($root . '/includes', $root . '/libs') as $directory) {
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+    foreach ($iterator as $file) {
+        if ($file->isFile() && substr($file->getFilename(), -4) === '.php') {
+            $themePhpFiles[] = $file->getPathname();
+        }
+    }
+}
+foreach ($themePhpFiles as $path) {
+    preg_match_all('/\b(?:Typecho|Widget)_[A-Z][A-Za-z_]*/', file_get_contents($path), $matches);
+    architectureAssertSame(
+        array(),
+        array_values(array_unique($matches[0])),
+        substr($path, strlen($root) + 1) . ' 只使用 Typecho 1.3 命名空间类名'
+    );
 }
 
 if ($failures > 0) {

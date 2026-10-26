@@ -7,8 +7,8 @@ class VOID_Repository_ContentRepository
 {
     public static function getPost($cid)
     {
-        $db = Typecho_Db::get();
-        $post = Widget_Abstract_Contents::alloc();
+        $db = \Typecho\Db::get();
+        $post = \Widget\Base\Contents::alloc();
         $db->fetchRow(
             $post->select()->where('cid = ?', $cid)->limit(1),
             array($post, 'push')
@@ -18,8 +18,8 @@ class VOID_Repository_ContentRepository
 
     public static function getComment($coid)
     {
-        $db = Typecho_Db::get();
-        $comment = Widget_Abstract_Comments::alloc();
+        $db = \Typecho\Db::get();
+        $comment = \Widget\Base\Comments::alloc();
         $db->fetchRow(
             $comment->select()->where('coid = ?', $coid)->limit(1),
             array($comment, 'push')
@@ -29,8 +29,8 @@ class VOID_Repository_ContentRepository
 
     public static function getMeta($mid)
     {
-        $db = Typecho_Db::get();
-        $meta = Widget_Abstract_Metas::alloc();
+        $db = \Typecho\Db::get();
+        $meta = \Widget\Base\Metas::alloc();
         $db->fetchRow(
             $meta->select()->where('mid = ?', $mid)->limit(1),
             array($meta, 'push')
@@ -41,12 +41,12 @@ class VOID_Repository_ContentRepository
     public static function getRecentComments($num)
     {
         $output = array();
-        $db = Typecho_Db::get();
+        $db = \Typecho\Db::get();
         $rows = $db->fetchAll($db->select()->from('table.comments')
             ->where('table.comments.status = ?', 'approved')
             ->where('type = ?', 'comment')
             ->where('ownerId <> authorId')
-            ->order('table.comments.created', Typecho_Db::SORT_DESC)
+            ->order('table.comments.created', \Typecho\Db::SORT_DESC)
             ->limit($num));
 
         foreach ($rows as $row) {

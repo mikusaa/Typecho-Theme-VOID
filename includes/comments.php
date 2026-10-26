@@ -13,8 +13,8 @@ $commentsRequireUrl = !empty(Helper::options()->commentsRequireUrl);
 $commentsOrder = strtoupper((string)Helper::options()->commentsOrder) === 'ASC' ? 'ASC' : 'DESC';
 $commentSecurityTokenExpression = null;
 if (!empty(Helper::options()->commentsAntiSpam)) {
-    Typecho_Widget::widget('Widget_Security')->to($commentSecurity);
-    $commentSecurityTokenExpression = Typecho_Common::shuffleScriptVar(
+    \Widget\Security::alloc()->to($commentSecurity);
+    $commentSecurityTokenExpression = \Typecho\Common::shuffleScriptVar(
         $commentSecurity->getToken($this->request->getRequestUrl())
     );
 }

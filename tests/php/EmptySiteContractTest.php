@@ -202,6 +202,9 @@ class EmptySiteHeadWidget
     }
 }
 
+// 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
+class_alias('Typecho_Db', 'Typecho\Db');
+
 require_once dirname(__DIR__, 2) . '/libs/Utils.php';
 
 $failures = 0;

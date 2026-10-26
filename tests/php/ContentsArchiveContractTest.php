@@ -300,6 +300,14 @@ class ArchiveContractTagBinder
     }
 }
 
+class Widget_Metas_Tag_Cloud
+{
+    public static function alloc()
+    {
+        return new ArchiveContractTagBinder();
+    }
+}
+
 class ArchiveContractWidget extends Widget_Archive
 {
     public $needed = array();
@@ -313,11 +321,6 @@ class ArchiveContractWidget extends Widget_Archive
         $this->needed[] = $path;
     }
 
-    public function widget()
-    {
-        return new ArchiveContractTagBinder();
-    }
-
     public function render($file)
     {
         ob_start();
@@ -325,6 +328,16 @@ class ArchiveContractWidget extends Widget_Archive
         return ob_get_clean();
     }
 }
+
+// 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
+class_alias('Widget_Archive', 'Widget\Archive');
+class_alias('Typecho_Date', 'Typecho\Date');
+class_alias('Typecho_Db', 'Typecho\Db');
+class_alias('Widget_Metas_Category_List', 'Widget\Metas\Category\Rows');
+class_alias('Widget_Metas_Category_Related', 'Widget\Metas\Category\Related');
+class_alias('Typecho_Common', 'Typecho\Common');
+class_alias('Widget_Abstract_Contents', 'Widget\Base\Contents');
+class_alias('Widget_Metas_Tag_Cloud', 'Widget\Metas\Tag\Cloud');
 
 require_once dirname(__DIR__, 2) . '/libs/Contents.php';
 

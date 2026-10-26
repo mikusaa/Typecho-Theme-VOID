@@ -118,6 +118,17 @@ class SettingsFormContainer
     }
 }
 
+// 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
+class_alias('Typecho_Plugin', 'Typecho\Plugin');
+class_alias('Widget_Abstract_Comments', 'Widget\Base\Comments');
+class_alias('Widget_Archive', 'Widget\Archive');
+class_alias('Typecho_Widget_Helper_Layout', 'Typecho\Widget\Helper\Layout');
+class_alias('Typecho_Widget_Helper_Form_Element_Text', 'Typecho\Widget\Helper\Form\Element\Text');
+class_alias('Typecho_Widget_Helper_Form_Element_Textarea', 'Typecho\Widget\Helper\Form\Element\Textarea');
+class_alias('Typecho_Widget_Helper_Form_Element_Radio', 'Typecho\Widget\Helper\Form\Element\Radio');
+class_alias('Typecho_Widget_Helper_Form_Element_Select', 'Typecho\Widget\Helper\Form\Element\Select');
+class_alias('Typecho_Widget_Helper_Form_Element_Hidden', 'Typecho\Widget\Helper\Form\Element\Hidden');
+
 Helper::$options = new SettingsFormOptions();
 ob_start();
 require_once dirname(__DIR__, 2) . '/functions.php';
@@ -177,7 +188,7 @@ settingsFormAssertSame('3', Helper::options()->colorScheme, 'themeConfig 使用 
 
 $functionsSource = file_get_contents(dirname(__DIR__, 2) . '/functions.php');
 settingsFormAssertSame(true, strpos($functionsSource, 'function themeConfig($form)') !== false, '保留 Typecho themeConfig 全局入口');
-settingsFormAssertSame(true, strpos($functionsSource, 'function themeFields(Typecho_Widget_Helper_Layout $layout)') !== false, '保留 Typecho themeFields 全局入口');
+settingsFormAssertSame(true, strpos($functionsSource, 'function themeFields(\\Typecho\\Widget\\Helper\\Layout $layout)') !== false, '保留 Typecho themeFields 全局入口');
 settingsFormAssertSame(true, strpos($functionsSource, 'function themeInit($archive = null)') !== false, '保留 Typecho themeInit 全局入口');
 
 if ($failures > 0) {

@@ -212,6 +212,15 @@ class Utils
 {
 }
 
+// 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
+class_alias('Typecho_Db', 'Typecho\Db');
+class_alias('Widget_Abstract_Contents', 'Widget\Base\Contents');
+class_alias('Widget_Abstract_Comments', 'Widget\Base\Comments');
+class_alias('Widget_Abstract_Metas', 'Widget\Base\Metas');
+class_alias('Widget_Metas_Category_Related', 'Widget\Metas\Category\Related');
+class_alias('Widget_Metas_Tag_Related', 'Widget\Metas\Tag\Related');
+class_alias('Typecho_Date', 'Typecho\Date');
+
 require_once dirname(__DIR__, 2) . '/libs/Contents.php';
 
 $failures = 0;
