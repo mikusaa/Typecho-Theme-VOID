@@ -5,8 +5,6 @@
   'use strict';
 
   var cacheVersion = '-native-v6';
-  // v6 stored opaque third-party responses; v7 starts from verified successes only.
-  var staticVendorCacheName = 'static-vendor-native-v7';
   var staticAssetsCacheName = 'static-assets' + cacheVersion;
   var emoteStaticCacheName = 'emote-static' + cacheVersion;
   var emoteAnimatedCacheName = 'emote-animated' + cacheVersion;
@@ -21,10 +19,6 @@
   var themeAssetsPath = usrPath + 'themes/VOID/assets/';
   var hashedThemeAssetPattern = /^[A-Za-z0-9_-]+-[0-9a-f]{10}\.(?:css|js)$/;
   var versionedThemeLibraryPattern = /^libs\/[^/]+\/\d+(?:\.\d+)+\//;
-  var cacheMutationQueues = {};
-  var cacheEntryMutationQueues = {};
-  var cacheEntryRecency = {};
-  var recencyCounter = 0;
   var retiredCacheNames = [
     'dynamic-vendor-toolbox-v1',
     'static-vendor-toolbox-v1',
@@ -46,133 +40,30 @@
     'static-assets-toolbox-v5',
     'emote-static-toolbox-v5',
     'emote-animated-toolbox-v5',
-    'static-vendor-native-v6'
+    'static-vendor-native-v6',
+    // Third-party avatars and fonts are no longer routed through the Worker.
+    'static-vendor-native-v7'
   ];
 
   function isSuccessfulResponse(response) {
-    // Opaque responses report status 0 and may hide an error page, so they are never cached.
+    // An error page must never replace or stand in for a stored success.
     return response.status >= 200 && response.status < 300;
   }
 
-  function queueCacheMutation(cacheName, callback) {
-    var previousOperation = cacheMutationQueues[cacheName] || self.Promise.resolve();
-    var operation = previousOperation.then(callback, callback);
-
-    cacheMutationQueues[cacheName] = operation.catch(function () {
-      // A failed Cache API operation must not block later mutations.
-    });
-    return operation;
-  }
-
-  function markCacheEntryUsed(cacheName, request) {
-    if (!cacheEntryRecency[cacheName]) {
-      cacheEntryRecency[cacheName] = {};
-    }
-    recencyCounter += 1;
-    cacheEntryRecency[cacheName][request.url] = recencyCounter;
-  }
-
-  function queueCacheEntryMutation(cacheName, request, callback) {
-    var queues = cacheEntryMutationQueues[cacheName] || {};
-    var previousOperation = queues[request.url] || self.Promise.resolve();
-    var operation = previousOperation.then(callback, callback);
-    var settledOperation = operation.catch(function () {
-      // A failed entry operation must not block a later replacement.
-    });
-
-    cacheEntryMutationQueues[cacheName] = queues;
-    queues[request.url] = settledOperation;
-    settledOperation.then(function () {
-      if (queues[request.url] === settledOperation) {
-        delete queues[request.url];
-      }
-    });
-    return operation;
-  }
-
-  function trimCache(cacheName, cache, maximumEntries) {
+  // Cache.keys() lists entries in insertion order and Cache.put() re-appends a replaced URL,
+  // so trimming the front evicts the entry written longest ago. Concurrent trims only delete
+  // prefixes of that order, so they converge on the limit without coordination. A URL re-written
+  // while a trim runs may still be removed; its next request simply fetches it again.
+  function trimCache(cache, maximumEntries) {
     return cache.keys().then(function (requests) {
       var overflow = requests.length - maximumEntries;
-      var recency = cacheEntryRecency[cacheName] || {};
-      var oldestRequests;
 
       if (overflow <= 0) {
         return self.Promise.resolve();
       }
-
-      oldestRequests = requests.map(function (request, index) {
-        return {
-          request: request,
-          index: index,
-          recency: recency[request.url] || 0
-        };
-      }).sort(function (left, right) {
-        if (left.recency && right.recency) {
-          return left.recency - right.recency;
-        }
-        if (left.recency) {
-          return 1;
-        }
-        if (right.recency) {
-          return -1;
-        }
-        return left.index - right.index;
-      }).slice(0, overflow);
-
-      return self.Promise.all(oldestRequests.map(function (entry) {
-        return queueCacheEntryMutation(cacheName, entry.request, function () {
-          if ((recency[entry.request.url] || 0) !== entry.recency) {
-            return self.Promise.resolve(false);
-          }
-          delete recency[entry.request.url];
-          return cache.delete(entry.request);
-        });
-      })).then(function () {
-        // A refreshed victim may have been skipped; keep trimming to the limit.
-        return trimCache(cacheName, cache, maximumEntries);
-      });
-    });
-  }
-
-  function storeResponse(cacheName, maximumEntries, request, response) {
-    var trimAfterPut;
-
-    // Protect this URL from a concurrent trim before Cache.put finishes.
-    markCacheEntryUsed(cacheName, request);
-    return caches.open(cacheName).then(function (cache) {
-      trimAfterPut = function () {
-        return queueCacheMutation(cacheName, function () {
-          return trimCache(cacheName, cache, maximumEntries);
-        });
-      };
-      // Distinct response bodies are consumed concurrently; only the same URL is ordered.
-      return queueCacheEntryMutation(cacheName, request, function () {
-        return cache.put(request, response);
-      }).then(function () {
-        return trimAfterPut();
-      }, function (putError) {
-        return trimAfterPut().then(function () {
-          throw putError;
-        }, function () {
-          throw putError;
-        });
-      });
-    });
-  }
-
-  function refreshCachedResponse(cacheName, request, response) {
-    var responseForCache = response.clone();
-
-    markCacheEntryUsed(cacheName, request);
-    return caches.open(cacheName).then(function (cache) {
-      return queueCacheEntryMutation(cacheName, request, function () {
-        // Persist LRU order across Service Worker restarts.
-        return cache.delete(request).then(function () {
-          return cache.put(request, responseForCache);
-        });
-      });
-    }).catch(function () {
-      // A refresh failure must not fail a cache hit.
+      return self.Promise.all(requests.slice(0, overflow).map(function (request) {
+        return cache.delete(request);
+      }));
     });
   }
 
@@ -180,7 +71,11 @@
     // Clone before respondWith can hand the body to the page.
     var responseForCache = response.clone();
 
-    return storeResponse(cacheName, maximumEntries, request, responseForCache).catch(function () {
+    return caches.open(cacheName).then(function (cache) {
+      return cache.put(request, responseForCache).then(function () {
+        return trimCache(cache, maximumEntries);
+      });
+    }).catch(function () {
       // Cache quota or storage failures must not fail the resource request.
     });
   }
@@ -192,17 +87,11 @@
     };
   }
 
-  function cacheFirst(request, cacheName, maximumEntries, refreshOnHit) {
+  function cacheFirst(request, cacheName, maximumEntries) {
     return caches.open(cacheName).then(function (cache) {
       return cache.match(request);
     }).then(function (cachedResponse) {
       if (cachedResponse) {
-        if (refreshOnHit) {
-          return strategyResult(
-            cachedResponse,
-            refreshCachedResponse(cacheName, request, cachedResponse)
-          );
-        }
         return strategyResult(cachedResponse);
       }
 
@@ -268,41 +157,32 @@
     }
 
     url = new URL(request.url);
+    // Third-party requests go straight to the network.
+    if (url.origin !== self.location.origin) {
+      return null;
+    }
     pathname = url.pathname;
 
-    if (url.origin === self.location.origin) {
-      if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/animated/')) {
-        return cacheFirst(request, emoteAnimatedCacheName, emoteAnimatedMaxEntries, true);
-      }
-      if (pathname === themeAssetsPath + 'libs/emotes/packs.json' ||
-          hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/packs/')) {
-        return networkFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
-      }
-      if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/poster/')) {
-        return cacheFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
-      }
-      if (hasPathPrefix(pathname, themeAssetsPath + 'fonts/fontsource/')) {
-        return cacheFirst(request, fontAssetsCacheName, fontAssetsMaxEntries, true);
-      }
-      if (isImmutableThemeAsset(pathname)) {
-        return cacheFirst(request, staticAssetsCacheName, staticMaxEntries);
-      }
-      // Uploads, plugins and unhashed theme files can be replaced in place.
-      if (hasPathPrefix(pathname, usrPath)) {
-        return networkFirst(request, staticAssetsCacheName, staticMaxEntries);
-      }
+    if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/animated/')) {
+      return cacheFirst(request, emoteAnimatedCacheName, emoteAnimatedMaxEntries);
     }
-
-    if (url.origin === 'https://secure.gravatar.com' && hasPathPrefix(pathname, '/avatar/')) {
-      return cacheFirst(request, staticVendorCacheName, staticMaxEntries);
+    if (pathname === themeAssetsPath + 'libs/emotes/packs.json' ||
+        hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/packs/')) {
+      return networkFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
     }
-    if (url.origin === 'https://fonts.googleapis.com' ||
-        url.origin === 'https://fonts.googleapis.cn' ||
-        url.origin === 'https://fonts.gstatic.com' ||
-        url.origin === 'https://fonts.gstatic.cn') {
-      return cacheFirst(request, staticVendorCacheName, staticMaxEntries);
+    if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/poster/')) {
+      return cacheFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
     }
-
+    if (hasPathPrefix(pathname, themeAssetsPath + 'fonts/fontsource/')) {
+      return cacheFirst(request, fontAssetsCacheName, fontAssetsMaxEntries);
+    }
+    if (isImmutableThemeAsset(pathname)) {
+      return cacheFirst(request, staticAssetsCacheName, staticMaxEntries);
+    }
+    // Uploads, plugins and unhashed theme files can be replaced in place.
+    if (hasPathPrefix(pathname, usrPath)) {
+      return networkFirst(request, staticAssetsCacheName, staticMaxEntries);
+    }
     return null;
   }
 

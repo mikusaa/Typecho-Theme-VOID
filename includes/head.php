@@ -103,15 +103,10 @@ if (isset($_POST['void_action'])) {
         'mathJaxUrl' => $mathJaxUrl,
         'emotesBase' => $emotesBase,
         'votePath' => $votePath,
-        'lightBg' => '',
-        'darkBg' => '',
-        'horizontalBg' => !empty($setting['siteBg']),
-        'verticalBg' => !empty($setting['siteBgVertical']),
         'fontStylesheets' => array(
             'serif' => $serifFontStylesheet
         ),
-        'version' => (string) $GLOBALS['VOIDVersion'],
-        'isDev' => true
+        'version' => (string) $GLOBALS['VOIDVersion']
     ));
     ?>
     <title><?php echo Utils::escapeHtml($pageTitle); ?></title>

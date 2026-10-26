@@ -16,7 +16,11 @@ require_once __DIR__ . '/libs/Contents.php';
 require_once __DIR__ . '/libs/Comments.php';
 
 /**
- * 清理当前文章已缓存的计算字段，避免 Typecho 1.3 在主题 hook 注册前缓存旧内容。
+ * 清理当前文章已缓存的计算字段。
+ *
+ * Typecho 1.3 先执行文章 handle（其中读取 plainExcerpt，会把 content、excerpt 缓存进
+ * 私有 row），之后才加载 functions.php，主题内容 Hook 因此错过这次计算；核心没有公开的
+ * 清除途径，只能在组件作用域内删除这三个缓存键。
  */
 function VOID_refreshArchiveComputedFields($archive)
 {
@@ -24,25 +28,9 @@ function VOID_refreshArchiveComputedFields($archive)
         return;
     }
 
-    try {
-        $reflection = new ReflectionObject($archive);
-        while ($reflection && !$reflection->hasProperty('row')) {
-            $reflection = $reflection->getParentClass();
-        }
-
-        if ($reflection && $reflection->hasProperty('row')) {
-            $rowProperty = $reflection->getProperty('row');
-            $row = $rowProperty->getValue($archive);
-
-            if (is_array($row)) {
-                unset($row['#content'], $row['#excerpt'], $row['#plainExcerpt']);
-                $rowProperty->setValue($archive, $row);
-            }
-        }
-    } catch (Exception $e) {
-    }
-
-    $archive->archiveDescription = $archive->plainExcerpt;
+    (function () {
+        unset($this->row['#content'], $this->row['#excerpt'], $this->row['#plainExcerpt']);
+    })->call($archive);
 }
 
 \Typecho\Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');

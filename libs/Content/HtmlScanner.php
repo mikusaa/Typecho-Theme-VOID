@@ -139,6 +139,31 @@ class VOID_Content_HtmlScanner
         return null;
     }
 
+    /**
+     * Track open code, pre, script, style and textarea elements whose text transforms must skip.
+     */
+    public static function updateProtectedTags($tag, &$protectedTags)
+    {
+        if (!preg_match('/\A<\s*(\/?)\s*(code|pre|script|style|textarea)\b/i', $tag, $matches)) {
+            return;
+        }
+
+        $name = strtolower($matches[2]);
+        if ($matches[1] === '') {
+            if (!preg_match('/\/\s*>\z/', $tag)) {
+                $protectedTags[] = $name;
+            }
+            return;
+        }
+
+        for ($index = count($protectedTags) - 1; $index >= 0; $index--) {
+            if ($protectedTags[$index] === $name) {
+                array_splice($protectedTags, $index, 1);
+                return;
+            }
+        }
+    }
+
     public static function isRawTextTag($name)
     {
         return in_array($name, array('script', 'style', 'textarea', 'title'), true);

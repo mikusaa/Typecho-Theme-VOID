@@ -40,7 +40,7 @@ class VOID_Content_Transform_Images
                 $result .= $tag;
             }
 
-            self::updateProtectedTags($tag, $protectedTags);
+            VOID_Content_HtmlScanner::updateProtectedTags($tag, $protectedTags);
             $offset = $tagEnd + 1;
         }
 
@@ -76,28 +76,6 @@ class VOID_Content_Transform_Images
         }
 
         return self::getDimensions($banner);
-    }
-
-    private static function updateProtectedTags($tag, &$protectedTags)
-    {
-        if (!preg_match('/\A<\s*(\/?)\s*(code|pre|script|style|textarea)\b/i', $tag, $matches)) {
-            return;
-        }
-
-        $name = strtolower($matches[2]);
-        if ($matches[1] === '') {
-            if (!preg_match('/\/\s*>\z/', $tag)) {
-                $protectedTags[] = $name;
-            }
-            return;
-        }
-
-        for ($index = count($protectedTags) - 1; $index >= 0; $index--) {
-            if ($protectedTags[$index] === $name) {
-                array_splice($protectedTags, $index, 1);
-                return;
-            }
-        }
     }
 
     private static function getDimensions($src)
