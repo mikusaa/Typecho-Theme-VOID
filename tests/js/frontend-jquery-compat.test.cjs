@@ -90,8 +90,11 @@ test('4.0 removes frontend jQuery while editor sources use the Typecho admin bou
         'pack and dev header bundles should only read the remaining header dependencies'
     );
     assert.equal(fs.existsSync(path.join(root, 'assets/libs/header/jquery/jquery.min.js')), false);
-    assert.match(index, /@version\s+4\.0\.0/);
-    assert.match(functions, /\$GLOBALS\['VOIDVersion'\] = '4\.0\.0';/);
+    const headerVersion = (index.match(/@version\s+(\d+\.\d+\.\d+)/) || [])[1];
+    const runtimeVersion = (functions.match(/\$GLOBALS\['VOIDVersion'\] = '(\d+\.\d+\.\d+)';/) || [])[1];
+    assert.ok(headerVersion, 'index.php should declare a three-part theme version');
+    assert.equal(runtimeVersion, headerVersion, 'VOIDVersion should match the theme header version');
+    assert.ok(Number(headerVersion.split('.')[0]) >= 4, 'jQuery-free frontend ships from VOID 4.0 onwards');
     assert.match(
         readme,
         /\[VOID 4\.0 升级说明\]\(https:\/\/github\.com\/mikusaa\/Typecho-Theme-VOID\/blob\/master\/docs\/upgrade-4\.0\.md\)/

@@ -227,6 +227,8 @@ Feed 截断、Media RSS 和浏览器预览可选安装 [FeedEnhancer 1.1.0 或�
 
 VOID 4.0 的兼容性变更和迁移步骤参见 [VOID 4.0 升级说明](https://github.com/mikusaa/Typecho-Theme-VOID/blob/master/docs/upgrade-4.0.md)。
 
+VOID 4.1 起只支持 PHP 8.5 与 Typecho 1.3，升级前请先确认站点满足[运行环境](#运行环境)要求；暂时无法升级环境的站点请继续使用 [4.0.0](https://github.com/mikusaa/Typecho-Theme-VOID/releases/tag/4.00)。
+
 ## 开发与自定义
 
 **首先注意：我不保证提供任何自定义修改相关的指导与帮助。You are on your own.**
