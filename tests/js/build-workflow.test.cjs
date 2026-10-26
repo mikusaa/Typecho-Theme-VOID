@@ -43,7 +43,8 @@ test('CI validates pull requests and publishes only a verified master artifact',
     assert.match(workflow, /^permissions:\n  contents: read$/m);
     assert.match(workflow, /^  verify:$/m);
     assert.match(workflow, /run: make verify/);
-    assert.match(workflow, /php-version: \['7\.0', '8\.5'\]/);
+    assert.match(workflow, /php-version: \['8\.5'\]/);
+    assert.doesNotMatch(workflow, /php-version:[^\n]*'7\./);
     assert.match(workflow, /^  nightly:\n    if: github\.event_name == 'push'/m);
     assert.match(workflow, /needs: \[verify, php-contracts\]/);
     assert.match(workflow, /name: void-build-\$\{\{ github\.sha \}\}/g);

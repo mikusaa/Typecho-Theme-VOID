@@ -2,6 +2,7 @@
 
 **开发中 | Unreleased**
 
+* 调整：[兼容性] 主题只支持 PHP 8 的最新稳定小版本和 Typecho 最新正式版，当前为 PHP 8.5 与 Typecho 1.3；不再兼容 PHP 7.x、PHP 8.0～8.4 和 Typecho 1.2 及更早版本，CI 的 PHP 合同矩阵移除 PHP 7.0。升级前请先确认站点运行环境。
 * 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
 * 调整：[PJAX] 移除后台设置中的 Beta 标记和过时提示，新安装及缺少该设置时默认开启；已明确关闭 PJAX 的站点保留原选择。
 * 调整：[文档] 将超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。

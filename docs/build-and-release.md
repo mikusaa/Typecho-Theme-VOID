@@ -91,8 +91,8 @@ PHP 引用、哈希资源和 Worker 缓存规则必须来自同一源码提交�
 
 - `verify` 使用 Node.js 26、npm 11 和 PHP 8.5 执行 `make verify`，并上传以当前
   `github.sha` 命名的生产构建 artifact。
-- `php-contracts` 在 PHP 7.0 与 PHP 8.5 上分别执行 PHP 语法检查和合同测试。该矩阵验证
-  PHP 兼容范围，不会启动真实 Typecho 站点。
+- `php-contracts` 按当前支持基线（PHP 8.5）执行 PHP 语法检查和合同测试。基线上调时，
+  该矩阵可以短期同时包含新旧两个小版本过渡；它不会启动真实 Typecho 站点。
 - `nightly` 只在 `master` push 上运行，并同时依赖 `verify` 与 `php-contracts` 成功。只有
   这个 job 获得 `contents: write`，且只下载同一 `github.sha` 的已验证 artifact 发布到
   `nightly`，不会重新从另一份工作区构建。

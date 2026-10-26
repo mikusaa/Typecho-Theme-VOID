@@ -52,8 +52,8 @@ scanner、Repository、设置 schema、表单生成、输出转义和模板连�
 每文件独立进程保证测试 stub 不互相泄漏，但不会自动获得真实 Typecho 请求状态。
 
 PHP CLI 合同不能证明 Typecho 路由、Hook 注册时机、数据库驱动、永久链接、Cookie、后台
-保存、动态 404、Feed 响应头或模板完整渲染。Typecho 1.2/1.3 分支的 stub 覆盖也不等于
-两个版本的真实站点都已启动验证。
+保存、动态 404、Feed 响应头或模板完整渲染。Typecho 1.3 分支的 stub 覆盖也不等于
+真实站点已启动验证。
 
 ### 构建输出检查
 
@@ -71,11 +71,11 @@ PHP CLI 合同不能证明 Typecho 路由、Hook 注册时机、数据库驱动�
 ## CI 范围
 
 pull request 与 `master` push 都运行只读验证。`verify` job 在 PHP 8.5 上执行完整
-`make verify` 并上传生产 artifact；独立的 `php-contracts` job 在 PHP 7.0 与 PHP 8.5 上
-执行 `npm run lint:php` 和 `npm run test:php`。
+`make verify` 并上传生产 artifact；独立的 `php-contracts` job 按当前支持基线
+（PHP 8.5）执行 `npm run lint:php` 和 `npm run test:php`。
 
-PHP 7.0 是当前 CI 的最低 PHP 检查端，PHP 8.5 是当前维护检查端。CI 没有真实安装 Typecho，
-也没有针对 Typecho 版本、数据库、HTTP、PJAX 或浏览器的矩阵。只有 `master` push 的两个
+主题只支持 PHP 8 的最新稳定小版本和 Typecho 最新正式版，基线上调时同步修改该矩阵。
+CI 没有真实安装 Typecho，也没有针对 Typecho 版本、数据库、HTTP、PJAX 或浏览器的矩阵。只有 `master` push 的两个
 验证 job 都成功后，nightly job 才能使用同一提交的 artifact 发布；权限细节参见
 [构建与 nightly 发布](./build-and-release.md)。
 
