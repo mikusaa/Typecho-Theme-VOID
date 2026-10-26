@@ -131,7 +131,7 @@ function loadExtractionHelpers() {
 
     const context = { $: jQuery };
     vm.runInNewContext(
-        `${sliceSource('function preserveHiddenMetadataField', '    function cleanupCustomField')}
+        `${sliceSource('function preserveHiddenMetadataField', '    function initBehaviorFieldLayout')}
 this.preserveHiddenMetadataField = preserveHiddenMetadataField;
 this.extractVoidField = extractVoidField;`,
         context
@@ -142,6 +142,78 @@ this.extractVoidField = extractVoidField;`,
         extractVoidField: context.extractVoidField,
         preserveHiddenMetadataField: context.preserveHiddenMetadataField
     };
+}
+
+class PanelNode {
+    constructor(options = {}) {
+        this.length = options.length === undefined ? 1 : options.length;
+        this.childLookup = options.childLookup || {};
+        this.childCount = options.childCount || 0;
+        this.beforeItems = [];
+        this.removed = false;
+    }
+
+    add(value) {
+        return new PanelNode({ length: this.length + value.length });
+    }
+
+    append() {
+        return this;
+    }
+
+    before(value) {
+        this.beforeItems.push(value);
+        return this;
+    }
+
+    children(selector) {
+        if (selector) {
+            return this.childLookup[selector] || new PanelNode({ length: 0 });
+        }
+        return new PanelNode({ length: this.childCount });
+    }
+
+    find() {
+        return this;
+    }
+
+    remove() {
+        this.removed = true;
+        return this;
+    }
+}
+
+function buildPanelWithNativeList(nativeRowCount) {
+    const fieldList = new PanelNode({ childCount: nativeRowCount });
+    const customField = new PanelNode({ childLookup: { '.fields': fieldList } });
+
+    function jQuery(value) {
+        if (value === '#custom-field') {
+            return customField;
+        }
+        if (value === undefined || value === '#void-editor-fields') {
+            return new PanelNode({ length: 0 });
+        }
+        if (typeof value === 'string' && value.startsWith('<')) {
+            return new PanelNode();
+        }
+        throw new Error(`Unexpected panel jQuery value: ${String(value)}`);
+    }
+    jQuery.each = (collection, callback) => {
+        Object.keys(collection).forEach((key) => callback(key, collection[key]));
+    };
+
+    const context = { $: jQuery };
+    vm.runInNewContext(
+        `${sliceSource('    var VOID_FIELD_GROUPS', '    var VOID_SEGMENTED_FIELDS')}
+${sliceSource('function buildVoidFieldPanel', '    function initBehaviorFieldLayout')}
+preserveHiddenMetadataField = function () {};
+extractVoidField = function () { return new this.PanelNode(); };
+this.panel = buildVoidFieldPanel();`,
+        Object.assign(context, { PanelNode })
+    );
+
+    return { customField, fieldList, panel: context.panel };
 }
 
 function createTypechoField(tag, fieldName, value, wrapped) {
@@ -526,6 +598,16 @@ for (const fixture of [
         assert.equal(field.control.attr('name'), 'fields[banner]');
         assert.equal(field.control.attr('value'), 'https://example.test/cover.jpg');
         assert.equal(field.row.removed, true);
+    });
+}
+
+for (const nativeRowCount of [0, 1]) {
+    test(`native custom field list survives VOID extraction with ${nativeRowCount} user field(s)`, () => {
+        const result = buildPanelWithNativeList(nativeRowCount);
+
+        assert.ok(result.panel);
+        assert.equal(result.customField.beforeItems[0], result.panel);
+        assert.equal(result.fieldList.removed, false);
     });
 }
 

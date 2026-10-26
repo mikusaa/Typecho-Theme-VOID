@@ -134,8 +134,8 @@ var VOID_Editor_Admin = (function ($) {
             $grid.append($group);
         });
 
+        // 即使 VOID 字段全部移走也保留原生字段列表：Typecho 的“添加字段”按钮会向它追加新行。
         $customField.before($panel);
-        cleanupCustomField($customField);
         return $panel;
     }
 
@@ -208,18 +208,6 @@ var VOID_Editor_Admin = (function ($) {
         }
 
         return $valueSource;
-    }
-
-    function cleanupCustomField($customField) {
-        var $list = $customField.children('.fields');
-        if ($list.length && !$list.children().length) {
-            $list.remove();
-        }
-
-        var $table = $customField.children('table.typecho-list-table');
-        if ($table.length && !$table.find('tr').length) {
-            $table.remove();
-        }
     }
 
     function initBehaviorFieldLayout($scope) {
