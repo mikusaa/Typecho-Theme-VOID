@@ -155,7 +155,7 @@ if (isset($_POST['void_action'])) {
     <script>
     window.VOIDConfig = <?php echo Utils::encodeJsonForHtml($voidConfig, '{}'); ?>;
     </script>
-    <script src="<?php Utils::indexTheme('/assets/header-ede208dfe3.js'); ?>"></script>
+    <script src="<?php Utils::indexTheme('/assets/header-b00d1b2b94.js'); ?>"></script>
     
     <?php echo $setting['head']; ?>
     <style>

@@ -124,7 +124,7 @@ $setting = $GLOBALS['VOIDSetting'];
         <script id="void-service-worker-config" type="application/json"><?php echo Utils::encodeJsonForHtml($serviceWorkerUri); ?></script>
         <script src="<?php Utils::indexTheme('/assets/service-worker-registration-231a2de8c8.js'); ?>"></script>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle-4ac796cc8e.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-27574c7648.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-4d4597d60f.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             if (VOID.pjaxReloadHandler) {
