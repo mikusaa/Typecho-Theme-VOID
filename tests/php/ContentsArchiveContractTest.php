@@ -197,11 +197,6 @@ class Typecho_Db
     }
 }
 
-class Typecho_Common
-{
-    const VERSION = '1.3.0';
-}
-
 class Widget_Metas_Category_List
 {
     public static $rows = array();
@@ -482,7 +477,7 @@ contentsArchiveAssertSame(
     array_column(Widget_Abstract_Contents::$pushedCategoriesByCid[102], 'mid'),
     '批量分类通过 Typecho 的 #categories 缓存注入内容组件'
 );
-contentsArchiveAssertSame(false, method_exists('Widget_Metas_Category_List', 'toArray'), '分类采集只使用 Typecho 1.2/1.3 共有接口');
+contentsArchiveAssertSame(false, method_exists('Widget_Metas_Category_List', 'toArray'), '分类采集只使用 Typecho 公开组件接口');
 
 contentsArchiveResetCounters();
 $GLOBALS['VOIDSetting'] = array('VOIDPlugin' => true);

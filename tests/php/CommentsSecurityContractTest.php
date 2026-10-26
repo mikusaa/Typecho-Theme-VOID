@@ -51,11 +51,18 @@ commentsSecurityAssertNotContains(
     $functions,
     '主题不再全局关闭 PHP 错误报告'
 );
-commentsSecurityAssertContains(
-    'if (PHP_VERSION_ID < 80100)',
+commentsSecurityAssertNotContains(
+    'setAccessible(',
     $functions,
-    '仅在仍需要时调用 ReflectionProperty 兼容接口'
+    'PHP 8.1 起无需再调用 ReflectionProperty::setAccessible()'
 );
+
+commentsSecurityAssertContains(
+    '$commentsRequireUrl = !empty(Helper::options()->commentsRequireUrl);',
+    $comments,
+    '评论网址必填只读取 Typecho 1.3 的 commentsRequireUrl'
+);
+commentsSecurityAssertNotContains('commentsRequireURL', $comments, '不再兜底读取 Typecho 1.2 的 commentsRequireURL 旧键');
 
 commentsSecurityAssertContains(
     "\$this->header('commentReply=&description=&social=0')",

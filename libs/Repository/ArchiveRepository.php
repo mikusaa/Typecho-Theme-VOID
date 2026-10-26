@@ -24,9 +24,7 @@ class VOID_Repository_ArchiveRepository
     public static function getNext($archive)
     {
         $db = Typecho_Db::get();
-        $currentTime = (class_exists('Typecho_Date') && method_exists('Typecho_Date', 'time'))
-            ? Typecho_Date::time()
-            : time();
+        $currentTime = Typecho_Date::time();
 
         $content = $db->fetchRow($db->select()->from('table.contents')
             ->where(
@@ -61,57 +59,53 @@ class VOID_Repository_ArchiveRepository
             return array();
         }
 
-        $supportsComputedCategoryCache = version_compare(Typecho_Common::VERSION, '1.3.0', '>=');
         $hasVOIDPlugin = !empty($settings['VOIDPlugin']);
         $categoriesByPostId = array();
+        $postIds = array();
+        foreach ($rows as $row) {
+            $postIds[(int) $row['cid']] = true;
+        }
 
-        if ($supportsComputedCategoryCache) {
-            $postIds = array();
-            foreach ($rows as $row) {
-                $postIds[(int) $row['cid']] = true;
+        $categoryRows = array();
+        $categoriesByMid = array();
+        $categoryWidget = Widget_Metas_Category_List::alloc();
+        while ($categoryWidget->next()) {
+            $category = array(
+                'mid' => (int) $categoryWidget->mid,
+                'name' => $categoryWidget->name,
+                'slug' => $categoryWidget->slug,
+                'description' => $categoryWidget->description,
+                'order' => (int) $categoryWidget->order,
+                'parent' => (int) $categoryWidget->parent,
+                'count' => (int) $categoryWidget->count,
+                'permalink' => $categoryWidget->permalink
+            );
+            $categoryRows[] = $category;
+            $categoriesByMid[$category['mid']] = $category;
+        }
+
+        $relationshipRows = $db->fetchAll($db->select(
+            'table.relationships.cid',
+            'table.relationships.mid'
+        )->from('table.relationships')
+            ->where('table.relationships.cid IN ?', array_keys($postIds)));
+        $relatedPostIdsByMid = array();
+        foreach ($relationshipRows as $relationship) {
+            $cid = (int) $relationship['cid'];
+            $mid = (int) $relationship['mid'];
+            if (isset($postIds[$cid]) && isset($categoriesByMid[$mid])) {
+                $relatedPostIdsByMid[$mid][] = $cid;
+            }
+        }
+
+        foreach ($categoryRows as $category) {
+            $mid = $category['mid'];
+            if (empty($relatedPostIdsByMid[$mid])) {
+                continue;
             }
 
-            $categoryRows = array();
-            $categoriesByMid = array();
-            $categoryWidget = Widget_Metas_Category_List::alloc();
-            while ($categoryWidget->next()) {
-                $category = array(
-                    'mid' => (int) $categoryWidget->mid,
-                    'name' => $categoryWidget->name,
-                    'slug' => $categoryWidget->slug,
-                    'description' => $categoryWidget->description,
-                    'order' => (int) $categoryWidget->order,
-                    'parent' => (int) $categoryWidget->parent,
-                    'count' => (int) $categoryWidget->count,
-                    'permalink' => $categoryWidget->permalink
-                );
-                $categoryRows[] = $category;
-                $categoriesByMid[$category['mid']] = $category;
-            }
-
-            $relationshipRows = $db->fetchAll($db->select(
-                'table.relationships.cid',
-                'table.relationships.mid'
-            )->from('table.relationships')
-                ->where('table.relationships.cid IN ?', array_keys($postIds)));
-            $relatedPostIdsByMid = array();
-            foreach ($relationshipRows as $relationship) {
-                $cid = (int) $relationship['cid'];
-                $mid = (int) $relationship['mid'];
-                if (isset($postIds[$cid]) && isset($categoriesByMid[$mid])) {
-                    $relatedPostIdsByMid[$mid][] = $cid;
-                }
-            }
-
-            foreach ($categoryRows as $category) {
-                $mid = $category['mid'];
-                if (empty($relatedPostIdsByMid[$mid])) {
-                    continue;
-                }
-
-                foreach ($relatedPostIdsByMid[$mid] as $cid) {
-                    $categoriesByPostId[$cid][] = $category;
-                }
+            foreach ($relatedPostIdsByMid[$mid] as $cid) {
+                $categoriesByPostId[$cid][] = $category;
             }
         }
 
@@ -123,14 +117,9 @@ class VOID_Repository_ArchiveRepository
                 ? $categoriesByPostId[$cid] : array();
 
             $post = Widget_Abstract_Contents::alloc();
-            if ($supportsComputedCategoryCache) {
-                $row['#categories'] = $categories;
-            }
+            // 由 Typecho 1.3 的 #categories 缓存接收批量查询结果，避免每篇文章再查分类。
+            $row['#categories'] = $categories;
             $row = $post->push($row);
-            if (!$supportsComputedCategoryCache) {
-                $categories = isset($row['categories']) && is_array($row['categories'])
-                    ? $row['categories'] : array();
-            }
             $date = new Typecho_Date($created);
             $item = array(
                 'cid' => $cid,

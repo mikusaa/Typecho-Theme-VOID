@@ -54,9 +54,9 @@ contentEx -> Contents::contentEx
 excerptEx -> Contents::excerptEx
 ```
 
-`VOID_registerContentsHook()` 同时兼容 Typecho 1.2 风格的
-`Widget_Abstract_Contents` 与 Typecho 1.3 的 `Widget\Base\Contents`，并先规范化句柄，
-避免同一组件因别名被重复注册。Hook 名称、回调签名和调用顺序是公开兼容边界。
+三个 Hook 直接注册到 Typecho 1.3 的 `Widget\Base\Contents`，与核心
+`Contents::pluginHandle()` 使用同一插件句柄，每个组件只注册一次。Hook 名称、回调签名和
+调用顺序是公开兼容边界。
 
 模板通过 facade 读取标题、头图、归档、相邻文章和分类标签；`libs/Comments.php` 通过
 `Contents::parseBiaoQing()` 处理评论内容。数据库访问集中在 Repository，不应重新散落到
@@ -110,8 +110,9 @@ Feed 上下文从 Typecho 内容组件的 `parameter.type` 或 `parameter.isFeed
 ## 数据访问边界
 
 `ContentRepository` 通过 Typecho 的内容、评论和 Meta 组件读取单条记录或最近评论；
-`ArchiveRepository` 使用 Typecho 查询与组件读取相邻文章、公开归档、标签和分类。Typecho
-1.3 的归档分类关系可以批量填充，Typecho 1.2 则保留其组件原有计算路径。
+`ArchiveRepository` 使用 Typecho 查询与组件读取相邻文章、公开归档、标签和分类。归档页
+一次查询全部文章的分类关系，再通过 Typecho 1.3 内容组件的 `#categories` 计算字段缓存
+注入，不再逐篇查询分类。
 
 Repository 返回现有模板所需的 Typecho 对象或数组，不把数据转换成新的领域模型。修改
 查询条件时必须继续考虑发布时间、状态、类型、密码保护、评论审核与现有排序等契约，并
@@ -128,7 +129,7 @@ PHP 合同测试覆盖以下边界：
   `ContentsEmoteProductionContractTest.php`、`ContentsImageContractTest.php`：各转换领域。
 - `ContentsFeedContractTest.php`：完整 Feed、静态清理和禁止恢复截断。
 - `ContentsArchiveContractTest.php`、`ContentsRepositoryContractTest.php`：查询、组件组装与
-  Typecho 1.2/1.3 兼容分支。
+  归档分类批量注入。
 - `ArchiveTemplateContractTest.php`、`GalleryTemplateContractTest.php`、
   `EmptySiteContractTest.php` 及头图合同：模板发现、空上下文和输出连接点。
 

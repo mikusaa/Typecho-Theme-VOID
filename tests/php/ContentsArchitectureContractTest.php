@@ -69,19 +69,27 @@ foreach ($requiredClasses as $className) {
 
 architectureAssertSame(
     true,
-    strpos($functionsSource, "VOID_registerContentsHook('markdown', array('Contents', 'markdown'))") !== false,
+    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->markdown = array('Contents', 'markdown');") !== false,
     'markdown Hook 继续指向 Contents facade'
 );
 architectureAssertSame(
     true,
-    strpos($functionsSource, "VOID_registerContentsHook('contentEx', array('Contents', 'contentEx'))") !== false,
+    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->contentEx = array('Contents', 'contentEx');") !== false,
     'contentEx Hook 继续指向 Contents facade'
 );
 architectureAssertSame(
     true,
-    strpos($functionsSource, "VOID_registerContentsHook('excerptEx', array('Contents', 'excerptEx'))") !== false,
+    strpos($functionsSource, "Typecho_Plugin::factory(Widget\\Base\\Contents::class)->excerptEx = array('Contents', 'excerptEx');") !== false,
     'excerptEx Hook 继续指向 Contents facade'
 );
+
+foreach (array('VOID_normalizePluginHandle', 'VOID_registerContentsHook', 'Widget_Abstract_Contents', '__TYPECHO_CLASS_ALIASES__') as $retiredHookCompat) {
+    architectureAssertSame(
+        false,
+        strpos($functionsSource, $retiredHookCompat) !== false,
+        'Hook 只注册到 Typecho 1.3 命名空间类，不再保留 ' . $retiredHookCompat . ' 兼容层'
+    );
+}
 
 $runtimeSources = $functionsSource . $contentsSource . $bootstrapSource;
 $directories = array($root . '/libs/Content', $root . '/libs/Repository');

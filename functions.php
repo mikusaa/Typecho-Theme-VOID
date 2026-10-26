@@ -16,47 +16,6 @@ require_once __DIR__ . '/libs/Contents.php';
 require_once __DIR__ . '/libs/Comments.php';
 
 /**
- * 统一 Typecho 1.2 / 1.3 的插件句柄格式，避免别名导致重复注册。
- */
-function VOID_normalizePluginHandle($handle)
-{
-    if (defined('__TYPECHO_CLASS_ALIASES__')) {
-        $alias = array_search('\\' . ltrim($handle, '\\'), __TYPECHO_CLASS_ALIASES__, true);
-        if (false !== $alias) {
-            $handle = $alias;
-        }
-    }
-
-    if (class_exists('Typecho\\Common')) {
-        return Typecho\Common::nativeClassName($handle);
-    }
-
-    return trim(str_replace('\\', '_', $handle), '_');
-}
-
-/**
- * 为内容解析相关 hook 同时兼容旧版别名和 1.3 命名空间类。
- */
-function VOID_registerContentsHook($component, $callback)
-{
-    $targets = array('Widget_Abstract_Contents');
-    if (class_exists('Widget\Base\Contents')) {
-        $targets[] = 'Widget\Base\Contents';
-    }
-
-    $registered = array();
-    foreach ($targets as $target) {
-        $normalized = VOID_normalizePluginHandle($target);
-        if (isset($registered[$normalized])) {
-            continue;
-        }
-
-        Typecho_Plugin::factory($target)->{$component} = $callback;
-        $registered[$normalized] = true;
-    }
-}
-
-/**
  * 清理当前文章已缓存的计算字段，避免 Typecho 1.3 在主题 hook 注册前缓存旧内容。
  */
 function VOID_refreshArchiveComputedFields($archive)
@@ -73,9 +32,6 @@ function VOID_refreshArchiveComputedFields($archive)
 
         if ($reflection && $reflection->hasProperty('row')) {
             $rowProperty = $reflection->getProperty('row');
-            if (PHP_VERSION_ID < 80100) {
-                $rowProperty->setAccessible(true);
-            }
             $row = $rowProperty->getValue($archive);
 
             if (is_array($row)) {
@@ -92,9 +48,9 @@ function VOID_refreshArchiveComputedFields($archive)
 Typecho_Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');
 Typecho_Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addButton');
 // 为防止友链解析与 Markdown 冲突，重写 Markdown 函数
-VOID_registerContentsHook('markdown', array('Contents', 'markdown'));
-VOID_registerContentsHook('contentEx', array('Contents', 'contentEx'));
-VOID_registerContentsHook('excerptEx', array('Contents', 'excerptEx'));
+Typecho_Plugin::factory(Widget\Base\Contents::class)->markdown = array('Contents', 'markdown');
+Typecho_Plugin::factory(Widget\Base\Contents::class)->contentEx = array('Contents', 'contentEx');
+Typecho_Plugin::factory(Widget\Base\Contents::class)->excerptEx = array('Contents', 'excerptEx');
 
 /**
  * 主题启用
