@@ -8,7 +8,7 @@
 * 修复：[PJAX/缓存] 所有主题页面发送 `Vary: X-PJAX`，PJAX 局部片段额外发送 `Cache-Control: no-store`，避免浏览器、CDN 或整页缓存把不含样式的片段当作完整页面返回；使用 CDN 缓存 HTML 的站点请参见 README 常见问题。
 * 调整：[文档/缓存] README 常见问题与 `docs/frontend-javascript.md` 列出页面随设备类型及登录、评论者、字号和衬线字体 Cookie 变化的输出；使用 CDN 或整页缓存缓存 HTML 时，应让带 Typecho Cookie 的请求绕过缓存，以免把登录状态或评论邮箱返回给其他访客。
 * 调整：[安全] 超高级设置中自定义导航 `nav` 与社交链接 `link` 的地址只接受 HTTP(S)、站内相对地址和 `mailto:`，`javascript:` 等其他协议的条目不再输出；`[links]` 友链的地址与缩略图按 HTML 属性转义。
-* 优化：[评论/文章] 评论赞踩直接取自评论查询结果，父评论不在当前列表时一次批量取回作者名；文章标签改用 Typecho 1.3 的标签关系组件一次取出，不再按评论或标签逐条查询数据库。
+* 优化：[评论/文章] 评论赞踩直接取自评论查询结果；文章标签改用 Typecho 1.3 的标签关系组件一次取出，不再按评论或标签逐条查询数据库。
 * 优化：[PJAX] 连续点击链接时，被新导航取代的请求不再先在旧页面上完整重建一次组件。
 * 修复：[链接] `mailto:`、`javascript:` 等没有主机名的链接不再被自动加上 `target="_blank"`。
 * 修复：[归档页] 有文章缺少字数数据时，总字数不再显示为 `NaN`。
@@ -18,6 +18,7 @@
 * 修复：[Service Worker] 不再缓存跨域的不透明响应和其他非 2xx 响应，并清退可能存有不透明响应的 `static-vendor-native-v6`；只有带内容哈希或版本号的主题资源使用缓存优先，上传附件、插件资源和未带哈希的主题文件改为网络优先，替换后不再一直显示旧版本；路由改为按 Worker 所在目录推导站点路径，Typecho 安装在子目录时也能生效。更新后需重新将 `VOIDCacheRule.js` 复制到 Typecho 根目录。
 * 移除：[兼容性] 删除只为 PHP 8.0 及更早版本、Typecho 1.2 服务的兼容层：内容 Hook 直接注册到 Typecho 1.3 的 `Widget\Base\Contents`（移除全局函数 `VOID_normalizePluginHandle()` 与 `VOID_registerContentsHook()`），归档分类只走批量注入路径，评论网址必填设置不再兜底读取 1.2 的 `commentsRequireURL` 旧键。
 * 重构：[PHP] 主题源码改用 Typecho 1.3 的命名空间类（如 `\Typecho\Db`、`\Widget\Base\Contents`、`\Widget\Metas\Category\Rows`），不再引用 `Typecho_Db`、`Widget_Abstract_Contents` 等下划线别名；页面输出不变。
+* 重构：[评论] 评论组件改为继承 Typecho 1.3 核心评论归档组件，查询、嵌套、排序、分页和永久链接沿用核心实现，主题只保留评论节点渲染、父评论标签和回复链接，并通过全局 `threadedComments()` 回调接入；评论区 HTML 不变。
 * 修复：[评论] 前端邮箱预检不再拒绝带连字符的域名（如 `foo-bar.com`）和超过 4 个字母的顶级域名（如 `.photography`），最终仍以 Typecho 服务端校验为准。
 * 修复：[评论] 评论时间恢复为带 `datetime` 属性的 `<time>` 元素，此前标签名与属性粘连导致机器可读时间丢失。
 * 修复：[子目录安装] 首页、归档、搜索等非内容页的 `og:url` 和登录表单 `referer` 不再重复站点子目录（如 `/blog/blog/...`），主机名取自站点地址设置而非请求头。

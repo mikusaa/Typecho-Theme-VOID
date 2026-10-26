@@ -1,278 +1,149 @@
 <?php
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
-/**
- * 评论归档
- *
- * @category typecho
- * @package Widget
- * @copyright Copyright (c) 2008 Typecho team (http://www.typecho.org)
- * @license GNU General Public License 2.0
- * @version $Id$
- */
 
 /**
- * 评论归档组件
+ * VOID 评论组件
  *
- * @category typecho
- * @package Widget
- * @copyright Copyright (c) 2008 Typecho team (http://www.typecho.org)
- * @license GNU General Public License 2.0
+ * 查询、嵌套、排序、分页与永久链接沿用 Typecho 1.3 核心评论归档组件；
+ * 主题只负责评论节点渲染、父评论标签和 Ajax 评论使用的回复链接。
  */
-class VOID_Widget_Comments_Archive extends \Widget\Base\Comments
+class VOID_Widget_Comments_Archive extends \Widget\Comments\Archive
 {
-     /**
-     * 当前页
-     *
-     * @access private
-     * @var integer
-     */
-    private $_currentPage;
-
     /**
-     * 所有文章个数
+     * 本文评论作者名，按 coid 索引，用于父评论标签
      *
-     * @access private
-     * @var integer
-     */
-    private $_total = false;
-
-    /**
-     * 子父级评论关系
-     *
-     * @access private
      * @var array
      */
-    private $_threadedComments = array();
+    private $commentAuthors = array();
 
     /**
-     * 多级评论回调函数
-     * 
-     * @access private
-     * @var mixed
-     */
-    private $_customThreadedCommentsCallback = false;
-
-    /**
-     * _singleCommentOptions  
-     * 
-     * @var mixed
-     * @access private
-     */
-    private $_singleCommentOptions = NULL;
-
-
-    private $_commentAuthors = array();
-
-    /**
-     * 安全组件
-     */
-    private $_security = NULL;
-
-    /**
-     * 从 parentContent 读取字段（兼容 array / object）
+     * 将每行的值压入堆栈
      *
-     * @access private
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
+     * @param array $value 每行的值
+     * @return array
      */
-    private function getParentContentField($key, $default = '')
+    public function push(array $value): array
     {
-        $parentContent = $this->parameter->parentContent;
-        if (is_array($parentContent)) {
-            return isset($parentContent[$key]) ? $parentContent[$key] : $default;
-        }
-        if (is_object($parentContent)) {
-            // 兼容 Typecho Widget 的 __get
-            if (isset($parentContent->$key)) {
-                return $parentContent->$key;
-            }
-            if (property_exists($parentContent, $key)) {
-                return $parentContent->$key;
-            }
-            try {
-                $value = $parentContent->$key;
-                return ($value === NULL || $value === '') ? $default : $value;
-            } catch (Exception $e) {
-                return $default;
-            } catch (Throwable $e) {
-                return $default;
-            }
-        }
-        return $default;
+        // 超过最大嵌套层级时核心会把 parent 改挂到上上层，父评论标签仍指向实际回复的评论。
+        $value['realParent'] = $value['parent'];
+        $value = parent::push($value);
+        $this->commentAuthors[$value['coid']] = $value['author'];
+
+        return $value;
     }
 
     /**
-     * 获取评论分页路由所需 permalink path（避免出现 /{permalink}/...）
+     * 输出单条评论；由全局 threadedComments() 回调调用
      *
-     * @access private
-     * @return string
-     */
-    private function getParentPath()
-    {
-        $path = trim((string)$this->getParentContentField('path', ''));
-
-        if ($path === '') {
-            $path = trim((string)$this->getParentContentField('pathinfo', ''));
-        }
-
-        if ($path === '' || strpos($path, '{') !== false) {
-            $permalink = trim((string)$this->getParentContentField('permalink', ''));
-            if ($permalink !== '') {
-                $parsedPath = parse_url($permalink, PHP_URL_PATH);
-                if (is_string($parsedPath) && $parsedPath !== '') {
-                    $path = $parsedPath;
-                }
-            }
-        }
-
-        $path = ltrim($path, '/');
-        return $path;
-    }
-
-    /**
-     * 构造函数,初始化组件
-     *
-     * @access public
-     * @param mixed $request request对象
-     * @param mixed $response response对象
-     * @param mixed $params 参数列表
+     * @param \Widget\Comments\Archive $comments
+     * @param \Typecho\Config $singleCommentOptions
      * @return void
      */
-    public function __construct($request, $response, $params = NULL)
+    public static function renderComment($comments, $singleCommentOptions)
     {
-        parent::__construct($request, $response, $params);
-        $this->parameter->setDefault('parentId=0&commentPage=0&commentsNum=0&allowComment=1');
-        
-        \Widget\Security::alloc()->to($this->_security);
-
-        /** 初始化回调函数 */
-        if (function_exists('threadedComments')) {
-            $this->_customThreadedCommentsCallback = true;
-        }
-    }
-
-    /**
-     * 评论回调函数
-     * 
-     * @access private
-     * @return void
-     */
-    private function threadedCommentsCallback()
-    {
-        $singleCommentOptions = $this->_singleCommentOptions;
-        if (function_exists('threadedComments')) {
-            return threadedComments($this, $singleCommentOptions);
-        }
-
         $setting = $GLOBALS['VOIDSetting'];
-        
+
         $avatarClass = '';
         $commentClass = '';
-        if ($this->authorId) {
-            if ($this->authorId == $this->ownerId) {
+        if ($comments->authorId) {
+            if ($comments->authorId == $comments->ownerId) {
                 $avatarClass .= ' star';
             }
         }
 
+        $isFolded = false;
         if ($setting['VOIDPlugin']) {
-            $metaArr = $this->getLikesAndDislikes();
-            if ($metaArr['dislikes'] >= $setting['commentFoldThreshold'][0]
-            && ($metaArr['dislikes'] >= $metaArr['likes']*$setting['commentFoldThreshold'][1])) {
+            $metaArr = self::getLikesAndDislikes($comments);
+            $isFolded = $metaArr['dislikes'] >= $setting['commentFoldThreshold'][0]
+                && ($metaArr['dislikes'] >= $metaArr['likes']*$setting['commentFoldThreshold'][1]);
+            if ($isFolded) {
                 $commentClass .= ' fold';
             }
         }
+        $parentLabel = $comments instanceof self ? $comments->getParentLabel() : '';
 ?>
-<div id="<?php $this->theId(); ?>"
-    data-comment-parent="<?php echo (int)$this->parent; ?>"
-    data-comment-depth="<?php echo (int)$this->levels; ?>"
+<div id="<?php $comments->theId(); ?>"
+    data-comment-parent="<?php echo (int)$comments->parent; ?>"
+    data-comment-depth="<?php echo (int)$comments->levels; ?>"
     class="comment-body<?php
-    if ($this->levels > 0) {
+    if ($comments->levels > 0) {
         echo ' comment-child';
-        $this->levelsAlt(' comment-level-odd', ' comment-level-even');
+        $comments->levelsAlt(' comment-level-odd', ' comment-level-even');
     } else {
         echo ' comment-parent';
     }
-    $this->alt(' comment-odd', ' comment-even');
+    $comments->alt(' comment-odd', ' comment-even');
     echo $commentClass;
 ?>">
     <div class="comment-content-wrap">
         <div class="comment-meta">
             <div class="comment-author">
-                <span class="comment-avatar<?php echo $avatarClass; ?>"><?php $this->gravatar($singleCommentOptions->avatarSize, $singleCommentOptions->defaultAvatar); ?></span>
+                <span class="comment-avatar<?php echo $avatarClass; ?>"><?php $comments->gravatar($singleCommentOptions->avatarSize, $singleCommentOptions->defaultAvatar); ?></span>
                 <b><cite class="fn"><?php $singleCommentOptions->beforeAuthor();
-                $this->author();
-                $singleCommentOptions->afterAuthor(); ?></cite></b><span><?php echo $this->getParent(); ?></span>
+                $comments->author();
+                $singleCommentOptions->afterAuthor(); ?></cite></b><span><?php echo $parentLabel; ?></span>
             </div>
         </div>
         <div class="comment-content yue">
-            <?php if ($setting['VOIDPlugin'] && $metaArr['dislikes'] >= $setting['commentFoldThreshold'][0]
-            && ($metaArr['dislikes'] >= $metaArr['likes']*$setting['commentFoldThreshold'][1])) { ?>
-                <span class="fold">[该评论已被自动折叠 | <a no-pjax target="_self" href="javascript:void(0)" 
-                onclick="VOID_Vote.toggleFoldComment(<?php echo $this->coid; ?>, this)">点击展开</a>]</span>
+            <?php if ($isFolded) { ?>
+                <span class="fold">[该评论已被自动折叠 | <a no-pjax target="_self" href="javascript:void(0)"
+                onclick="VOID_Vote.toggleFoldComment(<?php echo $comments->coid; ?>, this)">点击展开</a>]</span>
             <?php }?>
-            <div class="comment-content-inner"><?php echo Contents::parseBiaoQing($this->content); ?></div>
+            <div class="comment-content-inner"><?php echo Contents::parseBiaoQing($comments->content); ?></div>
         </div>
         <div class="comment-actions">
-            <a href="<?php $this->permalink(); ?>"><time datetime="<?php $this->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
-            echo date('Y-m-d H:i', $this->created);
+            <a href="<?php $comments->permalink(); ?>"><time datetime="<?php $comments->date('c'); ?>"><?php $singleCommentOptions->beforeDate();
+            echo date('Y-m-d H:i', $comments->created);
             $singleCommentOptions->afterDate(); ?></time></a>
-            <?php if ('waiting' == $this->status) { ?>
+            <?php if ('waiting' == $comments->status) { ?>
             <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em>
             <?php } ?>
             <?php if ($setting['VOIDPlugin']) { ?>
-            <a no-pjax target="_self" class="comment-vote vote-button" 
-                href="javascript:void(0)" 
+            <a no-pjax target="_self" class="comment-vote vote-button"
+                href="javascript:void(0)"
                 onclick="VOID_Vote.vote(this)"
-                data-item-id="<?php echo $this->coid;?>" 
+                data-item-id="<?php echo $comments->coid;?>"
                 data-type="up"
                 data-table="comment"
             ><i class="voidicon-thumbs-up"></i> <span class="value"><?php echo $metaArr['likes']?></span>
             </a>
-            <a no-pjax target="_self" class="comment-vote vote-button" 
-                href="javascript:void(0)" 
+            <a no-pjax target="_self" class="comment-vote vote-button"
+                href="javascript:void(0)"
                 onclick="VOID_Vote.vote(this)"
-                data-item-id="<?php echo $this->coid;?>" 
+                data-item-id="<?php echo $comments->coid;?>"
                 data-type="down"
                 data-table="comment"
             ><i class="voidicon-thumbs-down"></i> <span class="value"><?php echo $metaArr['dislikes']?></span>
             </a>
             <?php } ?>
             <span class="comment-reply">
-                <?php $this->reply($singleCommentOptions->replyWord); ?>
+                <?php $comments->reply($singleCommentOptions->replyWord); ?>
             </span>
         </div>
     </div>
-    <?php if ($this->children) { ?>
+    <?php if ($comments->children) { ?>
     <div class="comment-children">
-        <?php $this->threadedComments(); ?>
+        <?php $comments->threadedComments(); ?>
     </div>
     <?php } ?>
 </div>
 <?php
     }
-  
-    private function getParent(){
+
+    /**
+     * 第二层及更深的回复显示被回复者；更浅的层级从缩进即可看出
+     *
+     * @return string
+     */
+    private function getParentLabel()
+    {
         if ($this->levels <= 1) {
             return '';
         }
 
-        $parentId = 0;
-        if (is_array($this->row) && isset($this->row['realParent'])) {
-            $parentId = (int)$this->row['realParent'];
-        } elseif (is_array($this->row) && isset($this->row['parent'])) {
-            $parentId = (int)$this->row['parent'];
-        }
-
-        if ($parentId <= 0) {
-            return '';
-        }
-
-        $author = '';
-        if (isset($this->_commentAuthors[$parentId])) {
-            $author = trim((string)$this->_commentAuthors[$parentId]);
-        }
-
+        // levels 大于 0 说明父评论在本次查询结果中，作者名已由 push() 记录。
+        $parentId = (int) $this->realParent;
+        $author = isset($this->commentAuthors[$parentId]) ? trim((string) $this->commentAuthors[$parentId]) : '';
         if ($author === '') {
             $author = '已删除的评论';
         }
@@ -282,402 +153,33 @@ class VOID_Widget_Comments_Archive extends \Widget\Base\Comments
     }
 
     /**
-     * 父评论不在当前列表中（如未通过审核）时，一次性补齐其作者名
-     */
-    private function loadMissingParentAuthors()
-    {
-        $missing = array();
-        foreach ($this->stack as $comment) {
-            $parentId = (int) $comment['parent'];
-            if ($parentId > 0 && !isset($this->_commentAuthors[$parentId])) {
-                $missing[$parentId] = true;
-            }
-        }
-
-        if (empty($missing)) {
-            return;
-        }
-
-        $parentIds = array_keys($missing);
-        foreach ($parentIds as $parentId) {
-            $this->_commentAuthors[$parentId] = '';
-        }
-
-        $rows = $this->db->fetchAll($this->db->select('coid', 'author')
-            ->from('table.comments')
-            ->where('coid IN ?', $parentIds));
-        foreach ($rows as $row) {
-            $this->_commentAuthors[(int) $row['coid']] = (string) $row['author'];
-        }
-    }
-
-    /**
      * 获取评论赞踩
+     *
+     * @param \Widget\Comments\Archive $comments
+     * @return array
      */
-    private function getLikesAndDislikes() {
+    private static function getLikesAndDislikes($comments)
+    {
         // 评论列表按整行查询，VOID 插件的赞踩列已在当前行中，无需逐条再查。
-        $row = is_array($this->row) ? $this->row : array();
         return array(
-            'likes' => isset($row['likes']) ? (int) $row['likes'] : 0,
-            'dislikes' => isset($row['dislikes']) ? (int) $row['dislikes'] : 0
+            'likes' => (int) $comments->likes,
+            'dislikes' => (int) $comments->dislikes
         );
     }
-    
-    /**
-     * 获取当前评论链接
-     *
-     * @access protected
-     * @return string
-     */
-    protected function ___permalink() : string
-    {
 
-        if ($this->options->commentsPageBreak) {            
-            $parentPath = $this->getParentPath();
-            if (!empty($parentPath)) {
-                $pageRow = array('permalink' => $parentPath, 'commentPage' => $this->_currentPage);
-                return \Typecho\Router::url('comment_page', $pageRow, $this->options->index) . '#' . $this->theId;
-            }
-        }
-
-        return (string)$this->getParentContentField('permalink', '') . '#' . $this->theId;
-    }
-
-    /**
-     * 子评论
-     *
-     * @access protected
-     * @return array
-     */
-    protected function ___children(): array
-    {
-        return $this->options->commentsThreaded && !$this->isTopLevel && isset($this->_threadedComments[$this->coid]) 
-            ? $this->_threadedComments[$this->coid] : array();
-    }
-
-    /**
-     * 是否到达顶层
-     *
-     * @access protected
-     * @return boolean
-     */
-    protected function ___isTopLevel(): bool
-    {
-        // 对齐 Typecho 1.3：顶层判定语义与核心一致
-        return $this->levels > $this->options->commentsMaxNestingLevels - 2;
-    }
-
-
-
-    /**
-     * 输出文章评论数
-     *
-     * @access public
-     * @param string $string 评论数格式化数据
-     * @return void
-     */
-    public function num()
-    {
-        $args = func_get_args();
-        if (!$args) {
-            $args[] = '%d';
-        }
-
-        $num = intval($this->_total);
-
-        echo sprintf(isset($args[$num]) ? $args[$num] : array_pop($args), $num);
-    }
-
-    /**
-     * 执行函数
-     *
-     * @access public
-     * @return void
-     */
-    public function execute()
-    {
-        if (!$this->parameter->parentId) {
-            return;
-        }
-
-        // 对齐 Typecho 1.3：仅显示已审核评论 + 当前访客自己的待审核评论
-        $unapprovedCommentId = intval(\Typecho\Cookie::get('__typecho_unapproved_comment', 0));
-        $select = $this->select()->where('table.comments.cid = ?', $this->parameter->parentId)
-            ->where(
-                'table.comments.status = ? OR (table.comments.coid = ? AND table.comments.status <> ?)',
-                'approved',
-                $unapprovedCommentId,
-                'approved'
-            );
-
-        $threadedSelect = NULL;
-        
-        if ($this->options->commentsShowCommentOnly) {
-            $select->where('table.comments.type = ?', 'comment');
-        }
-        
-        $select->order('table.comments.coid', 'ASC');
-        $this->db->fetchAll($select, array($this, 'push'));
-        $this->loadMissingParentAuthors();
-        
-        /** 需要输出的评论列表 */
-        $outputComments = array();
-        
-        /** 如果开启评论回复 */
-        if ($this->options->commentsThreaded) {
-        
-            foreach ($this->stack as $coid => &$comment) {
-                
-                /** 取出父节点 */
-                $parent = $comment['parent'];
-            
-                /** 如果存在父节点 */
-                if (0 != $parent && isset($this->stack[$parent])) {
-                
-                    /** 如果当前节点深度大于最大深度, 则将其挂接在父节点上 */
-                    // 对齐 Typecho 1.3：遵循 commentsMaxNestingLevels 配置，不再硬编码层级
-                    if ($comment['levels'] >= (int)$this->options->commentsMaxNestingLevels) {
-                        $comment['levels'] = $this->stack[$parent]['levels'];
-                        $parent = $this->stack[$parent]['parent'];     // 上上层节点
-                        $comment['parent'] = $parent;
-                    }
-                
-                    /** 计算子节点顺序 */
-                    $comment['order'] = isset($this->_threadedComments[$parent]) 
-                        ? count($this->_threadedComments[$parent]) + 1 : 1;
-                
-                    /** 如果是子节点 */
-                    $this->_threadedComments[$parent][$coid] = $comment;
-                } else {
-                    $outputComments[$coid] = $comment;
-                }
-                
-            }
-        
-            $this->stack = $outputComments;
-        }
-        
-        /** 评论排序 */
-        if ('DESC' == $this->options->commentsOrder) {
-            $this->stack = array_reverse($this->stack, true);
-            $this->_threadedComments = array_map('array_reverse', $this->_threadedComments);
-        }
-        
-        /** 评论总数 */
-        $this->_total = count($this->stack);
-        
-        /** 对评论进行分页 */
-        if ($this->options->commentsPageBreak) {
-            if ('last' == $this->options->commentsPageDisplay && !$this->parameter->commentPage) {
-                $this->_currentPage = ceil($this->_total / $this->options->commentsPageSize);
-            } else {
-                $this->_currentPage = $this->parameter->commentPage ? $this->parameter->commentPage : 1;
-            }
-            
-            /** 截取评论 */
-            $this->stack = array_slice($this->stack,
-                ($this->_currentPage - 1) * $this->options->commentsPageSize, $this->options->commentsPageSize);
-        }
-        
-        /** 评论置位 */
-        $this->length = count($this->stack);
-        $this->row = $this->length > 0 ? current($this->stack) : array();
-        
-        reset($this->stack);
-    }
-
-    /**
-     * 将每行的值压入堆栈
-     *
-     * @access public
-     * @param array $value 每行的值
-     * @return array
-     */
-    public function push(array $value) : array
-    {
-        $value = $this->filter($value);
-        
-        /** 计算深度 */
-        if (0 != $value['parent'] && isset($this->stack[$value['parent']]['levels'])) {
-            $value['levels'] = $this->stack[$value['parent']]['levels'] + 1;
-        } else {
-            $value['levels'] = 0;
-        }
-
-        $value['realParent'] = $value['parent'];
-
-        /** 重载push函数,使用coid作为数组键值,便于索引 */
-        $this->stack[$value['coid']] = $value;
-        $this->_commentAuthors[$value['coid']] = $value['author'];
-        $this->length ++;
-        
-        return $value;
-    }
-
-    /**
-     * 输出分页
-     *
-     * @access public
-     * @param string $prev 上一页文字
-     * @param string $next 下一页文字
-     * @param int $splitPage 分割范围
-     * @param string $splitWord 分割字符
-     * @param string $template 展现配置信息
-     * @return void
-     */
-    public function pageNav($prev = '&laquo;', $next = '&raquo;', $splitPage = 3, $splitWord = '...', $template = '')
-    {
-        if ($this->options->commentsPageBreak && $this->_total > $this->options->commentsPageSize) {
-            $default = array(
-                'wrapTag'       =>  'ol',
-                'wrapClass'     =>  'page-navigator'
-            );
-
-            if (is_string($template)) {
-                parse_str($template, $config);
-            } else {
-                $config = $template;
-            }
-
-            $template = array_merge($default, $config);
-            $parentPath = $this->getParentPath();
-            if (empty($parentPath)) {
-                return;
-            }
-            $query = \Typecho\Router::url('comment_page', array(
-                'permalink' => $parentPath,
-                'commentPage' => '{commentPage}'
-            ), $this->options->index);
-
-            /** 使用盒状分页 */
-            $nav = new \Typecho\Widget\Helper\PageNavigator\Box($this->_total,
-                $this->_currentPage, $this->options->commentsPageSize, $query);
-            $nav->setPageHolder('commentPage');
-            $nav->setAnchor('comments');
-            
-            echo '<' . $template['wrapTag'] . (empty($template['wrapClass']) 
-                    ? '' : ' class="' . $template['wrapClass'] . '"') . '>';
-            $nav->render($prev, $next, $splitPage, $splitWord, $template);
-            echo '</' . $template['wrapTag'] . '>';
-        }
-    }
-
-    /**
-     * 递归输出评论
-     *
-     * @access protected
-     * @return void
-     */
-    public function threadedComments()
-    {
-        $children = $this->children;
-        if ($children) {
-            //缓存变量便于还原
-            $tmp = $this->row;
-            $this->sequence ++;
-
-            //在子评论之前输出
-            echo $this->_singleCommentOptions->before;
-
-            foreach ($children as $child) {
-                $this->row = $child;
-                $this->threadedCommentsCallback();
-                $this->row = $tmp;
-            }
-
-            //在子评论之后输出
-            echo $this->_singleCommentOptions->after;
-
-            $this->sequence --;
-        }
-    }
-    
-    /**
-     * 列出评论
-     * 
-     * @access private
-     * @param mixed $singleCommentOptions 单个评论自定义选项
-     * @return void
-     */
-    public function listComments($singleCommentOptions = NULL)
-    {
-        //初始化一些变量
-        $this->_singleCommentOptions = \Typecho\Config::factory($singleCommentOptions);
-        $this->_singleCommentOptions->setDefault(array(
-            'before'        =>  '<ol class="comment-list">',
-            'after'         =>  '</ol>',
-            'beforeAuthor'  =>  '',
-            'afterAuthor'   =>  '',
-            'beforeDate'    =>  '',
-            'afterDate'     =>  '',
-            'dateFormat'    =>  $this->options->commentDateFormat,
-            'replyWord'     =>  '回复',
-            'commentStatus' =>  '评论正等待审核!',
-            'avatarSize'    =>  32,
-            'defaultAvatar' =>  NULL
-        ));
-        $this->pluginHandle()->trigger($plugged)->listComments($this->_singleCommentOptions, $this);
-
-        if (!$plugged) {
-            if ($this->have()) { 
-                echo $this->_singleCommentOptions->before;
-            
-                while ($this->next()) {
-                    $this->threadedCommentsCallback();
-                }
-            
-                echo $this->_singleCommentOptions->after;
-            }
-        }
-    }
-    
-    /**
-     * 重载alt函数,以适应多级评论
-     * 
-     * @access public
-     * @return void
-     */
-    public function alt(...$args)
-    {
-        $args = func_get_args();
-        $num = func_num_args();
-        
-        $sequence = $this->levels <= 0 ? $this->sequence : $this->order;
-        
-        $split = $sequence % $num;
-        echo $args[(0 == $split ? $num : $split) -1];
-    }
-
-    /**
-     * 根据深度余数输出
-     *
-     * @access public
-     * @param string $param 需要输出的值
-     * @return void
-     */
-    public function levelsAlt()
-    {
-        $args = func_get_args();
-        $num = func_num_args();
-        $split = $this->levels % $num;
-        echo $args[(0 == $split ? $num : $split) -1];
-    }
-    
     /**
      * 评论回复链接
-     * 
-     * @access public
+     *
      * @param string $word 回复链接文字
      * @return void
      */
-    public function reply($word = '')
+    public function reply(string $word = '')
     {
-        // 对齐 Typecho 1.3：达到顶层时不再显示回复入口
         if ($this->options->commentsThreaded && !$this->isTopLevel && $this->parameter->allowComment) {
             $word = empty($word) ? '回复' : $word;
             $cancelWord = '取消回复';
-            $this->pluginHandle()->trigger($plugged)->reply($word, $this);
-            
+            self::pluginHandle()->trigger($plugged)->call('reply', $word, $this);
+
             if (!$plugged) {
                 echo '<a no-pjax href="' . substr($this->permalink, 0, - strlen($this->theId) - 1) . '?replyTo=' . $this->coid .
                     '#' . $this->parameter->respondId . '" rel="nofollow" data-comment-id="' . $this->theId .
@@ -689,26 +191,38 @@ class VOID_Widget_Comments_Archive extends \Widget\Base\Comments
             }
         }
     }
-    
+
     /**
      * 取消评论回复链接
-     * 
-     * @access public
+     *
      * @param string $word 取消回复链接文字
      * @return void
      */
-    public function cancelReply($word = '')
+    public function cancelReply(string $word = '')
     {
         if ($this->options->commentsThreaded) {
             $word = empty($word) ? '取消回复' : $word;
-            $this->pluginHandle()->trigger($plugged)->cancelReply($word, $this);
-            
+            self::pluginHandle()->trigger($plugged)->call('cancelReply', $word, $this);
+
             if (!$plugged) {
-                // 兼容 Typecho 1.3：改为 get() 读取，避免使用已弃用的 request magic 属性
                 $replyId = $this->request->filter('int')->get('replyTo');
-                echo '<a id="cancel-comment-reply-link" href="' . (string)$this->getParentContentField('permalink', '') . '#' . $this->parameter->respondId .
+                echo '<a id="cancel-comment-reply-link" href="' . $this->parentContent->permalink . '#' . $this->parameter->respondId .
                 '" rel="nofollow"' . ($replyId ? '' : ' style="display:none"') . ' onclick="return AjaxComment.cancelActiveReply();">' . $word . '</a>';
             }
         }
+    }
+}
+
+if (!function_exists('threadedComments')) {
+    /**
+     * Typecho 1.3 评论组件渲染每条评论时调用的主题回调
+     *
+     * @param \Widget\Comments\Archive $comments
+     * @param \Typecho\Config $singleCommentOptions
+     * @return void
+     */
+    function threadedComments($comments, $singleCommentOptions)
+    {
+        VOID_Widget_Comments_Archive::renderComment($comments, $singleCommentOptions);
     }
 }

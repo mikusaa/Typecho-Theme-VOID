@@ -134,7 +134,8 @@ $this->widget('VOID_Widget_Comments_Archive', $parameter)->to($comments);
             'before'        =>  '<div class="comment-list">',
             'after'         =>  '</div>',
             'avatarSize'    =>  64,
-            'dateFormat'    =>  'Y-m-d H:i'
+            'dateFormat'    =>  'Y-m-d H:i',
+            'commentStatus' =>  '评论正等待审核!'
             )); ?>
             <?php $comments->pageNav('<span aria-label="评论上一页">←</span>', '<span aria-label="评论下一页">→</span>', 1, '...', 'wrapClass=pager&prevClass=prev&nextClass=next'); ?>
         <?php endif; ?>
