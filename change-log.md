@@ -2,9 +2,13 @@
 
 **开发中 | Unreleased**
 
+**🛠️ 2026-10-26 Version 4.1.0**
+
+> **兼容性升级提醒：** VOID 4.1 起只支持 PHP 8.5 与 Typecho 1.3，不再兼容 PHP 7.x、PHP 8.0～8.4 和 Typecho 1.2 及更早版本，主题不会在旧环境中给出降级提示。升级前请先确认站点运行环境；暂时无法升级环境的站点请继续使用 4.0.0。
+>
+> **缓存升级提醒：** 更新主题后，请将主题 `assets` 文件夹中的 `VOIDCacheRule.js` 复制到 Typecho 站点根目录并覆盖旧文件。
+
 * 调整：[兼容性] 主题只支持 PHP 8 的最新稳定小版本和 Typecho 最新正式版，当前为 PHP 8.5 与 Typecho 1.3；不再兼容 PHP 7.x、PHP 8.0～8.4 和 Typecho 1.2 及更早版本，CI 的 PHP 合同矩阵移除 PHP 7.0。升级前请先确认站点运行环境。
-* 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
-* 调整：[PJAX] 移除后台设置中的 Beta 标记和过时提示，新安装及缺少该设置时默认开启；已明确关闭 PJAX 的站点保留原选择。
 * 修复：[PJAX/缓存] 所有主题页面发送 `Vary: X-PJAX`，PJAX 局部片段额外发送 `Cache-Control: no-store`，避免浏览器、CDN 或整页缓存把不含样式的片段当作完整页面返回；使用 CDN 缓存 HTML 的站点请参见 README 常见问题。
 * 调整：[文档/缓存] README 常见问题与 `docs/frontend-javascript.md` 列出页面随设备类型及登录、评论者、字号和衬线字体 Cookie 变化的输出；使用 CDN 或整页缓存缓存 HTML 时，应让带 Typecho Cookie 的请求绕过缓存，以免把登录状态或评论邮箱返回给其他访客。
 * 调整：[安全] 超高级设置中自定义导航 `nav` 与社交链接 `link` 的地址只接受 HTTP(S)、站内相对地址和 `mailto:`，`javascript:` 等其他协议的条目不再输出；`[links]` 友链的地址与缩略图按 HTML 属性转义。
@@ -27,7 +31,6 @@
 * 修复：[评论] 评论时间恢复为带 `datetime` 属性的 `<time>` 元素，此前标签名与属性粘连导致机器可读时间丢失。
 * 修复：[子目录安装] 首页、归档、搜索等非内容页的 `og:url` 和登录表单 `referer` 不再重复站点子目录（如 `/blog/blog/...`），主机名取自站点地址设置而非请求头。
 * 修复：[后台编辑器] 文章没有用户自定义字段时，主题移走 VOID 扩展字段后不再删除原生字段列表，“+添加字段”按钮恢复可用（[#1](https://github.com/mikusaa/Typecho-Theme-VOID/issues/1)）。
-* 调整：[文档] 将超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。
 
 **🧩 2026-09-05 Version 4.0.0**
 
@@ -43,6 +46,9 @@
 * 重构：[评论交互] 将评论查询、回复与取消、hash 同步、线程展开收起、分页渲染以及评论提交迁移到原生 DOM、FormData、fetch 和 DOMParser，保持 URL-encoded 协议、PJAX 幂等、焦点恢复、滚动位置及防重复/陈旧写入。
 * 移除：[Feed] 移除主题内置的正文截断及后台选项，改由可选的 FeedEnhancer 1.1.0 或更高版本负责；旧主题设置不会自动迁移，未安装插件时恢复 Typecho 原生输出，需要接近旧版长度时可在插件中设置为 300 字。
 * 调整：[工程] 统一 `make dev-build`、`make verify` 和 `make build`，开发运行单元不再写回源码目录；PHP 测试与语法检查自动发现目标，CI 验证 PR 和 PHP 7.0/8.5，并只从通过验证的同一提交制品发布 nightly。
+* 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
+* 调整：[PJAX] 移除后台设置中的 Beta 标记和过时提示，新安装及缺少该设置时默认开启；已明确关闭 PJAX 的站点保留原选择。
+* 调整：[文档] 将超高级设置说明移至 `docs/advanceSetting.md`，不再随主题构建包发布。
 
 **🖼️ 2026-09-04 Version 3.6.2**
 
