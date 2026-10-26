@@ -91,8 +91,7 @@ $setting = $GLOBALS['VOIDSetting'];
                                     $referer = Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'));
                                     echo Utils::escapeHtml($referer);
                                 } else {
-                                    $referer = rtrim($this->options->rootUrl, '/') . '/'
-                                        . ltrim($this->request->getRequestUri(), '/');
+                                    $referer = Utils::getRequestPageUrl($this->options->rootUrl, $this->request->getRequestUri());
                                     echo htmlspecialchars($referer, ENT_QUOTES, 'UTF-8');
                                 }
                             ?>">
@@ -123,7 +122,7 @@ $setting = $GLOBALS['VOIDSetting'];
         <script id="void-service-worker-config" type="application/json"><?php echo Utils::encodeJsonForHtml($serviceWorkerUri); ?></script>
         <script src="<?php Utils::indexTheme('/assets/service-worker-registration-231a2de8c8.js'); ?>"></script>
         <script data-manual src="<?php Utils::indexTheme('/assets/bundle-4ac796cc8e.js'); ?>"></script>
-        <script src="<?php Utils::indexTheme('/assets/VOID-63e76140c9.js'); ?>"></script>
+        <script src="<?php Utils::indexTheme('/assets/VOID-5b702fb897.js'); ?>"></script>
         <?php if($setting['pjax']): ?>
         <script>
             if (VOID.pjaxReloadHandler) {

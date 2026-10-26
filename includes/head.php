@@ -52,7 +52,7 @@ if (isset($_POST['void_action'])) {
     $isContentPage = $this->have() && ($this->is('post') || $this->is('page'));
     $pageUrl = $isContentPage
         ? Utils::decodeHtmlEntities(Utils::captureOutput($this, 'permalink'))
-        : rtrim($this->options->rootUrl, '/') . '/' . ltrim($this->request->getRequestUri(), '/');
+        : Utils::getRequestPageUrl($this->options->rootUrl, $this->request->getRequestUri());
     if($isContentPage){
         if($this->fields->banner != '')
             $banner=$this->fields->banner;

@@ -46,6 +46,13 @@
 
 ## 开始使用
 
+### 运行环境
+
+* PHP 8.5（只支持 PHP 8 的最新稳定小版本）
+* Typecho 1.3（只支持 Typecho 最新正式版）
+
+旧版 PHP 存在已公开的高危漏洞，主题不再兼容 PHP 7.x、PHP 8.0～8.4 或 Typecho 1.2 及更早版本。PHP 或 Typecho 发布新的正式版后，支持基线随之上调。
+
 ### 安装主题
 
 1. 下载主题：[发布版](https://github.com/mikusaa/Typecho-Theme-VOID/releases)，注意是下载 VOID-x.x.x.zip 这个压缩包，而不是 Source code
@@ -200,7 +207,7 @@ Feed 截断、Media RSS 和浏览器预览可选安装 [FeedEnhancer 1.1.0 或�
 
 <details><summary>页面空白</summary><br>
 
-* 另外，推荐使用 PHP 7.0 及以上版本搭配 MySQL 数据库。PHP 5.6 或者更低版本以及其它数据库可能出现未知问题（并且我不会去修复）。
+* 另外，请确认站点满足[运行环境](#运行环境)要求，并搭配 MySQL 数据库。旧版 PHP、旧版 Typecho 以及其它数据库可能出现未知问题（并且我不会去修复）。
 
 </details>
 
