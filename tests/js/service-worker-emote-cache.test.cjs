@@ -9,7 +9,7 @@ const ANIMATED_CACHE = 'emote-animated-native-v6';
 const EMOTE_STATIC_CACHE = 'emote-static-native-v6';
 const FONT_ASSETS_CACHE = 'font-assets-native-v1';
 const STATIC_ASSETS_CACHE = 'static-assets-native-v6';
-const STATIC_VENDOR_CACHE = 'static-vendor-native-v6';
+const STATIC_VENDOR_CACHE = 'static-vendor-native-v7';
 const WORKER_PATH = path.resolve(__dirname, '../../assets/VOIDCacheRule.js');
 
 class FakeRequest {
@@ -80,7 +80,7 @@ class FakeCache {
     }
 }
 
-function loadWorker(fetchImplementation, existingCacheStores) {
+function loadWorker(fetchImplementation, existingCacheStores, workerUrl = `${ORIGIN}/VOIDCacheRule.js`) {
     const listeners = new Map();
     const cacheStores = existingCacheStores || new Map();
     const deletedDatabases = [];
@@ -103,8 +103,8 @@ function loadWorker(fetchImplementation, existingCacheStores) {
     };
     const self = {
         Promise,
-        location: { origin: ORIGIN },
-        registration: { scope: `${ORIGIN}/` },
+        location: new URL(workerUrl),
+        registration: { scope: new URL('./', workerUrl).href },
         clients: {
             claim() {
                 claimCount += 1;
@@ -207,6 +207,8 @@ function animatedUrl(id) {
 function fontUrl(id) {
     return localUrl(`/usr/themes/VOID/assets/fonts/fontsource/${id}.woff2`);
 }
+
+const HASHED_SCRIPT_URL = localUrl('/usr/themes/VOID/assets/VOID-5b702fb897.js');
 
 test('native routes replace sw-toolbox and leave unrelated requests alone', async () => {
     const source = fs.readFileSync(WORKER_PATH, 'utf8');
@@ -314,7 +316,7 @@ test('animated cache hits refresh recency before strict 48-entry eviction', asyn
 });
 
 test('warm static hits avoid rewrites while animated LRU refresh stays non-blocking', async () => {
-    const staticUrl = localUrl('/usr/themes/VOID/assets/app.js');
+    const staticUrl = HASHED_SCRIPT_URL;
     const animation = animatedUrl('001');
     let fetchCount = 0;
     const worker = loadWorker((request) => {
@@ -497,6 +499,7 @@ test('failed responses from every cache-first route are never stored', async () 
         new FakeRequest(animatedUrl('001')),
         new FakeRequest(localUrl('/usr/themes/VOID/assets/libs/emotes/bangumi/poster/001.webp')),
         new FakeRequest(fontUrl('missing')),
+        new FakeRequest(localUrl('/usr/themes/VOID/assets/missing-0123456789.js')),
         new FakeRequest(localUrl('/usr/themes/VOID/assets/missing.js')),
         new FakeRequest('https://secure.gravatar.com/avatar/missing'),
         new FakeRequest('https://fonts.gstatic.com/s/font.woff2')
@@ -513,16 +516,116 @@ test('failed responses from every cache-first route are never stored', async () 
     }
 });
 
-test('opaque vendor responses remain cacheable', async () => {
-    const url = 'https://fonts.gstatic.cn/s/font.woff2';
-    const worker = loadWorker(() => Promise.resolve(new FakeResponse('font', 0)));
+test('opaque vendor responses pass through without entering the cache', async () => {
+    const opaqueUrls = [
+        'https://secure.gravatar.com/avatar/opaque',
+        'https://fonts.googleapis.com/css2?family=Opaque',
+        'https://fonts.gstatic.cn/s/opaque.woff2'
+    ];
+    const corsUrl = 'https://fonts.gstatic.com/s/cors.woff2';
+    const worker = loadWorker((request) => Promise.resolve(
+        request.url === corsUrl ? new FakeResponse('font') : new FakeResponse('hidden', 0)
+    ));
 
-    const response = await worker.dispatchFetch(new FakeRequest(url));
+    for (const url of opaqueUrls) {
+        const response = await worker.dispatchFetch(new FakeRequest(url));
+        assert.equal(response.status, 0, url);
+    }
+    await worker.dispatchFetch(new FakeRequest(corsUrl));
     await worker.settleFetches();
-    const cache = worker.cacheStores.get(STATIC_VENDOR_CACHE);
 
-    assert.equal(response.status, 0);
-    assert.equal((await cache.keys()).length, 1);
+    const urls = (await worker.cacheStores.get(STATIC_VENDOR_CACHE).keys())
+        .map((request) => request.url);
+    assert.deepEqual(urls, [corsUrl], 'only a readable successful response may be cached');
+});
+
+test('hashed and versioned theme assets are cache-first', async () => {
+    const urls = [
+        HASHED_SCRIPT_URL,
+        localUrl('/usr/themes/VOID/assets/bundle-a00d82e627.css'),
+        localUrl('/usr/themes/VOID/assets/libs/mathjax/4.1.3/tex-svg.js')
+    ];
+    let fetchCount = 0;
+    let offline = false;
+    const worker = loadWorker((request) => {
+        fetchCount += 1;
+        if (offline) {
+            return Promise.reject(new Error('offline'));
+        }
+        return Promise.resolve(new FakeResponse(request.url));
+    });
+
+    for (const url of urls) {
+        await worker.dispatchFetch(new FakeRequest(url));
+    }
+    await worker.settleFetches();
+    offline = true;
+    for (const url of urls) {
+        assert.equal((await worker.dispatchFetch(new FakeRequest(url))).body, url);
+    }
+
+    assert.equal(fetchCount, urls.length, 'warm immutable assets must not use the network');
+});
+
+test('replaceable files under usr are network-first with an offline fallback', async () => {
+    const urls = [
+        localUrl('/usr/uploads/2026/10/cover.jpg'),
+        localUrl('/usr/plugins/VOID/assets/plugin.js'),
+        localUrl('/usr/themes/VOID/assets/fonts/void-icon.woff2'),
+        localUrl('/usr/themes/VOID/assets/libs/mathjax/latest/tex-svg.js'),
+        localUrl('/usr/themes/VOID/assets/VOID.js')
+    ];
+    let revision = 1;
+    let offline = false;
+    const worker = loadWorker((request) => {
+        if (offline) {
+            return Promise.reject(new Error('offline'));
+        }
+        return Promise.resolve(new FakeResponse(`${request.url}#${revision}`));
+    });
+
+    for (const url of urls) {
+        await worker.dispatchFetch(new FakeRequest(url));
+    }
+    await worker.settleFetches();
+    revision = 2;
+    for (const url of urls) {
+        assert.equal((await worker.dispatchFetch(new FakeRequest(url))).body, `${url}#2`, url);
+    }
+    await worker.settleFetches();
+    offline = true;
+    for (const url of urls) {
+        assert.equal((await worker.dispatchFetch(new FakeRequest(url))).body, `${url}#2`, url);
+    }
+
+    const cache = worker.cacheStores.get(STATIC_ASSETS_CACHE);
+    assert.equal((await cache.keys()).length, urls.length);
+});
+
+test('a subdirectory install derives every route from the Worker location', async () => {
+    const worker = loadWorker(
+        (request) => Promise.resolve(new FakeResponse(request.url)),
+        undefined,
+        `${ORIGIN}/blog/VOIDCacheRule.js`
+    );
+    const routed = [
+        [localUrl('/blog/usr/themes/VOID/assets/libs/emotes/bangumi/animated/001.gif'), ANIMATED_CACHE],
+        [localUrl('/blog/usr/themes/VOID/assets/libs/emotes/packs.json'), EMOTE_STATIC_CACHE],
+        [localUrl('/blog/usr/themes/VOID/assets/fonts/fontsource/open-sans.woff2'), FONT_ASSETS_CACHE],
+        [localUrl('/blog/usr/themes/VOID/assets/VOID-5b702fb897.js'), STATIC_ASSETS_CACHE],
+        [localUrl('/blog/usr/uploads/cover.jpg'), STATIC_ASSETS_CACHE]
+    ];
+
+    for (const [url] of routed) {
+        assert.ok(worker.dispatchFetch(new FakeRequest(url)), url);
+    }
+    assert.equal(worker.dispatchFetch(new FakeRequest(HASHED_SCRIPT_URL)), undefined);
+    assert.equal(worker.dispatchFetch(new FakeRequest(localUrl('/usr/uploads/cover.jpg'))), undefined);
+    await worker.settleFetches();
+
+    for (const [url, cacheName] of routed) {
+        assert.ok(await worker.cacheStores.get(cacheName).match(new FakeRequest(url)), url);
+    }
 });
 
 test('manifest routes prefer a successful network response and fall back offline', async () => {
@@ -627,6 +730,8 @@ test('activation retires toolbox caches and metadata without deleting native cac
     const defaultCache = `$$$toolbox-cache$$$${ORIGIN}/$$$`;
 
     await worker.cacheStores.set('static-assets-toolbox-v5', new FakeCache());
+    await worker.cacheStores.set('static-vendor-native-v6', new FakeCache());
+    await worker.cacheStores.set(STATIC_VENDOR_CACHE, new FakeCache());
     await worker.cacheStores.set(defaultCache, new FakeCache());
     await worker.cacheStores.set(`${defaultCache}$$$inactive$$$`, new FakeCache());
     await worker.cacheStores.set(FONT_ASSETS_CACHE, new FakeCache());
@@ -638,6 +743,8 @@ test('activation retires toolbox caches and metadata without deleting native cac
     assert.equal(worker.getSkipWaitingCount(), 1);
     assert.equal(worker.getClaimCount(), 1);
     assert.ok(!worker.cacheStores.has('static-assets-toolbox-v5'));
+    assert.ok(!worker.cacheStores.has('static-vendor-native-v6'), 'opaque-era vendor cache must retire');
+    assert.ok(worker.cacheStores.has(STATIC_VENDOR_CACHE));
     assert.ok(!worker.cacheStores.has(defaultCache));
     assert.ok(!worker.cacheStores.has(`${defaultCache}$$$inactive$$$`));
     assert.ok(worker.cacheStores.has(FONT_ASSETS_CACHE));

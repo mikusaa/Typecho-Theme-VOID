@@ -5,7 +5,8 @@
   'use strict';
 
   var cacheVersion = '-native-v6';
-  var staticVendorCacheName = 'static-vendor' + cacheVersion;
+  // v6 stored opaque third-party responses; v7 starts from verified successes only.
+  var staticVendorCacheName = 'static-vendor-native-v7';
   var staticAssetsCacheName = 'static-assets' + cacheVersion;
   var emoteStaticCacheName = 'emote-static' + cacheVersion;
   var emoteAnimatedCacheName = 'emote-animated' + cacheVersion;
@@ -14,6 +15,12 @@
   var emoteStaticMaxEntries = 140;
   var emoteAnimatedMaxEntries = 48;
   var fontAssetsMaxEntries = 160;
+  // The Worker lives in the Typecho root, so its directory is the site path even in a subdirectory install.
+  var sitePath = new URL('./', self.location).pathname;
+  var usrPath = sitePath + 'usr/';
+  var themeAssetsPath = usrPath + 'themes/VOID/assets/';
+  var hashedThemeAssetPattern = /^[A-Za-z0-9_-]+-[0-9a-f]{10}\.(?:css|js)$/;
+  var versionedThemeLibraryPattern = /^libs\/[^/]+\/\d+(?:\.\d+)+\//;
   var cacheMutationQueues = {};
   var cacheEntryMutationQueues = {};
   var cacheEntryRecency = {};
@@ -38,11 +45,13 @@
     'static-vendor-toolbox-v5',
     'static-assets-toolbox-v5',
     'emote-static-toolbox-v5',
-    'emote-animated-toolbox-v5'
+    'emote-animated-toolbox-v5',
+    'static-vendor-native-v6'
   ];
 
   function isSuccessfulResponse(response) {
-    return response.status === 0 || (response.status >= 200 && response.status < 300);
+    // Opaque responses report status 0 and may hide an error page, so they are never cached.
+    return response.status >= 200 && response.status < 300;
   }
 
   function queueCacheMutation(cacheName, callback) {
@@ -239,6 +248,17 @@
     return pathname.indexOf(prefix) === 0;
   }
 
+  function isImmutableThemeAsset(pathname) {
+    var relativePath;
+
+    if (!hasPathPrefix(pathname, themeAssetsPath)) {
+      return false;
+    }
+    relativePath = pathname.slice(themeAssetsPath.length);
+    return hashedThemeAssetPattern.test(relativePath) ||
+      versionedThemeLibraryPattern.test(relativePath);
+  }
+
   function routeRequest(request) {
     var url;
     var pathname;
@@ -251,21 +271,25 @@
     pathname = url.pathname;
 
     if (url.origin === self.location.origin) {
-      if (hasPathPrefix(pathname, '/usr/themes/VOID/assets/libs/emotes/bangumi/animated/')) {
+      if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/animated/')) {
         return cacheFirst(request, emoteAnimatedCacheName, emoteAnimatedMaxEntries, true);
       }
-      if (pathname === '/usr/themes/VOID/assets/libs/emotes/packs.json' ||
-          hasPathPrefix(pathname, '/usr/themes/VOID/assets/libs/emotes/packs/')) {
+      if (pathname === themeAssetsPath + 'libs/emotes/packs.json' ||
+          hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/packs/')) {
         return networkFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
       }
-      if (hasPathPrefix(pathname, '/usr/themes/VOID/assets/libs/emotes/bangumi/poster/')) {
+      if (hasPathPrefix(pathname, themeAssetsPath + 'libs/emotes/bangumi/poster/')) {
         return cacheFirst(request, emoteStaticCacheName, emoteStaticMaxEntries);
       }
-      if (hasPathPrefix(pathname, '/usr/themes/VOID/assets/fonts/fontsource/')) {
+      if (hasPathPrefix(pathname, themeAssetsPath + 'fonts/fontsource/')) {
         return cacheFirst(request, fontAssetsCacheName, fontAssetsMaxEntries, true);
       }
-      if (hasPathPrefix(pathname, '/usr/')) {
+      if (isImmutableThemeAsset(pathname)) {
         return cacheFirst(request, staticAssetsCacheName, staticMaxEntries);
+      }
+      // Uploads, plugins and unhashed theme files can be replaced in place.
+      if (hasPathPrefix(pathname, usrPath)) {
+        return networkFirst(request, staticAssetsCacheName, staticMaxEntries);
       }
     }
 

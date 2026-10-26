@@ -84,6 +84,28 @@ PHP 引用、哈希资源和 Worker 缓存规则必须来自同一源码提交�
 引用已不存在的哈希文件，或由旧 Worker 缓存、清理和返回另一组资源。已有 `build/` 的
 存在不代表它是当前源码的产物；发布或部署前必须从确定的源码状态重新构建整个运行单元。
 
+### 缓存路由
+
+Worker 只接管 GET 请求。站点路径取自 Worker 脚本自身所在目录（注册时不指定 scope），因此
+Typecho 安装在子目录时，只要把 `VOIDCacheRule.js` 放在 Typecho 根目录，并在设置中填写含子
+目录的路径（例如 `blog/VOIDCacheRule.js`），路由就会落在 `/blog/usr/` 下。主题目录名固定为
+`VOID`，不支持改名。
+
+| 请求 | 策略 | 缓存 |
+| --- | --- | --- |
+| 主题 `assets/` 下的 Bangumi 动图表情 | 缓存优先，命中时刷新 LRU | `emote-animated-native-v6`，48 条 |
+| 表情清单 `packs.json`、`packs/*.json` | 网络优先，失败时回退缓存 | `emote-static-native-v6`，140 条 |
+| Bangumi 海报 | 缓存优先 | `emote-static-native-v6` |
+| Fontsource 字体（路径含版本） | 缓存优先，命中时刷新 LRU | `font-assets-native-v1`，160 条 |
+| 主题 `assets/` 顶层的内容哈希 JS、CSS，以及 `assets/libs/<名称>/<版本号>/` 下的文件 | 缓存优先 | `static-assets-native-v6`，200 条 |
+| 站点 `usr/` 下的其他文件（上传附件、插件资源、未带哈希的主题文件） | 网络优先，失败时回退缓存 | `static-assets-native-v6` |
+| Gravatar 头像、Google Fonts | 缓存优先 | `static-vendor-native-v7`，200 条 |
+
+只有状态码为 2xx 的响应会写入缓存。跨域请求未启用 CORS 时得到的不透明响应（状态码 0）
+可能掩盖错误页，Worker 只把它转交给页面，不写入缓存；因此普通 `<img>` 加载的 Gravatar
+头像和未加 `crossorigin` 的 Google Fonts 样式表不会被 Worker 缓存，`@font-face` 以 CORS
+加载的字体文件仍可缓存。`static-vendor-native-v6` 可能保存过不透明响应，激活时会被清退。
+
 ## CI 与 nightly 权限
 
 `.github/workflows/ci.yml` 在 pull request 和 `master` push 上启动，工作流默认只有
