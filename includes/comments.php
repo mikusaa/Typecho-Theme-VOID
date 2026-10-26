@@ -9,12 +9,7 @@
  */
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $setting = $GLOBALS['VOIDSetting'];
-// 兼容 Typecho 1.3：优先新键 commentsRequireUrl，旧键 commentsRequireURL 兜底
-$commentsRequireUrl = Helper::options()->commentsRequireUrl;
-if ($commentsRequireUrl === null) {
-    $commentsRequireUrl = Helper::options()->commentsRequireURL;
-}
-$commentsRequireUrl = !empty($commentsRequireUrl);
+$commentsRequireUrl = !empty(Helper::options()->commentsRequireUrl);
 $commentsOrder = strtoupper((string)Helper::options()->commentsOrder) === 'ASC' ? 'ASC' : 'DESC';
 $commentSecurityTokenExpression = null;
 if (!empty(Helper::options()->commentsAntiSpam)) {
