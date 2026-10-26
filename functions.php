@@ -57,6 +57,7 @@ Typecho_Plugin::factory(Widget\Base\Contents::class)->excerptEx = array('Content
  */
 function themeInit($archive = null)
 {
+    Utils::applyPjaxCacheHeaders(Typecho\Response::getInstance());
     VOID_refreshArchiveComputedFields($archive);
 }
 

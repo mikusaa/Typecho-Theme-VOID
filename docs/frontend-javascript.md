@@ -134,6 +134,20 @@ jQuery 适配代码，但主题只使用其原生接口；外部自定义脚本�
 后只对新容器重建。改变该顺序或公开事件参数时，必须同时审计模板、原生监听器、第三方
 适配和自定义扩展点。
 
+### PJAX 响应与缓存
+
+PJAX 请求与完整页面使用同一 URL，服务端按 `X-PJAX` 请求头决定只输出 `#pjax-container`
+片段（不含 `<head>`、样式表和页脚）。为避免缓存把片段当作完整页面复用，`themeInit()`
+通过 `Utils::applyPjaxCacheHeaders()` 为所有主题页面发送 `Vary: X-PJAX`，并为 PJAX
+片段额外发送 `Cache-Control: no-store`。
+
+- 不在请求 URL 上追加防缓存参数：评论反垃圾令牌由 PJAX 响应按请求 URL 生成，Typecho
+  则按访客页面的 Referer 校验，两者必须是同一地址。
+- 前端收到完整页面时仍会从中取出 `#pjax-container`，因此缓存把完整页面返回给 PJAX
+  请求只会多传数据，不会破坏页面。
+- 只有遵守源站 `Cache-Control` 或按 `X-PJAX` 区分缓存的 CDN、反向代理和整页缓存插件
+  才能受益；强制缓存 HTML 且忽略源站头的配置不在主题能控制的范围内。
+
 ## 后台编辑器合同
 
 编辑器必须同时适配文章和独立页面后台已有的 Typecho DOM 形态。`fields.js` 可以重组展示，
