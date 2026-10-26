@@ -124,7 +124,7 @@ class VOID_Settings_Schema
             ),
             'serviceworker' => self::entry(
                 'theme', '', 'string', 'string', null, null, false, false, null,
-                array('element' => 'Text', 'default' => null, 'title' => '自定义 Service Worker', 'description' => '如果你知道这是什么，请把你的 SW 文件（例如主题 assets 文件夹下的 VOIDCacheRule.js）复制一份到<b>站点根目录</b>，并在这里填写文件名（例如 VOIDCacheRule.js）。若不知道该选项含义，请留空此项。')
+                array('element' => 'Text', 'default' => null, 'title' => '自定义 Service Worker', 'description' => '如果你知道这是什么，请把你的 SW 文件（例如主题 assets 文件夹下的 VOIDCacheRule.js）复制一份到<b>站点根目录</b>，并在这里填写文件名（例如 VOIDCacheRule.js）；Typecho 安装在子目录时，请放在 Typecho 所在目录并填写含子目录的路径（例如 blog/VOIDCacheRule.js）。若不知道该选项含义，请留空此项。')
             ),
             'advance' => self::entry(
                 'theme', '', 'json', 'raw', null, null, false, false, null,
