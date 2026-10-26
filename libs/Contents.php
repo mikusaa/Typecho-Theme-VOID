@@ -25,7 +25,7 @@ Class Contents
     /**
      * 根据 cid 返回文章对象
      *
-     * @return Widget_Abstract_Contents
+     * @return \Widget\Base\Contents
      */
     public static function getPost($cid)
     {
@@ -35,7 +35,7 @@ Class Contents
     /**
      * 根据 cid 返回评论对象
      *
-     * @return Widget_Abstract_Comments
+     * @return \Widget\Base\Comments
      */
     public static function getComment($coid)
     {
@@ -45,7 +45,7 @@ Class Contents
     /**
      * 根据 mid 返回 meta 对象
      * 
-     * @return Widget_Abstract_Metas
+     * @return \Widget\Base\Metas
      */
     public static function getMeta($mid)
     {
@@ -57,7 +57,7 @@ Class Contents
      *
      * @return string
      */
-    public static function titleText(Widget_Archive $archive)
+    public static function titleText(\Widget\Archive $archive)
     {
         ob_start();
         $archive->archiveTitle(array(
@@ -80,7 +80,7 @@ Class Contents
      *
      * @return void
      */
-    public static function title(Widget_Archive $archive)
+    public static function title(\Widget\Archive $archive)
     {
         echo Utils::escapeHtml(self::titleText($archive));
     }

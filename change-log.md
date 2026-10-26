@@ -17,6 +17,7 @@
 * 修复：[归档数据] `Contents::archives($widget, true)` 返回的摘要改为文章纯文本摘要的前 30 个字符，此前恒为空并产生 PHP 警告。
 * 修复：[Service Worker] 不再缓存跨域的不透明响应和其他非 2xx 响应，并清退可能存有不透明响应的 `static-vendor-native-v6`；只有带内容哈希或版本号的主题资源使用缓存优先，上传附件、插件资源和未带哈希的主题文件改为网络优先，替换后不再一直显示旧版本；路由改为按 Worker 所在目录推导站点路径，Typecho 安装在子目录时也能生效。更新后需重新将 `VOIDCacheRule.js` 复制到 Typecho 根目录。
 * 移除：[兼容性] 删除只为 PHP 8.0 及更早版本、Typecho 1.2 服务的兼容层：内容 Hook 直接注册到 Typecho 1.3 的 `Widget\Base\Contents`（移除全局函数 `VOID_normalizePluginHandle()` 与 `VOID_registerContentsHook()`），归档分类只走批量注入路径，评论网址必填设置不再兜底读取 1.2 的 `commentsRequireURL` 旧键。
+* 重构：[PHP] 主题源码改用 Typecho 1.3 的命名空间类（如 `\Typecho\Db`、`\Widget\Base\Contents`、`\Widget\Metas\Category\Rows`），不再引用 `Typecho_Db`、`Widget_Abstract_Contents` 等下划线别名；页面输出不变。
 * 修复：[评论] 前端邮箱预检不再拒绝带连字符的域名（如 `foo-bar.com`）和超过 4 个字母的顶级域名（如 `.photography`），最终仍以 Typecho 服务端校验为准。
 * 修复：[评论] 评论时间恢复为带 `datetime` 属性的 `<time>` 元素，此前标签名与属性粘连导致机器可读时间丢失。
 * 修复：[子目录安装] 首页、归档、搜索等非内容页的 `og:url` 和登录表单 `referer` 不再重复站点子目录（如 `/blog/blog/...`），主机名取自站点地址设置而非请求头。

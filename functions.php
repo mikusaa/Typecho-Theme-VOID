@@ -20,7 +20,7 @@ require_once __DIR__ . '/libs/Comments.php';
  */
 function VOID_refreshArchiveComputedFields($archive)
 {
-    if (!($archive instanceof Widget_Archive) || !$archive->have()) {
+    if (!($archive instanceof \Widget\Archive) || !$archive->have()) {
         return;
     }
 
@@ -45,12 +45,12 @@ function VOID_refreshArchiveComputedFields($archive)
     $archive->archiveDescription = $archive->plainExcerpt;
 }
 
-Typecho_Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');
-Typecho_Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addButton');
+\Typecho\Plugin::factory('admin/write-post.php')->bottom = array('Utils', 'addButton');
+\Typecho\Plugin::factory('admin/write-page.php')->bottom = array('Utils', 'addButton');
 // 为防止友链解析与 Markdown 冲突，重写 Markdown 函数
-Typecho_Plugin::factory(Widget\Base\Contents::class)->markdown = array('Contents', 'markdown');
-Typecho_Plugin::factory(Widget\Base\Contents::class)->contentEx = array('Contents', 'contentEx');
-Typecho_Plugin::factory(Widget\Base\Contents::class)->excerptEx = array('Contents', 'excerptEx');
+\Typecho\Plugin::factory(\Widget\Base\Contents::class)->markdown = array('Contents', 'markdown');
+\Typecho\Plugin::factory(\Widget\Base\Contents::class)->contentEx = array('Contents', 'contentEx');
+\Typecho\Plugin::factory(\Widget\Base\Contents::class)->excerptEx = array('Contents', 'excerptEx');
 
 /**
  * 主题启用
@@ -76,7 +76,7 @@ function VOID_addSchemaFormElements($container, $source, $method)
         }
 
         $form = $definition['form'];
-        $elementClass = 'Typecho_Widget_Helper_Form_Element_' . $form['element'];
+        $elementClass = '\\Typecho\\Widget\\Helper\\Form\\Element\\' . $form['element'];
         $options = isset($form['options']) ? $form['options'] : null;
         $default = array_key_exists('default', $form) ? $form['default'] : $definition['default'];
         $title = isset($form['title']) ? $form['title'] : '';
@@ -126,7 +126,7 @@ function themeConfig($form)
 /**
  * 文章自定义字段
  */
-function themeFields(Typecho_Widget_Helper_Layout $layout)
+function themeFields(\Typecho\Widget\Helper\Layout $layout)
 {
     VOID_addSchemaFormElements($layout, 'field', 'addItem');
 }
