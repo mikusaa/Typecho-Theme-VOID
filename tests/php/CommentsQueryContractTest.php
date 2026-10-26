@@ -4,61 +4,35 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     define('__TYPECHO_ROOT_DIR__', dirname(__DIR__, 2));
 }
 
-class CommentsQueryStub
+class Widget_Comments_Archive
 {
-    public $fields;
-    public $where = array();
+    protected $row = array();
+    protected $stack = array();
 
-    public function __construct($fields)
+    public function __get($name)
     {
-        $this->fields = $fields;
+        return isset($this->row[$name]) ? $this->row[$name] : null;
     }
 
-    public function from($table)
+    public function setRow(array $row)
     {
-        return $this;
+        $this->row = $row;
     }
 
-    public function where($expression, $value)
+    public function getStack()
     {
-        $this->where[] = array($expression, $value);
-        return $this;
-    }
-}
-
-class CommentsQueryDb
-{
-    public $queries = array();
-    public $rows = array();
-
-    public function select()
-    {
-        return new CommentsQueryStub(func_get_args());
+        return $this->stack;
     }
 
-    public function fetchAll($query)
+    public function push(array $value): array
     {
-        $this->queries[] = $query;
-        return $this->rows;
+        $this->stack[$value['coid']] = $value;
+        return $value;
     }
-
-    public function fetchRow($query)
-    {
-        $this->queries[] = $query;
-        return array();
-    }
-}
-
-class Widget_Abstract_Comments
-{
-    public $row = array();
-    public $stack = array();
-    public $levels = 0;
-    protected $db;
 }
 
 // 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
-class_alias('Widget_Abstract_Comments', 'Widget\Base\Comments');
+class_alias('Widget_Comments_Archive', 'Widget\Comments\Archive');
 
 require_once dirname(__DIR__, 2) . '/libs/Comments.php';
 
@@ -78,72 +52,66 @@ function commentsQueryAssertSame($expected, $actual, $message)
     echo '  actual:   ' . var_export($actual, true) . "\n";
 }
 
-function commentsQueryWidget(CommentsQueryDb $db)
-{
-    $reflection = new ReflectionClass('VOID_Widget_Comments_Archive');
-    $widget = $reflection->newInstanceWithoutConstructor();
-    $property = new ReflectionProperty('Widget_Abstract_Comments', 'db');
-    $property->setValue($widget, $db);
-    return $widget;
-}
-
-function commentsQueryCall($widget, $method)
+function commentsQueryCall($widget, $method, array $args = array())
 {
     $reflection = new ReflectionMethod('VOID_Widget_Comments_Archive', $method);
-    return $reflection->invoke($widget);
+    return $reflection->invokeArgs($reflection->isStatic() ? null : $widget, $args);
 }
 
-function commentsQuerySetAuthors($widget, array $authors)
-{
-    $property = new ReflectionProperty('VOID_Widget_Comments_Archive', '_commentAuthors');
-    $property->setValue($widget, $authors);
-}
+commentsQueryAssertSame(
+    true,
+    is_subclass_of('VOID_Widget_Comments_Archive', 'Widget\Comments\Archive'),
+    '评论组件继承 Typecho 1.3 核心评论归档组件'
+);
+commentsQueryAssertSame(true, function_exists('threadedComments'), '主题提供核心评论组件调用的全局 threadedComments() 回调');
 
-$db = new CommentsQueryDb();
-$widget = commentsQueryWidget($db);
-$widget->row = array('coid' => 5, 'likes' => '3', 'dislikes' => '7');
+$widget = new VOID_Widget_Comments_Archive();
+$widget->setRow(array('coid' => 5, 'likes' => '3', 'dislikes' => '7'));
 commentsQueryAssertSame(
     array('likes' => 3, 'dislikes' => 7),
-    commentsQueryCall($widget, 'getLikesAndDislikes'),
+    commentsQueryCall(null, 'getLikesAndDislikes', array($widget)),
     '赞踩直接取自评论列表已查询的整行'
 );
-$widget->row = array('coid' => 6);
+$widget->setRow(array('coid' => 6));
 commentsQueryAssertSame(
     array('likes' => 0, 'dislikes' => 0),
-    commentsQueryCall($widget, 'getLikesAndDislikes'),
+    commentsQueryCall(null, 'getLikesAndDislikes', array($widget)),
     '缺少赞踩列时按 0 处理'
 );
-commentsQueryAssertSame(0, count($db->queries), '读取赞踩不再逐条查询数据库');
 
-$db = new CommentsQueryDb();
-$db->rows = array(array('coid' => 9, 'author' => '待审核的父评论'));
-$widget = commentsQueryWidget($db);
-$widget->stack = array(
-    1 => array('coid' => 1, 'parent' => 0, 'author' => 'A'),
-    2 => array('coid' => 2, 'parent' => 1, 'author' => 'B'),
-    3 => array('coid' => 3, 'parent' => 9, 'author' => 'C'),
-    4 => array('coid' => 4, 'parent' => 9, 'author' => 'D'),
-    5 => array('coid' => 5, 'parent' => 11, 'author' => 'E')
-);
-commentsQuerySetAuthors($widget, array(1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D', 5 => 'E'));
-commentsQueryCall($widget, 'loadMissingParentAuthors');
-commentsQueryAssertSame(1, count($db->queries), '不在列表中的父评论作者一次批量查询');
-commentsQueryAssertSame(array(array('coid IN ?', array(9, 11))), $db->queries[0]->where, '批量查询只包含缺失的父评论');
+$widget = new VOID_Widget_Comments_Archive();
+foreach (array(
+    array('coid' => 1, 'parent' => 0, 'author' => 'A'),
+    array('coid' => 2, 'parent' => 1, 'author' => 'B<script>'),
+    array('coid' => 3, 'parent' => 2, 'author' => 'C'),
+    array('coid' => 4, 'parent' => 3, 'author' => '')
+) as $row) {
+    $widget->push($row);
+}
+$stack = $widget->getStack();
+commentsQueryAssertSame(2, $stack[3]['realParent'], 'push() 在核心改挂超深评论前记录实际父评论');
 
-$widget->levels = 2;
-$widget->row = array('coid' => 3, 'parent' => 9, 'realParent' => 9);
+// 核心把超过最大嵌套层级的评论改挂到上上层：parent 变化，realParent 不变。
+$widget->setRow(array('coid' => 4, 'levels' => 2, 'parent' => 1, 'realParent' => 3));
 commentsQueryAssertSame(
     true,
-    strpos(commentsQueryCall($widget, 'getParent'), '@待审核的父评论') !== false,
-    '回复标签使用批量取回的父评论作者'
+    strpos(commentsQueryCall($widget, 'getParentLabel'), '@C</b>') !== false,
+    '超深评论的回复标签指向实际回复的评论'
 );
-$widget->row = array('coid' => 5, 'parent' => 11, 'realParent' => 11);
+$widget->setRow(array('coid' => 3, 'levels' => 2, 'parent' => 2, 'realParent' => 2));
 commentsQueryAssertSame(
     true,
-    strpos(commentsQueryCall($widget, 'getParent'), '@已删除的评论') !== false,
-    '数据库中也不存在的父评论显示为已删除'
+    strpos(commentsQueryCall($widget, 'getParentLabel'), '@B&lt;script&gt;</b>') !== false,
+    '回复标签转义父评论作者名'
 );
-commentsQueryAssertSame(1, count($db->queries), '渲染回复标签时不再单独查询父评论');
+$widget->setRow(array('coid' => 5, 'levels' => 2, 'parent' => 4, 'realParent' => 4));
+commentsQueryAssertSame(
+    true,
+    strpos(commentsQueryCall($widget, 'getParentLabel'), '@已删除的评论') !== false,
+    '父评论作者名为空时显示为已删除'
+);
+$widget->setRow(array('coid' => 2, 'levels' => 1, 'parent' => 1, 'realParent' => 1));
+commentsQueryAssertSame('', commentsQueryCall($widget, 'getParentLabel'), '第一层回复不显示回复标签');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} comments query contract test(s) failed.\n");

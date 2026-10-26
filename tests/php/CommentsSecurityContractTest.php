@@ -104,17 +104,24 @@ commentsSecurityAssertContains(
 );
 
 commentsSecurityAssertContains(
-    "\$this->_threadedComments = array_map('array_reverse', \$this->_threadedComments);",
+    'class VOID_Widget_Comments_Archive extends \\Widget\\Comments\\Archive',
     $commentWidget,
-    'DESC 排序同时反转每组子评论'
+    '评论组件继承 Typecho 1.3 核心评论归档组件'
 );
+foreach (array('execute', 'pageNav', 'listComments', 'threadedComments', 'num', 'alt', 'levelsAlt', '___permalink', '___children', '___isTopLevel') as $coreMethod) {
+    commentsSecurityAssertSame(
+        0,
+        preg_match('/(?:public|protected|private)(?:\s+static)?\s+function\s+' . preg_quote($coreMethod, '/') . '\s*\(/', $commentWidget),
+        '查询、嵌套、DESC 子评论反转与分页沿用核心 ' . $coreMethod . '()，主题不再复制'
+    );
+}
 commentsSecurityAssertContains(
-    'data-comment-parent="<?php echo (int)$this->parent; ?>"',
+    'data-comment-parent="<?php echo (int)$comments->parent; ?>"',
     $commentWidget,
     '评论节点暴露服务端实际父级供 Ajax 保持嵌套顺序'
 );
 commentsSecurityAssertContains(
-    'data-comment-depth="<?php echo (int)$this->levels; ?>"',
+    'data-comment-depth="<?php echo (int)$comments->levels; ?>"',
     $commentWidget,
     '评论节点暴露服务端实际深度供 Ajax 保持嵌套顺序'
 );
@@ -124,7 +131,7 @@ commentsSecurityAssertContains(
     '评论样式变量在所有分支中均已初始化'
 );
 commentsSecurityAssertContains(
-    '<time datetime="<?php $this->date(\'c\'); ?>">',
+    '<time datetime="<?php $comments->date(\'c\'); ?>">',
     $commentWidget,
     '评论时间使用带 datetime 属性的 time 元素'
 );

@@ -62,6 +62,14 @@ excerptEx -> Contents::excerptEx
 `Contents::parseBiaoQing()` 处理评论内容。数据库访问集中在 Repository，不应重新散落到
 Transform 或模板。
 
+`VOID_Widget_Comments_Archive` 继承核心 `\Widget\Comments\Archive`：查询、嵌套、排序、分页和
+永久链接都由核心完成，主题只覆盖 `push()`（记录实际父评论与作者名）、`reply()` 和
+`cancelReply()`，并通过核心约定的全局 `threadedComments()` 回调渲染每条评论。
+`assets/js/void/comments.js` 依赖渲染结果中的 `.comment-body`、`.comment-parent`/`.comment-child`、
+`.comment-children`、`.comment-reply a`，以及 `data-comment-parent`、`data-comment-depth`、
+回复链接的 `data-comment-id`、`data-comment-coid`、`data-reply-word`、`data-cancel-word`；
+修改评论模板时必须保持这些结构和属性。
+
 ## 转换顺序
 
 `markdown($text)` 的顺序是：

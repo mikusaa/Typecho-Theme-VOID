@@ -46,7 +46,7 @@ class Typecho_Plugin
     }
 }
 
-class Widget_Abstract_Comments
+class Widget_Comments_Archive
 {
 }
 
@@ -120,7 +120,7 @@ class SettingsFormContainer
 
 // 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
 class_alias('Typecho_Plugin', 'Typecho\Plugin');
-class_alias('Widget_Abstract_Comments', 'Widget\Base\Comments');
+class_alias('Widget_Comments_Archive', 'Widget\Comments\Archive');
 class_alias('Widget_Archive', 'Widget\Archive');
 class_alias('Typecho_Widget_Helper_Layout', 'Typecho\Widget\Helper\Layout');
 class_alias('Typecho_Widget_Helper_Form_Element_Text', 'Typecho\Widget\Helper\Form\Element\Text');
