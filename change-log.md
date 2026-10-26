@@ -5,6 +5,7 @@
 * 调整：[兼容性] 主题只支持 PHP 8 的最新稳定小版本和 Typecho 最新正式版，当前为 PHP 8.5 与 Typecho 1.3；不再兼容 PHP 7.x、PHP 8.0～8.4 和 Typecho 1.2 及更早版本，CI 的 PHP 合同矩阵移除 PHP 7.0。升级前请先确认站点运行环境。
 * 重构：[主题设置] 以 `libs/Settings` schema、Resolver 和 FrontendConfig 统一默认值、类型、兼容回退、废弃键过滤、后台表单、前端配置、JSON 示例和文档；未知高级设置继续透传，`head`、`footer` 和 `pjaxreload` 自由格式扩展点保持不变。
 * 调整：[PJAX] 移除后台设置中的 Beta 标记和过时提示，新安装及缺少该设置时默认开启；已明确关闭 PJAX 的站点保留原选择。
+* 修复：[PJAX/缓存] 所有主题页面发送 `Vary: X-PJAX`，PJAX 局部片段额外发送 `Cache-Control: no-store`，避免浏览器、CDN 或整页缓存把不含样式的片段当作完整页面返回；使用 CDN 缓存 HTML 的站点请参见 README 常见问题。
 * 移除：[兼容性] 删除只为 PHP 8.0 及更早版本、Typecho 1.2 服务的兼容层：内容 Hook 直接注册到 Typecho 1.3 的 `Widget\Base\Contents`（移除全局函数 `VOID_normalizePluginHandle()` 与 `VOID_registerContentsHook()`），归档分类只走批量注入路径，评论网址必填设置不再兜底读取 1.2 的 `commentsRequireURL` 旧键。
 * 修复：[评论] 前端邮箱预检不再拒绝带连字符的域名（如 `foo-bar.com`）和超过 4 个字母的顶级域名（如 `.photography`），最终仍以 Typecho 服务端校验为准。
 * 修复：[评论] 评论时间恢复为带 `datetime` 属性的 `<time>` 元素，此前标签名与属性粘连导致机器可读时间丢失。

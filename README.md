@@ -100,6 +100,12 @@ Feed 截断、Media RSS 和浏览器预览可选安装 [FeedEnhancer 1.1.0 或�
 
 </details>
 
+<details><summary>使用 CDN 或整页缓存后页面没有样式？</summary><br>
+
+开启 PJAX 时，同一个网址会根据请求头 `X-PJAX` 返回完整页面或只含正文的片段。主题会为页面发送 `Vary: X-PJAX`，并为片段发送 `Cache-Control: no-store`。如果 CDN、反向代理或缓存插件缓存了 HTML，请让它遵守源站的 `Cache-Control`，或按 `X-PJAX` 请求头分开缓存；Cloudflare 等不支持自定义 `Vary` 的 CDN 需要依赖前者，不要用强制缓存规则覆盖源站缓存头。也可以在主题设置中关闭 PJAX。
+
+</details>
+
 <details><summary>添加归档页面</summary><br>
 
 新建独立页面，自定义模板选择 `Archives`，内容留空。

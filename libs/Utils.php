@@ -284,6 +284,20 @@ class Utils
     }
 
     /**
+     * 声明 PJAX 缓存边界。
+     *
+     * 同一 URL 会按 X-PJAX 请求头返回完整页面或局部片段：Vary 让缓存区分两种响应，
+     * 局部片段不进入任何缓存，避免被当成缺少 head 和样式的完整页面复用。
+     */
+    public static function applyPjaxCacheHeaders($response)
+    {
+        $response->setHeader('Vary', 'X-PJAX');
+        if (self::isPjax()) {
+            $response->setHeader('Cache-Control', 'no-store');
+        }
+    }
+
+    /**
      * 判断当前归档是否为 Typecho 的 404 上下文
      *
      * @return bool
