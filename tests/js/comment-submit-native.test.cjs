@@ -99,10 +99,22 @@ function createDocument(getForm) {
 }
 
 function loadAjaxComment(options = {}) {
-    const window = options.window || {};
+    const timers = [];
+    let nextTimerId = 1;
+    const window = options.window || {
+        clearTimeout(id) {
+            const index = timers.findIndex((timer) => timer.id === id);
+            if (index !== -1) timers.splice(index, 1);
+        },
+        setTimeout(callback, delay) {
+            const id = nextTimerId++;
+            timers.push({ callback, delay, id });
+            return id;
+        }
+    };
     const alerts = [];
     const context = {
-        AbortController: options.AbortController || AbortController,
+        AbortController: 'AbortController' in options ? options.AbortController : AbortController,
         DOMParser: options.DOMParser || class {
             parseFromString() {
                 throw new Error('DOMParser fixture missing');
@@ -126,7 +138,17 @@ function loadAjaxComment(options = {}) {
 
     window.window = window;
     vm.runInNewContext(ajaxCommentSource, context);
-    return { ajaxComment: context.AjaxComment, alerts, context };
+    return {
+        ajaxComment: context.AjaxComment,
+        alerts,
+        context,
+        flushTimer(delay) {
+            const index = timers.findIndex((timer) => timer.delay === delay);
+            assert.notEqual(index, -1, `expected a ${delay}ms timer`);
+            timers.splice(index, 1)[0].callback();
+        },
+        pendingTimerDelays: () => timers.map((timer) => timer.delay)
+    };
 }
 
 function responseDocument({ error = '', hasList = true, nodes = [] } = {}) {
@@ -526,4 +548,103 @@ test('replaced forms abort pending work and stale responses cannot update the ne
     await settle();
     assert.equal(applied, 0);
     assert.equal(newForm.button.disabled, false);
+});
+
+function pendingFetch(calls, stage = 'request') {
+    return (url, options) => {
+        const call = { options, url };
+        calls.push(call);
+        return new Promise((resolve, reject) => {
+            call.resolve = resolve;
+            if (options.signal) {
+                options.signal.addEventListener('abort', () => {
+                    const error = new Error('aborted');
+                    error.name = 'AbortError';
+                    reject(error);
+                });
+            }
+            if (stage === 'body') {
+                resolve({
+                    ok: true,
+                    text: () => new Promise((finish) => { call.finishBody = finish; }),
+                    url
+                });
+            }
+        });
+    };
+}
+
+test('a settled or cancelled submit clears its deadline', async () => {
+    const form = new FakeForm();
+    let currentForm = form;
+    const calls = [];
+    const document = createDocument(() => currentForm);
+    const runtime = loadAjaxComment({ document, fetch: pendingFetch(calls) });
+
+    runtime.ajaxComment.applySubmitResponse = () => {};
+    runtime.ajaxComment.bindSubmit();
+    form.dispatchSubmit();
+    assert.deepEqual(runtime.pendingTimerDelays(), [15000]);
+    calls[0].resolve({ ok: true, text: () => Promise.resolve(''), url: form.action });
+    await settle();
+    assert.deepEqual(runtime.pendingTimerDelays(), []);
+    assert.equal(runtime.ajaxComment.submitToken, null);
+
+    form.dispatchSubmit();
+    assert.deepEqual(runtime.pendingTimerDelays(), [15000]);
+    currentForm = new FakeForm();
+    runtime.ajaxComment.bindSubmit();
+    await settle();
+    assert.deepEqual(runtime.pendingTimerDelays(), []);
+    assert.deepEqual(runtime.alerts, []);
+});
+
+test('a hung submit times out, keeps the draft, and ignores the late response', async () => {
+    for (const stage of ['request', 'body']) {
+        for (const abortable of [true, false]) {
+            const form = new FakeForm({ text: '还没发出去的草稿' });
+            const document = createDocument(() => form);
+            const calls = [];
+            const runtime = loadAjaxComment({
+                AbortController: abortable ? AbortController : undefined,
+                document,
+                fetch: pendingFetch(calls, stage)
+            });
+            let applied = 0;
+
+            runtime.ajaxComment.applySubmitResponse = () => { applied += 1; };
+            runtime.ajaxComment.bindSubmit();
+            form.dispatchSubmit();
+            await settle();
+            assert.equal(form.button.disabled, true);
+
+            runtime.flushTimer(15000);
+            assert.deepEqual(runtime.alerts, [
+                '等待响应超时，评论可能已提交。请先检查评论列表，确认后再重试。'
+            ]);
+            assert.equal(form.button.disabled, false);
+            assert.equal(form.button.textContent, '提交评论');
+            assert.equal(form.fields['#textarea'].value, '还没发出去的草稿');
+            assert.equal(runtime.ajaxComment.submitToken, null);
+            assert.equal(calls.length, 1, 'a timed-out write is not resent automatically');
+            if (abortable) assert.equal(calls[0].options.signal.aborted, true);
+
+            // A manual retry gets its own lock, which the abandoned request cannot release.
+            form.dispatchSubmit();
+            assert.equal(calls.length, 2);
+            const retryToken = runtime.ajaxComment.submitToken;
+            assert.ok(retryToken);
+            if (stage === 'body') {
+                calls[0].finishBody('<html>late</html>');
+            } else {
+                calls[0].resolve({ ok: true, text: () => Promise.resolve('<html>late</html>'), url: form.action });
+            }
+            await settle();
+            assert.equal(applied, 0);
+            assert.equal(runtime.ajaxComment.submitToken, retryToken);
+            assert.equal(form.button.disabled, true);
+            assert.equal(runtime.alerts.length, 1);
+            runtime.ajaxComment.cancelSubmit();
+        }
+    }
 });

@@ -173,6 +173,8 @@ function loadVote(options = {}) {
     const buttons = options.buttons || [];
     const comments = options.comments || new Map();
     const fetchCalls = [];
+    const timers = [];
+    let nextTimerId = 1;
     const fetchImpl = options.fetchImpl || (() => Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ code: 200 })
@@ -204,9 +206,19 @@ function loadVote(options = {}) {
             }
         },
         window: {
+            AbortController: options.AbortController,
+            clearTimeout(id) {
+                const index = timers.findIndex((timer) => timer.id === id);
+                if (index !== -1) timers.splice(index, 1);
+            },
             fetch(url, request) {
                 fetchCalls.push({ request, url });
                 return fetchImpl(url, request);
+            },
+            setTimeout(callback, delay) {
+                const id = nextTimerId++;
+                timers.push({ callback, delay, id });
+                return id;
             }
         }
     });
@@ -219,6 +231,12 @@ function loadVote(options = {}) {
         cookieWrites,
         cookies,
         fetchCalls,
+        flushTimer(delay) {
+            const index = timers.findIndex((timer) => timer.delay === delay);
+            assert.notEqual(index, -1, `expected a ${delay}ms timer`);
+            timers.splice(index, 1)[0].callback();
+        },
+        pendingTimerDelays: () => timers.map((timer) => timer.delay),
         vote: context.VOID_Vote
     };
 }
@@ -404,6 +422,84 @@ test('vote reports HTTP, malformed JSON, and network failures without recording 
         assert.equal(button.classList.contains('done'), false);
         assert.equal(runtime.cookieWrites.length, 0);
         assert.deepEqual(runtime.alerts, ['投票失败 o(╥﹏╥)o，请稍后重试']);
+    }
+});
+
+test('a settled vote clears its deadline', async () => {
+    const { button } = createVoteButton();
+    const runtime = loadVote();
+
+    const pending = runtime.vote.vote(button);
+    assert.deepEqual(runtime.pendingTimerDelays(), [10000]);
+    await pending;
+    assert.deepEqual(runtime.pendingTimerDelays(), []);
+    assert.equal(runtime.vote.pendingItems.has(button), false);
+});
+
+test('a hung vote request or JSON body times out, unlocks the button, and ignores the late result', async () => {
+    for (const stage of ['request', 'body']) {
+        const responses = [];
+        const { button, value } = createVoteButton();
+        const runtime = loadVote({
+            AbortController,
+            fetchImpl: () => new Promise((resolve, reject) => {
+                responses.push({ reject, resolve });
+            })
+        });
+
+        const stale = runtime.vote.vote(button);
+        let finishBody;
+        if (stage === 'body') {
+            responses[0].resolve({
+                ok: true,
+                json: () => new Promise((resolve) => { finishBody = resolve; })
+            });
+            await new Promise((resolve) => setImmediate(resolve));
+            assert.equal(typeof finishBody, 'function');
+        }
+        runtime.flushTimer(10000);
+        assert.deepEqual(runtime.alerts, ['投票等待超时，结果尚未确认，请刷新页面后再操作。']);
+        assert.equal(runtime.fetchCalls[0].request.signal.aborted, true);
+        assert.equal(runtime.vote.pendingItems.has(button), false);
+
+        // The button is usable again before the abandoned request settles.
+        const retry = runtime.vote.vote(button);
+        assert.equal(runtime.fetchCalls.length, 2);
+
+        if (stage === 'body') {
+            finishBody({ code: 200 });
+        } else {
+            responses[0].resolve({ ok: true, json: () => Promise.resolve({ code: 200 }) });
+        }
+        await stale;
+        assert.equal(value.textContent, '7');
+        assert.equal(button.classList.contains('done'), false);
+        assert.equal(runtime.cookieWrites.length, 0);
+        assert.equal(runtime.alerts.length, 1);
+        assert.equal(runtime.vote.pendingItems.has(button), true);
+
+        responses[1].resolve({ ok: true, json: () => Promise.resolve({ code: 302 }) });
+        await retry;
+        assert.equal(button.classList.contains('done'), true);
+        assert.equal(runtime.cookieWrites.length, 1);
+        assert.deepEqual(runtime.alerts.slice(1), ['您好像已经投过票了呢～']);
+        assert.deepEqual(runtime.pendingTimerDelays(), []);
+    }
+});
+
+test('a vote whose button was replaced records the result without alerting the new page', async () => {
+    for (const fetchImpl of [
+        () => Promise.resolve({ ok: true, json: () => Promise.resolve({ code: 302 }) }),
+        () => Promise.reject(new Error('offline'))
+    ]) {
+        const { button } = createVoteButton();
+        const runtime = loadVote({ fetchImpl });
+
+        const pending = runtime.vote.vote(button);
+        button.isConnected = false;
+        await pending;
+        assert.deepEqual(runtime.alerts, []);
+        assert.equal(runtime.vote.pendingItems.has(button), false);
     }
 });
 

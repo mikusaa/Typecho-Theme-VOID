@@ -275,6 +275,7 @@ function loadHeaderEnvironment() {
         form,
         goTop,
         header,
+        pendingTimerDelays: () => timers.map((timer) => timer.delay),
         lazyWrap,
         loginPanel,
         nav,
@@ -445,6 +446,66 @@ test('PJAX invalidation ignores stale login work and fetches the new action', as
     environment.context.VOID_Ui.toggleLoginForm();
     assert.equal(environment.fetchCalls.length, 2);
     assert.equal(environment.fetchCalls[1].url, 'https://example.test/archives/246.html');
+});
+
+test('a successful login action refresh clears its deadline', async () => {
+    const environment = loadHeaderEnvironment();
+
+    environment.loginPanel.classList.remove('show');
+    environment.form.classList.add('need-refresh');
+    environment.context.VOID_Ui.toggleLoginForm();
+    assert.deepEqual(environment.pendingTimerDelays(), [8000]);
+
+    const actionRequest = environment.context.VOID_Ui.loginActionRequest;
+    environment.fetchCalls[0].resolveText('/admin/login.php');
+    await actionRequest;
+    assert.deepEqual(environment.pendingTimerDelays(), []);
+    assert.equal(environment.context.VOID_Ui.loginActionTimer, null);
+});
+
+test('a hung login action refresh times out without reloading and can be retried', async () => {
+    const environment = loadHeaderEnvironment();
+
+    environment.context.window.AbortController = AbortController;
+    environment.loginPanel.classList.remove('show');
+    environment.form.classList.add('need-refresh');
+    environment.context.VOID_Ui.toggleLoginForm();
+    const staleRequest = environment.context.VOID_Ui.loginActionRequest;
+
+    environment.flushTimer(8000);
+    assert.deepEqual(environment.alerts, ['请求登录参数超时，请重新打开登录面板再试。']);
+    assert.equal(environment.fetchCalls[0].options.signal.aborted, true);
+    assert.equal(environment.context.VOID_Ui.loginActionRequest, null);
+    assert.equal(environment.form.classList.contains('need-refresh'), true);
+    assert.deepEqual(environment.pendingTimerDelays(), []);
+
+    // A response that still arrives later belongs to the abandoned request.
+    environment.fetchCalls[0].resolveText('/stale-login');
+    await staleRequest;
+    assert.equal(environment.form.getAttribute('action'), '/old-login');
+    assert.equal(environment.reloadCount(), 0);
+    assert.equal(environment.alerts.length, 1);
+
+    environment.context.VOID_Ui.toggleLoginForm();
+    environment.context.VOID_Ui.toggleLoginForm();
+    assert.equal(environment.fetchCalls.length, 2);
+    const retry = environment.context.VOID_Ui.loginActionRequest;
+    environment.fetchCalls[1].resolveText('/admin/login.php');
+    await retry;
+    assert.equal(environment.form.getAttribute('action'), '/admin/login.php');
+    assert.equal(environment.form.classList.contains('need-refresh'), false);
+});
+
+test('PJAX invalidation clears the login action deadline silently', () => {
+    const environment = loadHeaderEnvironment();
+
+    environment.loginPanel.classList.remove('show');
+    environment.form.classList.add('need-refresh');
+    environment.context.VOID_Ui.toggleLoginForm();
+    environment.context.VOID_Ui.invalidateLoginAction();
+
+    assert.deepEqual(environment.pendingTimerDelays(), []);
+    assert.deepEqual(environment.alerts, []);
 });
 
 test('TOC, click containment, archive toggles, and global listeners use native state', () => {

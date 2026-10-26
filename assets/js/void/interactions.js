@@ -1,5 +1,7 @@
 var VOID_Vote = {
-    pendingItems: new WeakSet(),
+    // 每个按钮对应当前请求的标识，用于识别超时后迟到的旧响应。
+    pendingItems: new WeakMap(),
+    timeout: 10000,
 
     vote: function (item) {
         var type = item.getAttribute('data-type');
@@ -29,9 +31,11 @@ var VOID_Vote = {
         if (VOID_Vote.pendingItems.has(item)) {
             return;
         }
-        VOID_Vote.pendingItems.add(item);
-
-        return window.fetch(VOIDConfig.votePath + table, {
+        var request = {};
+        var controller = typeof window.AbortController === 'function'
+            ? new window.AbortController()
+            : null;
+        var options = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json; charset=utf-8'
@@ -41,12 +45,35 @@ var VOID_Vote = {
                 'id': parseInt(id),
                 'type': type
             })
-        }).then(function (response) {
+        };
+        var isCurrent = function () {
+            return VOID_Vote.pendingItems.get(item) === request;
+        };
+        // 按钮已被 PJAX 替换时不再提示；投票结果本身仍按响应写入 Cookie。
+        var notify = function (message) {
+            if (item.isConnected !== false) {
+                VOID.alert(message);
+            }
+        };
+        var timer;
+
+        if (controller) options.signal = controller.signal;
+        VOID_Vote.pendingItems.set(item, request);
+        // 超时只解锁按钮：写请求结果未知，不自动重发，迟到的响应也不再改动计数或 Cookie。
+        timer = window.setTimeout(function () {
+            if (!isCurrent()) return;
+            VOID_Vote.pendingItems.delete(item);
+            if (controller) controller.abort();
+            notify('投票等待超时，结果尚未确认，请刷新页面后再操作。');
+        }, VOID_Vote.timeout);
+
+        return window.fetch(VOIDConfig.votePath + table, options).then(function (response) {
             if (!response.ok) {
                 throw new Error('Vote request failed');
             }
             return response.json();
         }).then(function (data) {
+            if (!isCurrent()) return;
             if (!data || typeof data.code !== 'number') {
                 throw new Error('Invalid vote response');
             }
@@ -63,18 +90,23 @@ var VOID_Vote = {
                     }
                     break;
                 case 302:
-                    VOID.alert('您好像已经投过票了呢～');
+                    notify('您好像已经投过票了呢～');
                     break;
                 case 403:
-                    VOID.alert('暂不支持更改投票哦～');
+                    notify('暂不支持更改投票哦～');
                     break;
                 default:
                     break;
             }
         }).catch(function () {
-            VOID.alert('投票失败 o(╥﹏╥)o，请稍后重试');
+            if (isCurrent()) {
+                notify('投票失败 o(╥﹏╥)o，请稍后重试');
+            }
         }).then(function () {
-            VOID_Vote.pendingItems.delete(item);
+            window.clearTimeout(timer);
+            if (isCurrent()) {
+                VOID_Vote.pendingItems.delete(item);
+            }
         });
     },
 

@@ -129,7 +129,7 @@ module.exports = [
                 VOID_Ui: 'readonly',
                 VOID_Util: 'readonly',
                 VOID_Vote: 'writable',
-                WeakSet: 'readonly',
+                WeakMap: 'readonly',
                 littlefoot: 'readonly',
                 loadClipboard: 'readonly',
                 pangu: 'readonly',

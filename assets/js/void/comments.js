@@ -4,6 +4,7 @@ var AjaxComment = {
     noUrl: '必须填写 URL',
     noContent: '必须填写评论内容',
     invalidMail: '邮箱地址不合法',
+    submitTimeoutMessage: '等待响应超时，评论可能已提交。请先检查评论列表，确认后再重试。',
     commentList: '.comment-list',
     comments: '#comments .comments-title',
     commentReply: '.comment-reply',
@@ -31,6 +32,9 @@ var AjaxComment = {
     submitController: null,
     submitToken: null,
     submitGeneration: 0,
+    submitTimer: null,
+    // 覆盖请求发出到响应正文读完的整个过程。
+    submitTimeout: 15000,
 
     isCommentPjaxRequest: function (options) {
         return !!(options && options.container === '#comments');
@@ -1311,8 +1315,16 @@ var AjaxComment = {
         if (AjaxComment.submitToken !== token || AjaxComment.submitGeneration !== generation) {
             return;
         }
+        AjaxComment.clearSubmitTimer();
         AjaxComment.submitToken = null;
         AjaxComment.submitController = null;
+    },
+
+    clearSubmitTimer: function () {
+        if (AjaxComment.submitTimer !== null) {
+            window.clearTimeout(AjaxComment.submitTimer);
+            AjaxComment.submitTimer = null;
+        }
     },
 
     cancelSubmit: function () {
@@ -1320,12 +1332,27 @@ var AjaxComment = {
         var controller = AjaxComment.submitController;
 
         AjaxComment.submitGeneration += 1;
+        AjaxComment.clearSubmitTimer();
         AjaxComment.submitToken = null;
         AjaxComment.submitController = null;
         if (controller && typeof controller.abort === 'function') {
             controller.abort();
         }
         AjaxComment.setSubmitState(form, false);
+    },
+
+    timeoutSubmit: function (form, token, generation) {
+        var isCurrent = AjaxComment.isCurrentSubmit(form, token, generation);
+
+        AjaxComment.submitTimer = null;
+        if (AjaxComment.submitToken !== token || AjaxComment.submitGeneration !== generation) {
+            return;
+        }
+        // 先作废本次提交再解锁，迟到的响应不会改动表单或之后的提交；写请求结果未知，不自动重发。
+        AjaxComment.cancelSubmit();
+        if (isCurrent) {
+            VOID.alert(AjaxComment.submitTimeoutMessage);
+        }
     },
 
     unbindSubmit: function () {
@@ -1506,6 +1533,9 @@ var AjaxComment = {
         if (controller) {
             requestOptions.signal = controller.signal;
         }
+        AjaxComment.submitTimer = window.setTimeout(function () {
+            AjaxComment.timeoutSubmit(form, token, generation);
+        }, AjaxComment.submitTimeout);
 
         fetch(form.getAttribute('action'), requestOptions).then(function (response) {
             return response.text().then(function (html) {

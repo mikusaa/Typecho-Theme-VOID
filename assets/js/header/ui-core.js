@@ -5,6 +5,8 @@ VOID_Ui = {
     loginActionController: null,
     loginActionGeneration: 0,
     loginActionRequest: null,
+    loginActionTimeout: 8000,
+    loginActionTimer: null,
     scrollHandler: null,
     settingPanelActive: false,
     settingPanelTimer: null,
