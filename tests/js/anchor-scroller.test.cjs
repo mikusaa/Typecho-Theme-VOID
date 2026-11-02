@@ -259,3 +259,49 @@ test('thread layout locks correct browser anchoring across two rendered frames',
     assert.equal(fixture.documentElement.scrollTop, 400);
     assert.equal(fixture.classes.has('void-anchor-scrolling'), false);
 });
+
+test('shrinking content keeps the clicked control in view instead of stranding it above', () => {
+    const fixture = createEnvironment();
+    const scroller = fixture.context.VOID_AnchorScroller;
+    const page = fixture.documentElement;
+    let footerDocumentTop = 2500;
+    const footer = {
+        isConnected: true,
+        getBoundingClientRect() {
+            const top = footerDocumentTop - page.scrollTop;
+            return { top, bottom: top + 30 };
+        }
+    };
+
+    // 父评论在视口上方，用户在长线程底部点击分页。
+    page.scrollTop = 2100;
+    scroller.preserveElement(fixture.target, () => {
+        footerDocumentTop = 1150;
+    }, { keepVisible: footer });
+    assert.equal(footer.getBoundingClientRect().top, 400);
+
+    fixture.flushFrame(16);
+    fixture.flushFrame(32);
+    assert.equal(footer.getBoundingClientRect().top, 400);
+});
+
+test('growing content keeps the original anchor when the control stays visible', () => {
+    const fixture = createEnvironment();
+    const scroller = fixture.context.VOID_AnchorScroller;
+    const page = fixture.documentElement;
+    let footerDocumentTop = 1150;
+    const footer = {
+        isConnected: true,
+        getBoundingClientRect() {
+            const top = footerDocumentTop - page.scrollTop;
+            return { top, bottom: top + 30 };
+        }
+    };
+
+    page.scrollTop = 900;
+    scroller.preserveElement(fixture.target, () => {
+        footerDocumentTop = 2500;
+    }, { keepVisible: footer });
+    assert.equal(page.scrollTop, 900);
+    assert.equal(fixture.target.getBoundingClientRect().top, 100);
+});

@@ -865,7 +865,12 @@ var AjaxComment = {
 
     updateThreadLayout: function (children, callback, options) {
         var root = children ? children.parentElement : null;
-        AjaxComment.preserveLayout(root, callback, options);
+        var list = AjaxComment.getDirectElement(children, '.comment-thread-list');
+
+        AjaxComment.preserveLayout(root, callback, {
+            trackFrames: options ? options.trackFrames : undefined,
+            keepVisible: AjaxComment.getDirectElement(list, '.comment-thread-footer')
+        });
     },
 
     createThreadButton: function (className, text, page) {

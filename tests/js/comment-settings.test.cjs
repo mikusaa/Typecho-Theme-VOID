@@ -330,6 +330,7 @@ test('thread panel identity, layout preservation, and focus use DOM elements dir
     assert.equal(preserved.length, 1);
     assert.equal(preserved[0].element, root);
     assert.equal(preserved[0].options.trackFrames, false);
+    assert.equal(preserved[0].options.keepVisible, null);
     assert.equal(focusCalls.length, 1);
     assert.equal(focusCalls[0].preventScroll, true);
     ajaxComment.bindThreadPanel(children);
@@ -1013,6 +1014,10 @@ test('nested replies flatten once and thread controls paginate without duplicate
     assert.equal(expand.focusOptions.preventScroll, true);
     assert.equal(preserveCalls.length, 3);
     assert.equal(preserveCalls[2].options.trackFrames, false);
+    preserveCalls.forEach((call) => {
+        assert.equal(call.root, parent);
+        assert.equal(call.options.keepVisible, threadList.querySelector('.comment-thread-footer'));
+    });
 });
 
 test('TypechoComment compatibility facade never replaces a plugin implementation', () => {

@@ -260,6 +260,10 @@ VOID_AnchorScroller = {
         VOID_AnchorScroller.layoutLocks += 1;
         VOID_AnchorScroller.updateLockClass();
         var beforeTop = element.getBoundingClientRect().top;
+        var keepVisible = options && options.keepVisible
+            && typeof options.keepVisible.getBoundingClientRect === 'function'
+            ? options.keepVisible : null;
+        var keepVisibleTop = keepVisible ? keepVisible.getBoundingClientRect().top : 0;
         var restorePosition = function () {
             if (element.isConnected === false) return;
             var afterTop = element.getBoundingClientRect().top;
@@ -270,6 +274,14 @@ VOID_AnchorScroller = {
             }
         };
         callback();
+        // 内容收缩时若固定原锚点会把触发控件推出视口上方，改为固定该控件。
+        if (keepVisible && keepVisible.isConnected !== false) {
+            var shift = beforeTop - element.getBoundingClientRect().top;
+            if (keepVisible.getBoundingClientRect().bottom + shift <= VOID_Ui.getHeaderOffset()) {
+                element = keepVisible;
+                beforeTop = keepVisibleTop;
+            }
+        }
         restorePosition();
 
         var release = function () {
