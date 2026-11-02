@@ -64,7 +64,9 @@ Transform 或模板。
 
 `VOID_Widget_Comments_Archive` 继承核心 `\Widget\Comments\Archive`：查询、嵌套、排序、分页和
 永久链接都由核心完成，主题只覆盖 `push()`（记录实际父评论与作者名）、`reply()` 和
-`cancelReply()`，并通过核心约定的全局 `threadedComments()` 回调渲染每条评论。
+`cancelReply()`，并通过核心约定的全局 `threadedComments()` 回调渲染每条评论。与核心不同，
+`reply()` 不检查 `isTopLevel`，最深一层也输出回复链接；核心会把超过 `commentsMaxNestingLevels`
+的回复改挂到上上层并保持在最深一层，父评论标签按 `realParent` 指向实际回复的评论。
 `assets/js/void/comments.js` 依赖渲染结果中的 `.comment-body`、`.comment-parent`/`.comment-child`、
 `.comment-children`、`.comment-reply a`，以及 `data-comment-parent`、`data-comment-depth`、
 回复链接的 `data-comment-id`、`data-comment-coid`、`data-reply-word`、`data-cancel-word`；

@@ -170,12 +170,15 @@ class VOID_Widget_Comments_Archive extends \Widget\Comments\Archive
     /**
      * 评论回复链接
      *
+     * 与核心不同，最深一层也输出回复链接：核心会把更深的回复改挂到上上层并保持在最深一层，
+     * 父评论标签按 realParent 指向实际回复的评论，前端楼中楼面板本身不随层级缩进。
+     *
      * @param string $word 回复链接文字
      * @return void
      */
     public function reply(string $word = '')
     {
-        if ($this->options->commentsThreaded && !$this->isTopLevel && $this->parameter->allowComment) {
+        if ($this->options->commentsThreaded && $this->parameter->allowComment) {
             $word = empty($word) ? '回复' : $word;
             $cancelWord = '取消回复';
             self::pluginHandle()->trigger($plugged)->call('reply', $word, $this);

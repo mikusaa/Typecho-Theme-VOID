@@ -29,6 +29,22 @@ class Widget_Comments_Archive
         $this->stack[$value['coid']] = $value;
         return $value;
     }
+
+    public static function pluginHandle()
+    {
+        return new class {
+            public function trigger(&$plugged)
+            {
+                $plugged = false;
+                return $this;
+            }
+
+            public function call(...$args)
+            {
+                return null;
+            }
+        };
+    }
 }
 
 // 主题源码使用 Typecho 1.3 命名空间类名；替身按下划线名声明，再像核心一样建立别名。
@@ -112,6 +128,34 @@ commentsQueryAssertSame(
 );
 $widget->setRow(array('coid' => 2, 'levels' => 1, 'parent' => 1, 'realParent' => 1));
 commentsQueryAssertSame('', commentsQueryCall($widget, 'getParentLabel'), '第一层回复不显示回复标签');
+
+function commentsQueryReplyOutput($widget)
+{
+    ob_start();
+    $widget->reply('');
+    return ob_get_clean();
+}
+
+$replyRow = array(
+    'coid' => 8784,
+    'levels' => 6,
+    'theId' => 'comment-8784',
+    'permalink' => 'https://example.test/archives/1.html/comment-page-1#comment-8784',
+    'isTopLevel' => true,
+    'options' => (object) array('commentsThreaded' => 1),
+    'parameter' => (object) array('allowComment' => true, 'respondId' => 'respond-post-1')
+);
+$widget = new VOID_Widget_Comments_Archive();
+$widget->setRow($replyRow);
+commentsQueryAssertSame(
+    true,
+    strpos(commentsQueryReplyOutput($widget), 'href="https://example.test/archives/1.html/comment-page-1?replyTo=8784#respond-post-1"') !== false,
+    '最深一层评论仍输出回复链接，更深的回复交由核心改挂到上上层'
+);
+$widget->setRow(array_merge($replyRow, array('options' => (object) array('commentsThreaded' => 0))));
+commentsQueryAssertSame('', commentsQueryReplyOutput($widget), '关闭评论回复时不输出回复链接');
+$widget->setRow(array_merge($replyRow, array('parameter' => (object) array('allowComment' => false, 'respondId' => 'respond-post-1'))));
+commentsQueryAssertSame('', commentsQueryReplyOutput($widget), '文章关闭评论时不输出回复链接');
 
 if ($failures > 0) {
     fwrite(STDERR, "{$failures} comments query contract test(s) failed.\n");
