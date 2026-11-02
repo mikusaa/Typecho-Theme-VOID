@@ -24,12 +24,68 @@ class VOID_Widget_Comments_Archive extends \Widget\Comments\Archive
      */
     public function push(array $value): array
     {
-        // 超过最大嵌套层级时核心会把 parent 改挂到上上层，父评论标签仍指向实际回复的评论。
+        // 超过最大嵌套层级时核心会把 parent 和 levels 改挂到上上层，这里保留实际父评论与实际深度。
         $value['realParent'] = $value['parent'];
         $value = parent::push($value);
+        // 核心 push() 返回前已写入堆栈，实际深度需要补写到堆栈中的同一行。
+        $value['realLevels'] = $value['levels'];
+        $this->stack[$value['coid']]['realLevels'] = $value['levels'];
         $this->commentAuthors[$value['coid']] = $value['author'];
 
         return $value;
+    }
+
+    /**
+     * 子评论；楼中楼始终按回复先后排列，超深回复紧跟在被回复评论之后
+     *
+     * “较新的评论显示在前面”只作用于顶层评论，核心在 DESC 时连子评论一起反转，
+     * 这里先还原为回复先后；核心把超深回复追加为同级，再按 realParent 先序展开。
+     *
+     * @return array
+     */
+    protected function ___children(): array
+    {
+        $children = parent::___children();
+        if ('DESC' == $this->options->commentsOrder) {
+            $children = array_reverse($children);
+        }
+        $coid = (int) $this->coid;
+        $byParent = array();
+        $flattened = false;
+
+        foreach ($children as $child) {
+            $realParent = (int) ($child['realParent'] ?? $child['parent']);
+            $flattened = $flattened || $realParent !== $coid;
+            $byParent[$realParent][] = $child;
+        }
+
+        if (!$flattened) {
+            return $children;
+        }
+
+        $ordered = array();
+        $append = function ($parentId) use (&$append, &$byParent, &$ordered) {
+            if (empty($byParent[$parentId])) {
+                return;
+            }
+
+            $items = $byParent[$parentId];
+            unset($byParent[$parentId]);
+            foreach ($items as $child) {
+                $ordered[] = $child;
+                $append((int) $child['coid']);
+            }
+        };
+        $append($coid);
+
+        // 实际父评论不在本组时按回复先后追加，避免丢失评论。
+        foreach ($byParent as $items) {
+            foreach ($items as $child) {
+                $ordered[] = $child;
+            }
+        }
+
+        return $ordered;
     }
 
     /**
@@ -63,8 +119,8 @@ class VOID_Widget_Comments_Archive extends \Widget\Comments\Archive
         $parentLabel = $comments instanceof self ? $comments->getParentLabel() : '';
 ?>
 <div id="<?php $comments->theId(); ?>"
-    data-comment-parent="<?php echo (int)$comments->parent; ?>"
-    data-comment-depth="<?php echo (int)$comments->levels; ?>"
+    data-comment-parent="<?php echo (int)$comments->realParent; ?>"
+    data-comment-depth="<?php echo (int)$comments->realLevels; ?>"
     class="comment-body<?php
     if ($comments->levels > 0) {
         echo ' comment-child';
