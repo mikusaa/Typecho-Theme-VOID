@@ -179,6 +179,51 @@ async function checkPhpAssetReferences(outputRoot, assets) {
     }
 }
 
+async function latestRevisionManifestTime() {
+    const revisionRoot = path.join(repositoryRoot, 'temp/rev');
+    const manifests = (await listFiles(revisionRoot).catch((error) => {
+        if (error && error.code === 'ENOENT') {
+            return [];
+        }
+        throw error;
+    })).filter((file) => path.posix.basename(file) === 'rev-manifest.json');
+    if (manifests.length === 0) {
+        throw new Error(`Missing revision manifests: ${revisionRoot}`);
+    }
+
+    let latest = 0;
+    for (const file of manifests) {
+        const stats = await fs.stat(path.join(revisionRoot, ...file.split('/')));
+        latest = Math.max(latest, Math.floor(stats.mtimeMs));
+    }
+    return latest;
+}
+
+// 改写了哈希引用的 PHP 必须带本次构建的 mtime，否则按时间同步的部署和 OPcache 会沿用旧模板
+async function checkRewrittenPhpTimes(outputRoot) {
+    const manifestTime = await latestRevisionManifestTime();
+    let rewritten = 0;
+
+    for (const relativePath of await discoverRuntimePhp()) {
+        const outputPath = path.join(outputRoot, ...relativePath.split('/'));
+        const [source, output, stats] = await Promise.all([
+            fs.readFile(path.join(repositoryRoot, ...relativePath.split('/'))),
+            fs.readFile(outputPath),
+            fs.stat(outputPath)
+        ]);
+        if (source.equals(output)) {
+            continue;
+        }
+        rewritten += 1;
+        if (Math.floor(stats.mtimeMs) < manifestTime) {
+            throw new Error(`Rewritten build PHP keeps a pre-build mtime: ${relativePath}`);
+        }
+    }
+    if (rewritten === 0) {
+        throw new Error('No build PHP was rewritten to reference revisioned assets');
+    }
+}
+
 async function checkCopiedRuntime(outputRoot, mode) {
     const runtimePhp = await discoverRuntimePhp();
     for (const relativePath of runtimePhp) {
@@ -281,6 +326,7 @@ export async function checkBuildOutput(options = {}) {
                 throw new Error(`Production build contains an unhashed asset: ${relativePath}`);
             }
         }
+        await checkRewrittenPhpTimes(outputRoot);
     }
 
     await checkPhpAssetReferences(outputRoot, referencedAssets);

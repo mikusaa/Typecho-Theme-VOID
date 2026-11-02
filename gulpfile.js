@@ -277,9 +277,36 @@ gulp.task('pack:js:main', function () {
 });
 
 // 静态文件加戳
+// revCollector 只替换内容，gulp.dest 仍会写回源文件的 mtime；被改写的 PHP 改用构建时刻，
+// 避免按大小和时间同步的部署或 OPcache 沿用引用旧哈希资源的模板
 gulp.task('md5', function () {
+    var buildTime = new Date();
+    var originalContents = new WeakMap();
+    var recordContents = new Transform({
+        objectMode: true,
+        transform: function (file, encoding, callback) {
+            if (file.isBuffer()) {
+                originalContents.set(file, file.contents);
+            }
+            callback(null, file);
+        }
+    });
+    var touchRewritten = new Transform({
+        objectMode: true,
+        transform: function (file, encoding, callback) {
+            var original = originalContents.get(file);
+            if (original && file.stat && !original.equals(file.contents)) {
+                file.stat.mtime = buildTime;
+                file.stat.atime = buildTime;
+            }
+            callback(null, file);
+        }
+    });
+
     return gulp.src(['temp/rev/**/*.json'].concat(runtimePhpSources), { base: './' })
+        .pipe(recordContents)
         .pipe(revCollector())
+        .pipe(touchRewritten)
         .pipe(gulp.dest(productionRoot));
 });
 

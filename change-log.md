@@ -9,6 +9,7 @@
 * 优化：[图标] 图标字体改为只加载单独的 `assets/fonts/void-icon.woff2`（约 15 KB），并在页头预加载；主样式表不再内联 base64 的 WOFF 与 TTF 字体，压缩后减小约 60 KB；同时删除只为 IE 和旧版浏览器服务的 `void-icon.eot`、`void-icon.svg`、`void-icon.ttf`、`void-icon.woff`。图标字形和 `voidicon-*` 类名不变。
 * 移除：[兼容性] 删除页头只为 IE 和旧版移动浏览器服务的 `X-UA-Compatible`、`HandheldFriendly` 声明；样式中删除自 iOS 13 起已不起作用的 `-webkit-overflow-scrolling: touch` 和不再使用的 `compensate-for-scrollbar` 规则，同时清理一段因缺少分号而从未生效的设置面板链接样式，页面外观不变。
 * 移除：[PHP] 删除没有任何调用的 `Utils::indexHome()`；自定义模板如有使用，请改用 `$this->options->siteUrl()`。
+* 修复：[构建] 构建时被改写为新哈希资源引用的 PHP 模板改用构建时刻作为修改时间；此前只改样式或脚本时，模板仍保留源文件的修改时间，按大小和时间同步的部署与 PHP OPcache 可能继续使用引用已删除旧哈希资源的模板。
 
 **🛠️ 2026-10-26 Version 4.1.0**
 
