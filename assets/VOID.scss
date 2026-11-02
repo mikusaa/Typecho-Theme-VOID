@@ -45,9 +45,6 @@ body{
     flex-direction: column;
     transition: 0.15s $animationTimingFunc background;
     background: $bgColor;
-    &:not(.mobile).compensate-for-scrollbar {
-        overflow: auto
-    }
     &.theme-dark {
         background: $td-bgColor;
     }
@@ -241,7 +238,6 @@ p.notice {
     max-width: 100%;
     overflow: auto;
     position: relative;
-    -webkit-overflow-scrolling: touch;
     li{
         height: 2.6rem;
         a,>span{
@@ -483,22 +479,6 @@ p.notice {
             font-size: 1.2rem;
             max-width: 100%;
             overflow-x: auto;
-            -webkit-overflow-scrolling:touch
-            a {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                padding: 5px;
-                width: 37px;
-                height: 37px;
-                border-radius: 50%;
-                &:hover {
-                    background: #f5f5f5;
-                    .theme-dark & {
-                        background: $td-bgColor;
-                    }
-                }
-            }
         }
 
         &#login-panel {
@@ -648,7 +628,6 @@ p.notice {
 .douban-single{margin: 1rem auto}
 mjx-container[jax="SVG"]{max-width:100%}
 mjx-container[jax="SVG"][display="true"]{overflow-x:auto;overflow-y:hidden}
-.aplayer .aplayer-list ol{-webkit-overflow-scrolling:touch}
 .theme-dark .aplayer {
     color: $td-textColor;
     background: rgba(#000, 0.925);

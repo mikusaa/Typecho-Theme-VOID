@@ -258,7 +258,6 @@
     border-bottom: 1px solid rgba(#000, 0.16);
     overflow-x: auto;
     overscroll-behavior-inline: contain;
-    -webkit-overflow-scrolling: touch;
 
     .theme-dark & {
         border-color: rgba(#fff, 0.15);
@@ -293,7 +292,6 @@
     overflow-x: auto;
     overflow-wrap: anywhere;
     word-break: normal;
-    -webkit-overflow-scrolling: touch;
 
     caption {
         padding: 0 0 8px;
@@ -575,7 +573,6 @@
         padding-top: 32px;
     }
     overflow: hidden;
-    -webkit-overflow-scrolling: touch;
     line-height: 1.5;
     font-size: 0.96em;
     font-family: Menlo, Monaco, Consolas, "Courier New", monospace;

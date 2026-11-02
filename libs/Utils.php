@@ -230,16 +230,6 @@ class Utils
     }
 
     /**
-     * 输出相对首页路径，本方法不处理伪静态，用于静态文件
-     * 
-     * @return void
-     */
-    public static function indexHome($path)
-    {
-        Helper::options()->siteUrl($path);
-    }
-
-    /**
      * 输出相对主题目录路径，用于静态文件
      * 
      * @return void

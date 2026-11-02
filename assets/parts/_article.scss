@@ -509,7 +509,6 @@ article {
             scroll-padding-inline: 20px;
             scroll-snap-type: x mandatory;
             overscroll-behavior-inline: contain;
-            -webkit-overflow-scrolling: touch;
             cursor: grab;
             scrollbar-width: thin;
 
@@ -962,7 +961,6 @@ article {
     bottom: 0;
     z-index: 3;
     overflow: auto;
-    -webkit-overflow-scrolling: touch;
     width: 280px;
     right: -280px;
     @include sidebar;
