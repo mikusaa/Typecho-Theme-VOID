@@ -108,22 +108,27 @@ commentsSecurityAssertContains(
     $commentWidget,
     '评论组件继承 Typecho 1.3 核心评论归档组件'
 );
-foreach (array('execute', 'pageNav', 'listComments', 'threadedComments', 'num', 'alt', 'levelsAlt', '___permalink', '___children', '___isTopLevel') as $coreMethod) {
+foreach (array('execute', 'pageNav', 'listComments', 'threadedComments', 'num', 'alt', 'levelsAlt', '___permalink', '___isTopLevel') as $coreMethod) {
     commentsSecurityAssertSame(
         0,
         preg_match('/(?:public|protected|private)(?:\s+static)?\s+function\s+' . preg_quote($coreMethod, '/') . '\s*\(/', $commentWidget),
-        '查询、嵌套、DESC 子评论反转与分页沿用核心 ' . $coreMethod . '()，主题不再复制'
+        '查询、嵌套、排序与分页沿用核心 ' . $coreMethod . '()，主题不再复制'
     );
 }
 commentsSecurityAssertContains(
-    'data-comment-parent="<?php echo (int)$comments->parent; ?>"',
+    '$children = parent::___children();',
     $commentWidget,
-    '评论节点暴露服务端实际父级供 Ajax 保持嵌套顺序'
+    '子评论查询仍由核心 ___children() 完成，主题只把楼中楼还原为回复先后并按实际回复关系展开'
 );
 commentsSecurityAssertContains(
-    'data-comment-depth="<?php echo (int)$comments->levels; ?>"',
+    'data-comment-parent="<?php echo (int)$comments->realParent; ?>"',
     $commentWidget,
-    '评论节点暴露服务端实际深度供 Ajax 保持嵌套顺序'
+    '评论节点暴露实际回复的父评论供 Ajax 保持嵌套顺序'
+);
+commentsSecurityAssertContains(
+    'data-comment-depth="<?php echo (int)$comments->realLevels; ?>"',
+    $commentWidget,
+    '评论节点暴露未压平的实际深度供 Ajax 保持嵌套顺序'
 );
 commentsSecurityAssertContains(
     "\$commentClass = '';",

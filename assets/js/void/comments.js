@@ -56,8 +56,6 @@ var AjaxComment = {
     },
 
     insertNewestComment: function (list, comment) {
-        var footer;
-
         if (!list || !comment) {
             return;
         }
@@ -67,7 +65,12 @@ var AjaxComment = {
             return;
         }
 
-        footer = AjaxComment.getDirectElement(list, '.comment-thread-footer');
+        AjaxComment.appendComment(list, comment);
+    },
+
+    appendComment: function (list, comment) {
+        var footer = AjaxComment.getDirectElement(list, '.comment-thread-footer');
+
         if (footer) {
             list.insertBefore(comment, footer);
         } else {
@@ -762,13 +765,9 @@ var AjaxComment = {
             return false;
         }
 
+        // 楼中楼始终按回复先后排列，不受“较新的评论显示在前面”影响，与服务端 ___children() 一致。
         if (parent.classList.contains('comment-parent')) {
-            AjaxComment.insertNewestComment(list, comment);
-            return true;
-        }
-
-        if (AjaxComment.getCommentsOrder() === 'DESC') {
-            parent.parentNode.insertBefore(comment, parent.nextSibling);
+            AjaxComment.appendComment(list, comment);
             return true;
         }
 

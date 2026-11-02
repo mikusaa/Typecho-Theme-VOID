@@ -421,6 +421,72 @@ test('new root and direct reply insertion follows ASC or DESC order', () => {
     assert.deepEqual(calls.pop(), ['before-footer', comment]);
 });
 
+test('thread replies stay in reply order and follow the replied comment by real parent and depth', () => {
+    const insertThreadReply = (order, threadIds, parentCoid, depth) => {
+        const root = new FakeDomNode('div', 'comment-8771');
+        const children = new FakeDomNode('div');
+        const list = new FakeDomNode('div');
+        const meta = {
+            8783: ['8771', '5'],
+            8784: ['8783', '6'],
+            8785: ['8784', '7'],
+            8786: ['8783', '6']
+        };
+
+        root.classList.add('comment-body', 'comment-parent');
+        children.classList.add('comment-children', 'comment-thread-panel');
+        list.classList.add('comment-list', 'comment-thread-list');
+        children.appendChild(list);
+        root.appendChild(children);
+        threadIds.forEach((coid) => {
+            const item = new FakeDomNode('div', `comment-${coid}`);
+            item.classList.add('comment-body', 'comment-child');
+            item.setAttribute('data-comment-parent', meta[coid][0]);
+            item.setAttribute('data-comment-depth', meta[coid][1]);
+            list.appendChild(item);
+        });
+
+        const findById = (node, id) => {
+            if (node.id === id) return node;
+            for (const child of node.children) {
+                const match = findById(child, id);
+                if (match) return match;
+            }
+            return null;
+        };
+        const document = Object.assign(commentPageDocument({ order, hasPrev: false, hasNext: false }), {
+            createElement(tagName) {
+                return new FakeDomNode(tagName);
+            },
+            getElementById(id) {
+                return findById(root, id);
+            }
+        });
+        const ajaxComment = loadAjaxComment(null, document);
+        const reply = new FakeDomNode('div', 'comment-8787');
+        reply.classList.add('comment-body', 'comment-child');
+        reply.setAttribute('data-comment-parent', parentCoid);
+        reply.setAttribute('data-comment-depth', depth);
+
+        assert.equal(ajaxComment.insertReplyComment(reply), true);
+        return list.children.map((item) => item.id.replace('comment-', ''));
+    };
+
+    // 服务端楼中楼按回复先后、实际回复关系先序输出：8785 回复 8784，8786 回复 8783，三者都被核心压到第 6 层。
+    for (const order of ['ASC', 'DESC']) {
+        assert.deepEqual(
+            insertThreadReply(order, ['8783', '8784', '8785', '8786'], '8784', '7'),
+            ['8783', '8784', '8785', '8787', '8786'],
+            `${order} 下超深回复紧跟被回复评论的已有回复`
+        );
+        assert.deepEqual(
+            insertThreadReply(order, ['8783', '8784', '8785', '8786'], '8771', '1'),
+            ['8783', '8784', '8785', '8786', '8787'],
+            `${order} 下直接回复顶层评论追加到楼中楼末尾`
+        );
+    }
+});
+
 test('comment hashes expand only replies hidden by the collapsed preview', () => {
     const ajaxComment = loadAjaxComment(() => ({}));
 

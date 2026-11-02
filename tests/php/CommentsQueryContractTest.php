@@ -30,6 +30,11 @@ class Widget_Comments_Archive
         return $value;
     }
 
+    protected function ___children(): array
+    {
+        return isset($this->row['children']) ? $this->row['children'] : array();
+    }
+
     public static function pluginHandle()
     {
         return new class {
@@ -97,15 +102,64 @@ commentsQueryAssertSame(
 
 $widget = new VOID_Widget_Comments_Archive();
 foreach (array(
-    array('coid' => 1, 'parent' => 0, 'author' => 'A'),
-    array('coid' => 2, 'parent' => 1, 'author' => 'B<script>'),
-    array('coid' => 3, 'parent' => 2, 'author' => 'C'),
-    array('coid' => 4, 'parent' => 3, 'author' => '')
+    array('coid' => 1, 'parent' => 0, 'levels' => 0, 'author' => 'A'),
+    array('coid' => 2, 'parent' => 1, 'levels' => 1, 'author' => 'B<script>'),
+    array('coid' => 3, 'parent' => 2, 'levels' => 2, 'author' => 'C'),
+    array('coid' => 4, 'parent' => 3, 'levels' => 3, 'author' => '')
 ) as $row) {
     $widget->push($row);
 }
 $stack = $widget->getStack();
 commentsQueryAssertSame(2, $stack[3]['realParent'], 'push() 在核心改挂超深评论前记录实际父评论');
+commentsQueryAssertSame(3, $stack[4]['realLevels'], 'push() 在核心压平超深评论前记录实际深度');
+
+function commentsQueryChildIds($widget, $order, array $children)
+{
+    $widget->setRow(array(
+        'coid' => 8783,
+        'children' => $children,
+        'options' => (object) array('commentsOrder' => $order)
+    ));
+    return array_map(function ($child) {
+        return $child['coid'];
+    }, commentsQueryCall($widget, '___children'));
+}
+
+$deepReply = function ($coid, $realParent) {
+    return array('coid' => $coid, 'parent' => 8783, 'realParent' => $realParent, 'levels' => 6);
+};
+$childrenWidget = new VOID_Widget_Comments_Archive();
+// DESC 时核心把 8783 下的 [8784, 8785, 8786] 整体反转；楼中楼应还原为回复先后，8785 实际回复 8784。
+commentsQueryAssertSame(
+    array(8784, 8785, 8786),
+    commentsQueryChildIds($childrenWidget, 'DESC', array($deepReply(8786, 8783), $deepReply(8785, 8784), $deepReply(8784, 8783))),
+    'DESC 下楼中楼仍按回复先后排列，超深回复排在被回复评论之后'
+);
+commentsQueryAssertSame(
+    array(8784, 8786),
+    commentsQueryChildIds($childrenWidget, 'DESC', array($deepReply(8786, 8783), $deepReply(8784, 8783))),
+    'DESC 只作用于顶层评论，同一评论的多条回复按回复先后排列'
+);
+commentsQueryAssertSame(
+    array(8784, 8785, 8787, 8786),
+    commentsQueryChildIds($childrenWidget, 'ASC', array($deepReply(8784, 8783), $deepReply(8785, 8784), $deepReply(8786, 8783), $deepReply(8787, 8784))),
+    '超深回复按实际回复关系紧跟被回复评论'
+);
+commentsQueryAssertSame(
+    array(8784, 8785, 8788),
+    commentsQueryChildIds($childrenWidget, 'ASC', array($deepReply(8784, 8783), $deepReply(8785, 8784), $deepReply(8788, 8785))),
+    '连续超深回复按实际回复链展开'
+);
+commentsQueryAssertSame(
+    array(8784, 8786),
+    commentsQueryChildIds($childrenWidget, 'ASC', array($deepReply(8784, 8783), $deepReply(8786, 8783))),
+    '没有超深回复时 ASC 保持核心子评论顺序'
+);
+commentsQueryAssertSame(
+    array(8784, 8790),
+    commentsQueryChildIds($childrenWidget, 'ASC', array($deepReply(8784, 8783), $deepReply(8790, 8999))),
+    '实际父评论不在本组时仍保留评论'
+);
 
 // 核心把超过最大嵌套层级的评论改挂到上上层：parent 变化，realParent 不变。
 $widget->setRow(array('coid' => 4, 'levels' => 2, 'parent' => 1, 'realParent' => 3));
