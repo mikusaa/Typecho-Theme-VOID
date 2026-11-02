@@ -140,6 +140,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="preload" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/files/open-sans-latin-wght-normal.woff2'); ?>" as="font" type="font/woff2" crossorigin="anonymous">
+    <link rel="preload" href="<?php Utils::indexTheme('/assets/fonts/void-icon.woff2'); ?>" as="font" type="font/woff2" crossorigin="anonymous">
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/wght.css'); ?>">
     <?php if(Utils::isSerif($setting)): ?>
         <link id="stylesheet_noto" href="<?php echo Utils::escapeHtml($serifFontStylesheet); ?>" rel="stylesheet">
