@@ -24,9 +24,7 @@ if (isset($_POST['void_action'])) {
 <html>
     <head>
     <meta charset="<?php $this->options->charset(); ?>">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="renderer" content="webkit">
-    <meta name="HandheldFriendly" content="true">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <script>
     (function () {
@@ -140,6 +138,7 @@ if (isset($_POST['void_action'])) {
 
     <!--CSS-->
     <link rel="preload" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/files/open-sans-latin-wght-normal.woff2'); ?>" as="font" type="font/woff2" crossorigin="anonymous">
+    <link rel="preload" href="<?php Utils::indexTheme('/assets/fonts/void-icon.woff2'); ?>" as="font" type="font/woff2" crossorigin="anonymous">
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/fonts/fontsource/open-sans/5.3.0-r1/wght.css'); ?>">
     <?php if(Utils::isSerif($setting)): ?>
         <link id="stylesheet_noto" href="<?php echo Utils::escapeHtml($serifFontStylesheet); ?>" rel="stylesheet">
@@ -148,7 +147,7 @@ if (isset($_POST['void_action'])) {
         <link href="<?php Utils::indexTheme('/assets/fonts/fontsource/fira-code/5.3.0-r1/400.css'); ?>" rel="stylesheet">
     <?php endif; ?>
     <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/bundle-a00d82e627.css');?>">
-    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-ef4a766a83.css');?>">
+    <link rel="stylesheet" href="<?php Utils::indexTheme('/assets/VOID-e5cd8bd837.css');?>">
 
     <!--JS-->
     <script src="<?php Utils::indexTheme('/assets/bundle-header-054bac83fe.js'); ?>"></script>
