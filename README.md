@@ -197,6 +197,8 @@ Feed 截断、Media RSS 和浏览器预览可选安装 [FeedEnhancer 1.1.0 或�
 
 * 注音语法：`{{文本:zhu yin}}`，会渲染为：<ruby>文本<rp> (</rp><rt>zhu yin</rt><rp>)</rp></ruby>
 
+在后台编辑器中打开 **VOID → 折叠块**，可插入默认收起的 HTML `<details>` 和 `<summary>` 模板。有选中文字时会将其作为折叠正文，插入后选中“折叠标题”供修改。标题与正文之间、正文与结束标签之间保留空行，正文可使用 Markdown。
+
 提示块使用 [GitHub Alerts](https://docs.github.com/zh/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts) 语法。例如：
 
 ```markdown

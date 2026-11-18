@@ -28,6 +28,7 @@ function createEnvironment() {
             this.selectionStart = 0;
             this.selectionEnd = 0;
             this.scrollTop = 0;
+            this.style = {};
             this._textContent = '';
         }
 
@@ -134,6 +135,10 @@ function createEnvironment() {
             this.selectionEnd = end;
         }
 
+        getBoundingClientRect() {
+            return this.bounds || { left: 16, right: 234 };
+        }
+
         get textContent() {
             return this._textContent;
         }
@@ -146,7 +151,7 @@ function createEnvironment() {
     class Document extends Element {
         constructor() {
             super('#document');
-            this.documentElement = { scrollTop: 0 };
+            this.documentElement = { scrollTop: 0, clientWidth: 1280 };
             this.activeElement = null;
             this.body = new Element('body');
             this.appendChild(this.body);
@@ -192,7 +197,7 @@ function createEnvironment() {
 
     let mountCount = 0;
     let mountOptions = null;
-    const window = {
+    const window = Object.assign(new Element('window'), {
         jQuery,
         VoidEmotes: {
             mount(options) {
@@ -234,9 +239,15 @@ function createEnvironment() {
                 };
             }
         }
-    };
+    });
     window.window = window;
-    const context = { document, Element, window };
+    class Event {
+        constructor(type, options = {}) {
+            this.type = type;
+            this.bubbles = !!options.bubbles;
+        }
+    }
+    const context = { document, Element, Event, window };
 
     vm.runInNewContext(
         menuSource,
@@ -286,7 +297,7 @@ test('quotes multiline and CRLF selections with valid blank quote lines', () => 
 
 test('preserves CRLF when inserting into a CRLF document', () => {
     const result = createEnvironment().menu.__test.applyTemplate('开头\r\n结尾', 0, 2, 'WARNING');
-    assert.equal(result.value, '> [!WARNING]\r\n> 开头\r\n结尾');
+    assert.equal(result.value, '> [!WARNING]\r\n> 开头\r\n\r\n结尾');
 });
 
 test('rejects unsupported and incorrectly cased Alert types', () => {
@@ -311,8 +322,11 @@ test('creates one VOID entry with the fixed menu order and one emote host', () =
     assert.equal(environment.document.getElementById('wmd-alerts-button'), null);
     assert.deepEqual(
         items.map((item) => item.getAttribute('data-void-action') || item.getAttribute('data-alert-type')),
-        ['photos', 'emotes', 'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
+        ['photos', 'details', 'emotes', 'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
     );
+    assert.equal(items[1].children[1].textContent, '折叠块');
+    assert.equal(items[1].children[2].tagName, 'CODE');
+    assert.equal(items[1].children[2].textContent, '<details>');
     assert.equal(environment.getMountCount(), 1);
     assert.equal(environment.getMountOptions().manualTrigger, true);
     assert.equal(environment.getMountOptions().trigger.id, 'void-editor-menu-trigger');
@@ -329,7 +343,7 @@ test('inserts the existing photos template and all Alert types from the menu', (
     items[0].click();
     assert.equal(environment.field.value, '正文\n\n[photos]\n\n[/photos]\n\n');
 
-    for (let index = 2; index < items.length; index++) {
+    for (let index = 3; index < items.length; index++) {
         const type = items[index].getAttribute('data-alert-type');
         environment.field.value = '选区';
         environment.field.selectionStart = 0;
@@ -339,44 +353,123 @@ test('inserts the existing photos template and all Alert types from the menu', (
     }
 });
 
-test('preserves editor and document scroll when inserting an Alert into existing content', () => {
+test('inserts a closed details block and selects its title from the menu', () => {
     const environment = createEnvironment();
-    const field = environment.field;
-    let value = '';
-    let focusOptions = null;
-
-    Object.defineProperty(field, 'value', {
-        configurable: true,
-        get() {
-            return value;
-        },
-        set(nextValue) {
-            value = String(nextValue);
-            this.selectionStart = value.length;
-            this.selectionEnd = value.length;
-            this.scrollTop = 9999;
-        }
-    });
-    field.focus = function (options) {
-        focusOptions = options;
-        environment.document.activeElement = this;
-        environment.document.documentElement.scrollTop = 9999;
-    };
-
-    field.value = Array.from({ length: 200 }, (_, index) => `第 ${index} 行`).join('\n');
-    field.selectionStart = field.value.indexOf('第 80 行');
-    field.selectionEnd = field.selectionStart;
-    field.scrollTop = 480;
-    environment.document.documentElement.scrollTop = 240;
-
     environment.menu.init();
-    menuItems(environment.document)[2].click();
+    const trigger = environment.document.getElementById('void-editor-menu-trigger');
+    const popup = environment.document.getElementById('void-editor-menu');
+    let inputEvents = 0;
+    environment.field.addEventListener('input', (event) => {
+        assert.equal(event.bubbles, true);
+        inputEvents++;
+    });
 
-    assert.equal(field.scrollTop, 480);
-    assert.equal(environment.document.documentElement.scrollTop, 240);
-    assert.equal(focusOptions.preventScroll, true);
-    assert.equal(field.value.slice(field.selectionStart, field.selectionEnd), '提示内容');
+    trigger.click();
+    menuItems(environment.document)[1].click();
+
+    assert.equal(
+        environment.field.value,
+        '<details>\n<summary>折叠标题</summary>\n\n折叠内容\n\n</details>'
+    );
+    assert.equal(
+        environment.field.value.slice(environment.field.selectionStart, environment.field.selectionEnd),
+        '折叠标题'
+    );
+    assert.equal(environment.document.activeElement, environment.field);
+    assert.equal(popup.hidden, true);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(inputEvents, 1);
 });
+
+test('wraps selected Markdown without changing it and selects the details title', () => {
+    const environment = createEnvironment();
+    const selected = '**粗体**\n\n- 第一项\n- 第二项\n\n```js\nconsole.log("<标签>");\n```';
+    const before = '前段\n\n';
+    const after = '\n\n后段';
+    environment.field.value = before + selected + after;
+    environment.field.setSelectionRange(before.length, before.length + selected.length);
+    environment.menu.init();
+
+    menuItems(environment.document)[1].click();
+
+    assert.equal(
+        environment.field.value,
+        before + '<details>\n<summary>折叠标题</summary>\n\n' + selected + '\n\n</details>' + after
+    );
+    assert.equal(
+        environment.field.value.slice(environment.field.selectionStart, environment.field.selectionEnd),
+        '折叠标题'
+    );
+});
+
+test('separates details from neighboring text and preserves document line endings', () => {
+    const helpers = createEnvironment().menu.__test;
+    for (const lineEnding of ['\n', '\r\n']) {
+        for (const separator of ['', lineEnding, lineEnding + lineEnding]) {
+            const before = '前段' + separator;
+            const selected = '第一行' + lineEnding + '第二行';
+            const after = separator + '后段';
+            const source = before + selected + after;
+            const result = helpers.applyTemplate(source, before.length, before.length + selected.length, 'details');
+            const expected = [
+                '前段',
+                '',
+                '<details>',
+                '<summary>折叠标题</summary>',
+                '',
+                selected,
+                '',
+                '</details>',
+                '',
+                '后段'
+            ].join(lineEnding);
+
+            assert.equal(result.value, expected);
+            assert.equal(result.value.slice(result.selectionStart, result.selectionEnd), '折叠标题');
+        }
+    }
+});
+
+for (const [itemIndex, placeholder] of [[1, '折叠标题'], [3, '提示内容']]) {
+    test(`preserves editor and document scroll when inserting ${placeholder} into existing content`, () => {
+        const environment = createEnvironment();
+        const field = environment.field;
+        let value = '';
+        let focusOptions = null;
+
+        Object.defineProperty(field, 'value', {
+            configurable: true,
+            get() {
+                return value;
+            },
+            set(nextValue) {
+                value = String(nextValue);
+                this.selectionStart = value.length;
+                this.selectionEnd = value.length;
+                this.scrollTop = 9999;
+            }
+        });
+        field.focus = function (options) {
+            focusOptions = options;
+            environment.document.activeElement = this;
+            environment.document.documentElement.scrollTop = 9999;
+        };
+
+        field.value = Array.from({ length: 200 }, (_, index) => `第 ${index} 行`).join('\n');
+        field.selectionStart = field.value.indexOf('第 80 行');
+        field.selectionEnd = field.selectionStart;
+        field.scrollTop = 480;
+        environment.document.documentElement.scrollTop = 240;
+
+        environment.menu.init();
+        menuItems(environment.document)[itemIndex].click();
+
+        assert.equal(field.scrollTop, 480);
+        assert.equal(environment.document.documentElement.scrollTop, 240);
+        assert.equal(focusOptions.preventScroll, true);
+        assert.equal(field.value.slice(field.selectionStart, field.selectionEnd), placeholder);
+    });
+}
 
 test('supports trigger and menu keyboard navigation, Tab closing and focus restoration', () => {
     const environment = createEnvironment();
@@ -392,6 +485,13 @@ test('supports trigger and menu keyboard navigation, Tab closing and focus resto
 
     items[0].dispatchEvent({ type: 'keydown', key: 'ArrowDown' });
     assert.equal(environment.document.activeElement, items[1]);
+    items[1].dispatchEvent({ type: 'keydown', key: 'Enter' });
+    assert.equal(popup.hidden, true);
+    assert.equal(environment.document.activeElement, environment.field);
+    assert.equal(environment.field.value.slice(environment.field.selectionStart, environment.field.selectionEnd), '折叠标题');
+
+    trigger.dispatchEvent({ type: 'keydown', key: 'ArrowDown' });
+    items[0].dispatchEvent({ type: 'keydown', key: 'ArrowDown' });
     items[1].dispatchEvent({ type: 'keydown', key: 'End' });
     assert.equal(environment.document.activeElement, items[items.length - 1]);
     items[items.length - 1].dispatchEvent({ type: 'keydown', key: 'Escape' });
@@ -411,7 +511,7 @@ test('switches the VOID trigger between the menu and emote picker', () => {
     const items = menuItems(environment.document);
 
     trigger.click();
-    items[1].click();
+    items[2].click();
     assert.equal(popup.hidden, true);
     assert.equal(controller.picker.isOpen, true);
     assert.equal(trigger.getAttribute('aria-haspopup'), 'dialog');
@@ -424,6 +524,26 @@ test('switches the VOID trigger between the menu and emote picker', () => {
     assert.equal(popup.hidden, false);
     assert.equal(trigger.getAttribute('aria-haspopup'), 'menu');
     assert.equal(trigger.getAttribute('aria-controls'), popup.id);
+});
+
+test('keeps the open menu inside the viewport and repositions it after resizing', () => {
+    const environment = createEnvironment();
+    environment.menu.init();
+    const trigger = environment.document.getElementById('void-editor-menu-trigger');
+    const popup = environment.document.getElementById('void-editor-menu');
+    popup.bounds = { left: 280, right: 498 };
+    environment.document.documentElement.clientWidth = 390;
+
+    trigger.click();
+    assert.equal(popup.style.transform, 'translateX(-116px)');
+
+    environment.document.documentElement.clientWidth = 1280;
+    environment.window.dispatchEvent({ type: 'resize' });
+    assert.equal(popup.style.transform, 'translateX(0px)');
+
+    popup.bounds = { left: -40, right: 178 };
+    environment.window.dispatchEvent({ type: 'resize' });
+    assert.equal(popup.style.transform, 'translateX(48px)');
 });
 
 test('outside clicks close the active popup without duplicating nodes after remount', () => {

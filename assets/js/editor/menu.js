@@ -39,6 +39,7 @@ var VOID_Editor_Menu = (function ($) {
     };
     var MENU_ITEMS = [
         { action: 'photos', label: '图集', meta: '[photos]' },
+        { action: 'details', label: '折叠块', meta: '<details>' },
         { action: 'emotes', label: '表情', meta: '选择器' },
         { alertType: 'NOTE', label: '说明', meta: 'NOTE' },
         { alertType: 'TIP', label: '提示', meta: 'TIP' },
@@ -47,6 +48,7 @@ var VOID_Editor_Menu = (function ($) {
         { alertType: 'CAUTION', label: '危险', meta: 'CAUTION' }
     ];
     var PHOTOS_TEMPLATE = '\n\n[photos]\n\n[/photos]\n\n';
+    var DETAILS_TITLE = '折叠标题';
     var PLACEHOLDER = '提示内容';
     var instance = null;
 
@@ -55,16 +57,27 @@ var VOID_Editor_Menu = (function ($) {
     }
 
     function createTemplate(type, selection, lineEnding) {
+        var placeholder = type === 'details' ? '折叠内容' : PLACEHOLDER;
         var body;
         var lines;
 
-        if (!isSupportedType(type)) {
+        if (type !== 'details' && !isSupportedType(type)) {
             return null;
         }
 
         body = selection === undefined || selection === null || selection === ''
-            ? PLACEHOLDER : String(selection);
+            ? placeholder : String(selection);
         lineEnding = lineEnding || '\n';
+        if (type === 'details') {
+            return [
+                '<details>',
+                '<summary>' + DETAILS_TITLE + '</summary>',
+                '',
+                body,
+                '',
+                '</details>'
+            ].join(lineEnding);
+        }
         lines = body.split(/\r\n|\r|\n/);
 
         return '> [!' + type + ']' + lineEnding + lines.map(function (line) {
@@ -77,23 +90,25 @@ var VOID_Editor_Menu = (function ($) {
     }
 
     function getLeadingSeparator(value, lineEnding) {
-        if (value === '') {
+        var normalized = value.replace(/\r\n?/g, '\n');
+        if (normalized === '') {
             return '';
         }
-        if (/(?:\r\n|\r|\n)[ \t]*(?:\r\n|\r|\n)$/.test(value)) {
+        if (/\n[ \t]*\n$/.test(normalized)) {
             return '';
         }
-        return /(?:\r\n|\r|\n)$/.test(value) ? lineEnding : lineEnding + lineEnding;
+        return /\n$/.test(normalized) ? lineEnding : lineEnding + lineEnding;
     }
 
     function getTrailingSeparator(value, lineEnding) {
-        if (value === '') {
+        var normalized = value.replace(/\r\n?/g, '\n');
+        if (normalized === '') {
             return '';
         }
-        if (/^(?:\r\n|\r|\n)[ \t]*(?:\r\n|\r|\n)/.test(value)) {
+        if (/^\n[ \t]*\n/.test(normalized)) {
             return '';
         }
-        return /^(?:\r\n|\r|\n)/.test(value) ? lineEnding : lineEnding + lineEnding;
+        return /^\n/.test(normalized) ? lineEnding : lineEnding + lineEnding;
     }
 
     function applyTemplate(value, selectionStart, selectionEnd, type) {
@@ -121,7 +136,10 @@ var VOID_Editor_Menu = (function ($) {
         insertedStart = before.length + leading.length;
         nextValue = before + leading + template + trailing + after;
 
-        if (selected === '') {
+        if (type === 'details') {
+            start = insertedStart + template.indexOf(DETAILS_TITLE);
+            end = start + DETAILS_TITLE.length;
+        } else if (selected === '') {
             start = insertedStart + template.indexOf(PLACEHOLDER);
             end = start + PLACEHOLDER.length;
         } else {
@@ -162,7 +180,7 @@ var VOID_Editor_Menu = (function ($) {
         field.setSelectionRange(result.selectionStart, result.selectionEnd);
         field.scrollTop = textTop;
         document.documentElement.scrollTop = documentTop;
-        $(field).trigger('input');
+        field.dispatchEvent(new Event('input', { bubbles: true }));
         return true;
     }
 
@@ -179,7 +197,7 @@ var VOID_Editor_Menu = (function ($) {
         var button = document.createElement('button');
         var icon = document.createElement('span');
         var label = document.createElement('span');
-        var meta = document.createElement(item.alertType || item.action === 'photos' ? 'code' : 'span');
+        var meta = document.createElement(item.action === 'emotes' ? 'span' : 'code');
         var iconType = item.alertType ? item.alertType.toLowerCase() : item.action;
 
         button.type = 'button';
@@ -247,11 +265,12 @@ var VOID_Editor_Menu = (function ($) {
         menu.appendChild(createMenuLabel('内容块'));
         menu.appendChild(createMenuItem(MENU_ITEMS[0]));
         menu.appendChild(createMenuItem(MENU_ITEMS[1]));
+        menu.appendChild(createMenuItem(MENU_ITEMS[2]));
         separator.className = 'void-editor-menu__separator';
         separator.setAttribute('aria-hidden', 'true');
         menu.appendChild(separator);
         menu.appendChild(createMenuLabel('提示块'));
-        MENU_ITEMS.slice(2).forEach(function (item) {
+        MENU_ITEMS.slice(3).forEach(function (item) {
             menu.appendChild(createMenuItem(item));
         });
 
@@ -324,12 +343,29 @@ var VOID_Editor_Menu = (function ($) {
             }
         }
 
+        function positionMenu() {
+            var bounds;
+            var offset = 0;
+            var viewportWidth = document.documentElement.clientWidth;
+
+            menu.style.transform = '';
+            bounds = menu.getBoundingClientRect();
+            if (bounds.right > viewportWidth - 8) {
+                offset = viewportWidth - 8 - bounds.right;
+            }
+            if (bounds.left + offset < 8) {
+                offset = 8 - bounds.left;
+            }
+            menu.style.transform = 'translateX(' + offset + 'px)';
+        }
+
         function openMenu(focusIndex) {
             var items = getItems();
             if (picker && picker.isOpen) {
                 picker.close();
             }
             menu.hidden = false;
+            positionMenu();
             syncTrigger('menu');
             if (typeof focusIndex === 'number' && items.length) {
                 items[(focusIndex + items.length) % items.length].focus();
@@ -424,7 +460,7 @@ var VOID_Editor_Menu = (function ($) {
                 if (action === 'emotes') {
                     openEmotes();
                 } else if ((action === 'photos' && insertPhotos(field))
-                    || applyToField(field, item.getAttribute('data-alert-type'))) {
+                    || applyToField(field, action || item.getAttribute('data-alert-type'))) {
                     closeMenu(false);
                 }
             });
@@ -457,6 +493,11 @@ var VOID_Editor_Menu = (function ($) {
             }
             if (!menu.hidden) {
                 closeMenu(false);
+            }
+        });
+        listen(window, 'resize', function () {
+            if (!menu.hidden) {
+                positionMenu();
             }
         });
 
