@@ -392,7 +392,7 @@ class Utils
             . self::encodeJsonForHtml($emotesBaseUrl) . '};</script>';
 
         ob_start();
-        self::indexTheme('/assets/editor-4adb10c99d.js');
+        self::indexTheme('/assets/editor-9673204b73.js');
         $editorUrl = ob_get_clean();
         echo '<script src="' . self::escapeHtml($editorUrl) . '"></script>';
 
@@ -402,7 +402,7 @@ class Utils
         echo '<link rel="stylesheet" href="' . self::escapeHtml($emotePickerStyleUrl) . '" />';
 
         ob_start();
-        self::indexTheme('/assets/editor-admin-686afd1648.css');
+        self::indexTheme('/assets/editor-admin-7a28edb4d5.css');
         $editorStyleUrl = ob_get_clean();
         echo '<link rel="stylesheet" href="' . self::escapeHtml($editorStyleUrl) . '" />';
     }
